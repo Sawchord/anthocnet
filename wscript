@@ -10,6 +10,9 @@ def build(bld):
     module = bld.create_ns3_module('anthocnet', ['core'])
     module.source = [
         'model/anthocnet.cc',
+        'model/anthocnet-rqueue.cc',
+        'model/anthocnet-rtable.cc',
+        'model/anthocnet-packet.cc',
         'helper/anthocnet-helper.cc',
         ]
 
@@ -22,6 +25,9 @@ def build(bld):
     headers.module = 'anthocnet'
     headers.source = [
         'model/anthocnet.h',
+        'model/anthocnet-rqueue.h',
+        'model/anthocnet-rtable.h',
+        'model/anthocnet-packet.h',
         'helper/anthocnet-helper.h',
         ]
 

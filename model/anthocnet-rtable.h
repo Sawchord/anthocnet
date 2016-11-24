@@ -31,6 +31,7 @@
 #include "ns3/net-device.h"
 #include "ns3/output-stream-wrapper.h"
 
+namespace ns3 {
 namespace anthocnet {
 using namespace std;
   
@@ -52,52 +53,70 @@ public:
   // Increases, whenever a packet is received throught this connection
   double recv_pheromone;
   
-  // TODO: what else needs to be stored here?
   
   // For the 2d list, one need to store two links per entry
-  //RoutingTableEntry down;
-  //RoutingTableEntry right;
+  RoutingTableEntry* down;
+  RoutingTableEntry* right;
   
 };
 
-template <typename T_Address, typename T_Clock>
 class DestinationInfo {
 public:
   
+  //ctor
+  DestinationInfo(Ipv4Address address = Ipv4Address(), Time now = Simulator::Now());
+  //dtor
+  ~DestinationInfo();
+  
   // The address of the destination
-  T_Address destination;
+  Ptr<Ipv4Address> dst;
   
   // After a certain amount of time without usage
   // the node consideres the destination useless and deletes it
-  T_Clock last_time_used;
+  Time last_time_used;
   
+  // Pointer to the next Destination info structure
+  DestinationInfo* right;
   // Pointer to the next routing table entry
-  //RoutingTableEntry* down;
+  RoutingTableEntry* down;
   
 };
 
-template <typename T_Address, typename T_Clock>
 class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (T_Address address, T_Clock now);
+  NeighborInfo (Ipv4InterfaceAddress iface = Ipv4InterfaceAddress(),
+                  Ipv4Address address = Ipv4Address(), Time now = Simulator::Now());
+  //dtor
+  ~NeighborInfo();
+  
+  // The interface behind which this neighbor is
+  Ipv4InterfaceAddress iface;
   
   // The address of the neighbor
-  T_Address address;
+  Ipv4Address address;
   
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
-  T_Clock last_lifesign;
+  Time last_lifesign;
   
   // Pointer to the next routing table enrty
-  //RoutingTableEntry* right;
+  RoutingTableEntry* right;
+  
+  // Pointer to the nex NeighborInfo structure
+  NeighborInfo* down;
   
 };
 
-template <typename T_Address, typename T_Clock>
+
 class RoutingTable {
 public:
   
+  //ctor
+  RoutingTable();
+  //dtor 
+  ~RoutingTable();
+    
   // TODO: Develop plausible API for the routing table.
   
   /**
@@ -106,14 +125,14 @@ public:
    * @arg now The time when this addition was made
    * @returns True, if neighbor was added, false if neighbor was already present
    */
-  bool AddNeighbor(T_Address address, T_Clock now);
+  bool AddNeighbor(Ipv4Address address, Time now);
   
   /**
    * @brief Removes a neighbor from the routing table
    * @arg address The address of the neighbor
    * @returns True, if sucessfully removed, false, if not found
    */
-  bool RemoveNeighbor(T_Address address);
+  bool RemoveNeighbor(Ipv4Address address);
   
   
   
@@ -126,20 +145,20 @@ private:
   // Network configurations affecting the routing table
   
   // Stores the number of destinations and neighbors
-  unsigned int n_dest;
-  unsigned int n_neighbors;
+  unsigned int n_dst;
+  unsigned int n_nb;
   
   
   
   // The actual datastructures
   // Stores information about possible destinations
-  //DestinationInfo <T_Address, T_Clock>* right;
+  DestinationInfo* right;
   
   // Stores information about all neighbors
-  //NeighborInfo <T_Address, T_Clock>* down;
+  NeighborInfo* down;
   
 };
 
 }
-
+}
 #endif /* ANTHOCNETRTABLE_H */

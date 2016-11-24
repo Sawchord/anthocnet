@@ -18,6 +18,8 @@
 #ifndef ANTHOCNET_H
 #define ANTHOCNET_H
 
+#include "anthocnet-rtable.h"
+
 namespace ns3 {
 
 /* ... */
