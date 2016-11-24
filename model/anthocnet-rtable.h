@@ -19,6 +19,9 @@
 #ifndef ANTHOCNETRTABLE_H
 #define ANTHOCNETRTABLE_H
 
+#define MAX_NEIGHBORS 30
+#define MAX_DESTINATIONS 100
+
 #include <vector>
 #include <list>
 #include <map>
@@ -26,10 +29,13 @@
 #include <cmath>
 
 #include "ns3/ipv4.h"
+#include "ns3/ipv4-address.h"
 #include "ns3/ipv4-route.h"
 #include "ns3/timer.h"
 #include "ns3/net-device.h"
 #include "ns3/output-stream-wrapper.h"
+#include "ns3/simulator.h"
+#include "ns3/log.h"
 
 namespace ns3 {
 namespace anthocnet {
@@ -53,32 +59,23 @@ public:
   // Increases, whenever a packet is received throught this connection
   double recv_pheromone;
   
-  
-  // For the 2d list, one need to store two links per entry
-  RoutingTableEntry* down;
-  RoutingTableEntry* right;
-  
 };
 
 class DestinationInfo {
 public:
   
   //ctor
-  DestinationInfo(Ipv4Address address = Ipv4Address(), Time now = Simulator::Now());
+  DestinationInfo(Time now = Simulator::Now());
   //dtor
   ~DestinationInfo();
-  
-  // The address of the destination
-  Ptr<Ipv4Address> dst;
   
   // After a certain amount of time without usage
   // the node consideres the destination useless and deletes it
   Time last_time_used;
   
-  // Pointer to the next Destination info structure
-  DestinationInfo* right;
-  // Pointer to the next routing table entry
-  RoutingTableEntry* down;
+  // The index into the rtable array
+  unsigned int index;
+  
   
 };
 
@@ -86,25 +83,15 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (Ipv4InterfaceAddress iface = Ipv4InterfaceAddress(),
-                  Ipv4Address address = Ipv4Address(), Time now = Simulator::Now());
+  NeighborInfo (unsigned int index, Time now = Simulator::Now());
   //dtor
   ~NeighborInfo();
-  
-  // The interface behind which this neighbor is
-  Ipv4InterfaceAddress iface;
-  
-  // The address of the neighbor
-  Ipv4Address address;
-  
+
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
   Time last_lifesign;
   
-  // Pointer to the next routing table enrty
-  RoutingTableEntry* right;
-  
-  // Pointer to the nex NeighborInfo structure
-  NeighborInfo* down;
+  // The index into the rtable array
+  unsigned int index;
   
 };
 
@@ -125,7 +112,7 @@ public:
    * @arg now The time when this addition was made
    * @returns True, if neighbor was added, false if neighbor was already present
    */
-  bool AddNeighbor(Ipv4Address address, Time now);
+  bool AddNeighbor(Ipv4InterfaceAddress iface, Ipv4Address address, Time now = Simulator::Now());
   
   /**
    * @brief Removes a neighbor from the routing table
@@ -134,7 +121,7 @@ public:
    */
   bool RemoveNeighbor(Ipv4Address address);
   
-  
+  bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
   
 private:
   
@@ -148,14 +135,18 @@ private:
   unsigned int n_dst;
   unsigned int n_nb;
   
+  list<Ipv4InterfaceAddress*> interfaces;
+  unsigned int n_ifaces;
   
+  map<Ipv4Address, DestinationInfo> dsts;
   
-  // The actual datastructures
-  // Stores information about possible destinations
-  DestinationInfo* right;
+  // For neighbors, it is also important to know the interface
+  map<Ipv4Address, NeighborInfo> nbs;
   
-  // Stores information about all neighbors
-  NeighborInfo* down;
+  list<unsigned int> free_rows;
+  list<unsigned int> free_collumns;
+  
+  RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
   
 };
 

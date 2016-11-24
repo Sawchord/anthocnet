@@ -27,79 +27,89 @@ RoutingTableEntry::RoutingTableEntry() {
     this->send_pheromone = NAN;
     this->recv_pheromone = NAN;
     
-    this->down = NULL;
-    this->right = NULL;
 }
 
 RoutingTableEntry::~RoutingTableEntry() {
 }
 
 
-DestinationInfo::DestinationInfo(Ipv4Address address, Time now) {
+DestinationInfo::DestinationInfo(Time now) {
   
-  this->dst.SetDestination(address);
-  this->last_time_used = new Time(now);
+  this->last_time_used = now;
   
-  this->down = NULL;
   
 }
 DestinationInfo::~DestinationInfo() {
 }
 
-/*NeighborInfo::NeighborInfo(Ipv4Address address, Time now) {
+NeighborInfo::NeighborInfo(unsigned int index, Time now) {
   
-  this->address = address;
+  this->index = index;
   this->last_lifesign = now;
   
-  this->right = NULL;
-}*/
+}
+
 NeighborInfo::~NeighborInfo() {
 }
 
 RoutingTable::RoutingTable() {
-    this->n_dst = 0;
-    this->n_nb = 0;
-    
-    this->right = NULL;
-    this->down = NULL;
+  this->n_dst = 0;
+  this->n_nb = 0;
+  
+  for(unsigned int i = 0; i < MAX_NEIGHBORS; i++) {
+    free_rows.push_back(i);
+  }
+  
+  for(unsigned int i = 0; i < MAX_DESTINATIONS; i++) {
+    free_collumns.push_back(i);
+  }
+  
 }
 RoutingTable::~RoutingTable() {
 }
 
-/*bool RoutingTable::AddNeighbor(Ipv4Address address, Time now) {
+bool RoutingTable::AddNeighbor(Ipv4InterfaceAddress iface, Ipv4Address address, Time now) {
   
-  // Check, that neighbor does not already exist
-  NeighborInfo* check_nb = this->down;
-  for (unsigned int i = 0; i < this->n_nb; i++) {
-    if (check_nb->address == address) {
-      return false;
-    } else {
-      check_nb = check_nb->down;
-    }
+  // Check if NeighborInfo already exists
+  map<Ipv4Address, NeighborInfo>::iterator it = 
+    this->nbs.find(address);
+  if (it != this->nbs.end()) {
+    return false;
   }
   
-  // Create the new Neighbor
-  NeighborInfo* new_nb = new NeighborInfo(address, now);
+  // Insert NeighborInfo into NeighborInfo map
+  this->nbs.insert(pair<Ipv4Address, NeighborInfo> (address, NeighborInfo(free_rows.front())));
+  this->free_rows.pop_front();
   
-  // Insert Neighbor at the top of the list
-  NeighborInfo* temp_np = this->down;
-  this->down = new_nb;
-  new_nb->down = temp_np;
-  
-  // Insert all empty RoutingTable entries.
-  
-  DestinationInfo* temp_dst = this->right;
-  for (unsigned int i = 0; i < this->n_dst; i++) {
-    RoutingTableEntry* temp_rte = temp_dst->down;
-    temp_dst->down = new RoutingTableEntry();
-    temp_dst->down->down = temp_rte;
-  }
-  
-  // Increase the number if n_neighbors
+  // Increase number of neigbors
   this->n_nb++;
-  
   return true;
-}*/
+}
+
+bool RoutingTable::RemoveNeighbor(Ipv4Address address) {
+  // Check, if Neighbor exists
+  map<Ipv4Address, NeighborInfo>::iterator it = this->nbs.find(address);
+  if (it == this->nbs.end()) {
+    return false;
+  }
+  
+  // First, reset the row in the array
+  unsigned int delete_index = it->second.index;
+  for (unsigned int i = 0; i < MAX_NEIGHBORS; i++) {
+    this->rtable[delete_index][i] = RoutingTableEntry();
+  }
+  
+  // Add index to freelist
+  this->free_rows.push_front(delete_index);
+  
+  // Then remove the entry from the map of neighbors
+  this->nbs.erase(it);
+  
+  // Decrease counter of neighbors
+  this->n_nb--;
+  return true;
+}
+
 
 
 
