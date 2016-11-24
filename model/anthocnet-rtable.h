@@ -124,11 +124,17 @@ public:
   
   /**
    * @brief Removes a neighbor from the routing table
-   * @arg address The address of the neighbor
-   * @returns True, if sucessfully removed, false, if not found
+   * @arg address The address of the neighbor to be removed
+   * @returns True if sucessfully removed, false if not found
    */
   bool RemoveNeighbor(Ipv4Address address);
   
+  /**
+   * @brief Removes a destination from the routing table
+   * @arg address The address o fthe destination to be removed.
+   * @returns True if successfully removed, false if not found.
+   */
+  bool RemoveDestination(Ipv4Address addess);
   
 private:
   

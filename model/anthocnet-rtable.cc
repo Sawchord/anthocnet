@@ -128,6 +128,29 @@ bool RoutingTable::RemoveNeighbor(Ipv4Address address) {
   return true;
 }
 
+bool RoutingTable::RemoveDestination(Ipv4Address address) {
+  // Check, if the destination exists
+  map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  if (it == this->dsts.end()) {
+    return false;
+  }
+  
+  // Reset the collumn in the array
+  unsigned int delete_index = it->second.index;
+  for (unsigned int i = 0; i < MAX_DESTINATIONS; i++) {
+    this->rtable[i][delete_index] = RoutingTableEntry();
+  }
+  
+  // Add the index to the freelist
+  this->free_collumns.push_front(delete_index);
+  
+  // Remove destination entry from the map
+  this->dsts.erase(it);
+  
+  // Decrease the counter of destination
+  this->n_dst--;
+  return true;
+}
 
 
 
