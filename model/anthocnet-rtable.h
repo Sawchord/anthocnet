@@ -65,7 +65,7 @@ class DestinationInfo {
 public:
   
   //ctor
-  DestinationInfo(Time now = Simulator::Now());
+  DestinationInfo(unsigned int index, Time now = Simulator::Now());
   //dtor
   ~DestinationInfo();
   
@@ -110,9 +110,17 @@ public:
    * @brief Adds a neighbor to the routing table
    * @arg address The address of the neighbor
    * @arg now The time when this addition was made
-   * @returns True, if neighbor was added, false if neighbor was already present
+   * @returns True if neighbor was added, false if neighbor was already present
    */
   bool AddNeighbor(Ipv4InterfaceAddress iface, Ipv4Address address, Time now = Simulator::Now());
+  
+  /**
+   * @brief Adds a destination to the routing table
+   * @arg address The address of the destination
+   * @arg now The time, when this addition was made.
+   * @returns True if neighbor was added, false if neighbor already present.
+   */
+  bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
   
   /**
    * @brief Removes a neighbor from the routing table
@@ -121,7 +129,6 @@ public:
    */
   bool RemoveNeighbor(Ipv4Address address);
   
-  bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
   
 private:
   
