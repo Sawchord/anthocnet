@@ -19,11 +19,56 @@
 #define ANTHOCNET_H
 
 #include "anthocnet-rtable.h"
+#include "anthocnet-rqueue.h"
+#include "anthocnet-packet.h"
+
+#include "ns3/node.h"
+#include "ns3/random-variable-stream.h"
+#include "ns3/output-stream-wrapper.h"
+#include "ns3/ipv4-routing-protocol.h"
+#include "ns3/ipv4-interface.h"
+#include "ns3/ipv4-l3-protocol.h"
 
 namespace ns3 {
+namespace ahn {
 
-/* ... */
-
+class RoutingProtocol : public Ipv4RoutingProtocol {
+public:
+  //ctor
+  RoutingProtocol();
+  //dtor
+  ~RoutingProtocol();
+  
+  static TypeId GetTypeId (void);
+  static const uint32_t AODV_PORT;
+  
+  // Inherited from Ipv4RoutingProtocol
+  Ptr<Ipv4Route> RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr);
+  bool RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
+                   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+                   LocalDeliverCallback lcb, ErrorCallback ecb);
+  virtual void NotifyInterfaceUp (uint32_t interface);
+  virtual void NotifyInterfaceDown (uint32_t interface);
+  virtual void NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address);
+  virtual void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address);
+  virtual void SetIpv4 (Ptr<Ipv4> ipv4);
+  virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const;
+  
+private:
+  
+  // All the network config stuff goes here as fields
+  
+  // The time to life a new born forward and
+  uint8_t initial_ttl;
+  
+  // The frequency in which to send Hello Ants
+  Time hello_interval;
+  Timer hello_timer;
+  
+  
+  
+};
+}
 }
 
 #endif /* ANTHOCNET_H */
