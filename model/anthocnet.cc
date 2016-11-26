@@ -32,9 +32,7 @@
 #include "ns3/pointer.h"
 
 namespace ns3 {
-  
-  NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingProtocol");
-  
+NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingProtocol");
 namespace ahn {
 
 //ctor
@@ -77,8 +75,49 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   return false;
 }
 
+// Add an interface to an operational AntHocNet instance
 void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
-  // STUB
+  NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface,
+    0).GetLocal ());
+  
+  if (this->free_sockets.empty()) {
+    NS_LOG_ERROR("Out of free sockets");
+  }
+  
+  // Get the interface pointer
+  Ptr<Ipv4L3Protocol> l3 =
+    this->ipv4->GetObject<Ipv4L3Protocol>();
+  
+  if (l3->GetNAddresses (interface) > 1) {
+    NS_LOG_ERROR ("AntHocNet does not support more than one\
+    address per interface for now.");
+  }
+  
+  Ipv4InterfaceAddress iface = l3->GetAddress (interface, 0);
+  if (iface.GetLocal () == Ipv4Address ("127.0.0.1"))
+    return;
+  
+  // Set up the socket to be able to receive
+  Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),
+    UdpSocketFactory::GetTypeId ());
+  NS_ASSERT(socket != 0);
+  
+  socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+  
+  socket->Bind(InetSocketAddress(iface.GetLocal(),
+                                 ANTHOCNET_PORT));
+  
+  socket->SetAllowBroadcast(true);
+  socket->SetIpRecvTtl(true);
+  
+  // Insert socket into the lists
+  this->sockets[this->free_sockets.front()] = socket;
+  this->socket_addresses.insert(std::make_pair(socket, iface));
+  
+  
+  // TODO: Need broadcast address?
+  // TODO: Support from MacLayer in detecting offline Neighbors
 }
 
 void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
@@ -118,7 +157,24 @@ void RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::
     *stream->GetStream () << std::endl;
 }
 
+
+// -----------------------------------------------------
+// User defined private functions
+
 void RoutingProtocol::Start() {
+  NS_LOG_FUNCTION(this);
+  
+  // Initialize all sockets as null pointers
+  for (uint32_t i = 0; i < MAX_SOCKETS; i++) {
+    this->sockets[i] = 0;
+    this->free_sockets.push_back(i);
+  }
+  
+  // Start Hello Timer here?
+  
+}
+
+void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // STUB
 }
 

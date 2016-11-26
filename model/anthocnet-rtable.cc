@@ -19,6 +19,7 @@
 #include "anthocnet-rtable.h"
 
 namespace ns3 {
+NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingTable");
 namespace ahn {
 
 
@@ -67,6 +68,10 @@ RoutingTable::~RoutingTable() {
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now) {
   
+  if (this->free_rows.empty()) {
+    NS_LOG_ERROR(this << "rtable full->no rows");
+  }
+  
   nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
@@ -76,7 +81,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
   }
   
   // Insert Neighbor into std::map
-  this->nbs.insert(pair<nb_t, NeighborInfo> (new_nb, NeighborInfo(free_rows.front())));
+  this->nbs.insert(std::make_pair(new_nb,  
+    NeighborInfo(free_rows.front())));
   this->free_rows.pop_front();
   
   // Increase number of neigbors
@@ -86,6 +92,10 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
+  if (this->free_collumns.empty()) {
+    NS_LOG_ERROR(this << "rtable full->no collumns");
+  }
+  
   // Check if destination already exists
   std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it != this->dsts.end()) {
@@ -93,7 +103,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   }
   
   // Insert Destination into std::map
-  this->dsts.insert(pair<Ipv4Address, DestinationInfo>(address, 
+  this->dsts.insert(std::make_pair(address, 
     DestinationInfo(free_collumns.front())));
   this->free_collumns.pop_front();
   

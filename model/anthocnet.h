@@ -22,6 +22,8 @@
 #include "anthocnet-rqueue.h"
 #include "anthocnet-packet.h"
 
+#include <list>
+
 #include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/output-stream-wrapper.h"
@@ -30,6 +32,8 @@
 #include "ns3/ipv4-l3-protocol.h"
 
 #define MAX_SOCKETS 10
+#define ANTHOCNET_PORT 5555
+
 
 namespace ns3 {
 namespace ahn {
@@ -62,6 +66,9 @@ private:
   // Sets up the operation of the protocol
   void Start();
   
+  // Callback function for receiving a packet
+  void Recv(Ptr<Socket> socket);
+  
   //----------------------------------------------
   // All the global state of the protocol go here
   RoutingTable rtable;
@@ -71,6 +78,7 @@ private:
   
   // Holds information about the interfaces
   Ptr<Socket> sockets[MAX_SOCKETS];
+  list<uint32_t> free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
   
   
