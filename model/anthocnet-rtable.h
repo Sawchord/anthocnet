@@ -69,13 +69,12 @@ public:
   //dtor
   ~DestinationInfo();
   
-  // After a certain amount of time without usage
-  // the node consideres the destination useless and deletes it
-  Time last_time_used;
-  
   // The index into the rtable array
   uint32_t index;
   
+  // After a certain amount of time without usage
+  // the node consideres the destination useless and deletes it
+  Time last_time_used;
   
 };
 
@@ -83,15 +82,18 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (uint32_t index, Time now = Simulator::Now());
+  NeighborInfo (uint32_t id, Time now = Simulator::Now());
   //dtor
   ~NeighborInfo();
-
-  // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
-  Time last_lifesign;
   
   // The index into the rtable array
   uint32_t index;
+  
+  // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
+  Time last_lifesign;
+  
+  // Interface under which to reach this neighbor
+  uint32_t interface_index;
   
 };
 

@@ -29,6 +29,8 @@
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
 
+#define MAX_SOCKETS 10
+
 namespace ns3 {
 namespace ahn {
 
