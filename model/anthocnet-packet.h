@@ -37,7 +37,7 @@ enum MessageType {
   AHNTYPE_DATA = 5, //!< Data packet (NEEDED?)
   AHNTYPE_RREP_ANT = 6, //!< RouteRepair Ant
   AHNTYPE_ERR = 7 //!< Error Ant
-}
+};
 
 class TypeHeader : public Header {
 public:
@@ -47,16 +47,24 @@ public:
   //dtor
   ~TypeHeader();
   
-  //Heder serialization/deserialization
-  static TypeId GetTypeId() const;
+  //Header serialization/deserialization
+  static TypeId GetTypeId();
   TypeId GetInstanceTypeId() const;
   uint32_t GetSerializedSize() const;
   void Serialize (Buffer::Iterator start) const;
   uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream &os) const;
   
+  // Return type
+  MessageType Get () const { return type; }
+  // Check that type if valid
+  bool IsValid () const { return valid; }
+  bool operator== (TypeHeader const & o) const;
+  
 private:
-}
+  MessageType type;
+  bool valid;
+};
 
 }
 }

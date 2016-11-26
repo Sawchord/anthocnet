@@ -65,7 +65,7 @@ class DestinationInfo {
 public:
   
   //ctor
-  DestinationInfo(unsigned int index, Time now = Simulator::Now());
+  DestinationInfo(uint32_t index, Time now = Simulator::Now());
   //dtor
   ~DestinationInfo();
   
@@ -74,7 +74,7 @@ public:
   Time last_time_used;
   
   // The index into the rtable array
-  unsigned int index;
+  uint32_t index;
   
   
 };
@@ -83,7 +83,7 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (unsigned int index, Time now = Simulator::Now());
+  NeighborInfo (uint32_t index, Time now = Simulator::Now());
   //dtor
   ~NeighborInfo();
 
@@ -91,7 +91,7 @@ public:
   Time last_lifesign;
   
   // The index into the rtable array
-  unsigned int index;
+  uint32_t index;
   
 };
 
@@ -145,19 +145,19 @@ private:
   // Network configurations affecting the routing table
   
   // Stores the number of destinations and neighbors
-  unsigned int n_dst;
-  unsigned int n_nb;
+  uint32_t n_dst;
+  uint32_t n_nb;
   
   list<Ipv4InterfaceAddress*> interfaces;
-  unsigned int n_ifaces;
+  uint32_t n_ifaces;
   
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
   map<Ipv4Address, NeighborInfo> nbs;
   
-  list<unsigned int> free_rows;
-  list<unsigned int> free_collumns;
+  list<uint32_t> free_rows;
+  list<uint32_t> free_collumns;
   
   RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
   
