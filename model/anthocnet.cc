@@ -114,8 +114,7 @@ void RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::
     << "Node: " << this->ipv4->GetObject<Node>()->GetId()
     << "Time: " << Now().As(unit)
     << "AntHocNet Routing Table: " << std::endl;
-    // TODO: Add print, once print function is established
-    //this->rtable.Print(stream);
+    this->rtable.Print(stream);
     *stream->GetStream () << std::endl;
 }
 

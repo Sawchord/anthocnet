@@ -22,9 +22,8 @@
 #define MAX_NEIGHBORS 30
 #define MAX_DESTINATIONS 100
 
-#include <vector>
-#include <list>
 #include <map>
+#include <iomanip>
 
 #include <cmath>
 
@@ -140,6 +139,8 @@ public:
    * @returns True if successfully removed, false if not found.
    */
   bool RemoveDestination(Ipv4Address addess);
+  
+  void Print(Ptr<OutputStreamWrapper> stream) const;
   
 private:
   

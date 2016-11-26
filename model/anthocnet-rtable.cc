@@ -20,7 +20,6 @@
 
 namespace ns3 {
 namespace ahn {
-using namespace std;
 
 
 RoutingTableEntry::RoutingTableEntry() {
@@ -71,12 +70,12 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
   nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
-  map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
+  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
   if (it != this->nbs.end()) {
     return false;
   }
   
-  // Insert Neighbor into map
+  // Insert Neighbor into std::map
   this->nbs.insert(pair<nb_t, NeighborInfo> (new_nb, NeighborInfo(free_rows.front())));
   this->free_rows.pop_front();
   
@@ -88,12 +87,12 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
 bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
   // Check if destination already exists
-  map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it != this->dsts.end()) {
     return false;
   }
   
-  // Insert Destination into map
+  // Insert Destination into std::map
   this->dsts.insert(pair<Ipv4Address, DestinationInfo>(address, 
     DestinationInfo(free_collumns.front())));
   this->free_collumns.pop_front();
@@ -108,7 +107,7 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   nb_t rem_nb = nb_t(iface_index, address);
   
   // Check, if Neighbor exists
-  map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
+  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
   if (it == this->nbs.end()) {
     return false;
   }
@@ -119,10 +118,10 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
     this->rtable[delete_index][i] = RoutingTableEntry();
   }
   
-  // Add index to freelist
+  // Add index to freestd::list
   this->free_rows.push_front(delete_index);
   
-  // Then remove the entry from the map of neighbors
+  // Then remove the entry from the std::map of neighbors
   this->nbs.erase(it);
   
   // Decrease counter of neighbors
@@ -132,7 +131,7 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
 
 bool RoutingTable::RemoveDestination(Ipv4Address address) {
   // Check, if the destination exists
-  map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it == this->dsts.end()) {
     return false;
   }
@@ -143,10 +142,10 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
     this->rtable[i][delete_index] = RoutingTableEntry();
   }
   
-  // Add the index to the freelist
+  // Add the index to the freestd::list
   this->free_collumns.push_front(delete_index);
   
-  // Remove destination entry from the map
+  // Remove destination entry from the std::map
   this->dsts.erase(it);
   
   // Decrease the counter of destination
@@ -154,7 +153,38 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
   return true;
 }
 
-
+void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
+  
+  *stream->GetStream() << "AntHocNet routing table \n\t";
+  
+  // Print the first line (all destination)
+  for (std::map<Ipv4Address, DestinationInfo>::const_iterator
+    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
+    *stream->GetStream() << it->first;
+  }
+  
+  for (std::map<nb_t, NeighborInfo>::const_iterator 
+    it = this->nbs.begin(); it != this->nbs.end(); ++it) {
+    
+    *stream->GetStream() << it->first.first << ":" << it->first.second;
+    
+    uint32_t nb_index = it->second.index;
+    
+    for (std::map<Ipv4Address, DestinationInfo>::const_iterator 
+      it1 = this->dsts.begin(); it1 != this->dsts.end(); ++it1) {
+      
+      uint32_t dst_index = it1->second.index;
+      
+      *stream->GetStream() << this->rtable[dst_index][nb_index]
+      .pheromone;
+      
+    }
+    
+    *stream->GetStream () << "\n";
+  }
+  
+  
+}
 
 }
 }
