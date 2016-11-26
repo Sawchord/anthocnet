@@ -41,6 +41,8 @@ namespace ns3 {
 namespace ahn {
 using namespace std;
   
+typedef pair<uint32_t, Ipv4Address> nb_t;
+
 class RoutingTableEntry {
 public:
   

@@ -21,7 +21,8 @@
 namespace ns3 {
 namespace ahn {
 using namespace std;
-    
+
+
 RoutingTableEntry::RoutingTableEntry() {
     this->pheromone = NAN;
     this->send_pheromone = NAN;
@@ -93,7 +94,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
   // Insert Destination into map
   this->dsts.insert(pair<Ipv4Address, DestinationInfo>(address, 
-                                                       DestinationInfo(free_collumns.front())));
+    DestinationInfo(free_collumns.front())));
   this->free_collumns.pop_front();
   
   this->n_dst++;

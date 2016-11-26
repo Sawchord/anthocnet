@@ -58,7 +58,24 @@ public:
   
 private:
   
-  // All the network config stuff goes here as fields
+  // All the utiliy and callback functions of the protocol go here
+  // Sets up the operation of the protocol
+  void Start();
+  
+  //----------------------------------------------
+  // All the global state of the protocol go here
+  RoutingTable rtable;
+  
+  // The IP protocol
+  Ptr<Ipv4> ipv4;
+  
+  // Holds information about the interfaces
+  Ptr<Socket> sockets[MAX_SOCKETS];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
+  
+  
+  //-----------------------------------------------
+  // All the network config stuff go here 
   
   // The time to life a new born forward and
   uint8_t initial_ttl;
