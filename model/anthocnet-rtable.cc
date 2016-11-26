@@ -44,8 +44,7 @@ DestinationInfo::~DestinationInfo() {
 
 NeighborInfo::NeighborInfo(uint32_t id, Time now) :
   index(id),
-  last_lifesign(now),
-  interface_index(1)
+  last_lifesign(now)
   {}
 
 NeighborInfo::~NeighborInfo() {
@@ -67,16 +66,18 @@ RoutingTable::RoutingTable() {
 RoutingTable::~RoutingTable() {
 }
 
-bool RoutingTable::AddNeighbor(Ipv4InterfaceAddress iface, Ipv4Address address, Time now) {
+bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now) {
+  
+  nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
-  map<Ipv4Address, NeighborInfo>::iterator it = this->nbs.find(address);
+  map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
   if (it != this->nbs.end()) {
     return false;
   }
   
   // Insert Neighbor into map
-  this->nbs.insert(pair<Ipv4Address, NeighborInfo> (address, NeighborInfo(free_rows.front())));
+  this->nbs.insert(pair<nb_t, NeighborInfo> (new_nb, NeighborInfo(free_rows.front())));
   this->free_rows.pop_front();
   
   // Increase number of neigbors
@@ -102,9 +103,12 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
 }
 
-bool RoutingTable::RemoveNeighbor(Ipv4Address address) {
+bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
+  
+  nb_t rem_nb = nb_t(iface_index, address);
+  
   // Check, if Neighbor exists
-  map<Ipv4Address, NeighborInfo>::iterator it = this->nbs.find(address);
+  map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
   if (it == this->nbs.end()) {
     return false;
   }

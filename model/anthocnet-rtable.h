@@ -94,9 +94,6 @@ public:
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
   Time last_lifesign;
   
-  // Interface under which to reach this neighbor
-  uint32_t interface_index;
-  
 };
 
 
@@ -112,11 +109,13 @@ public:
   
   /**
    * @brief Adds a neighbor to the routing table
+   * @arg iface_index The index of the interface on which to
+   *  reach this neighbor
    * @arg address The address of the neighbor
    * @arg now The time when this addition was made
    * @returns True if neighbor was added, false if neighbor was already present
    */
-  bool AddNeighbor(Ipv4InterfaceAddress iface, Ipv4Address address, Time now = Simulator::Now());
+  bool AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now = Simulator::Now());
   
   /**
    * @brief Adds a destination to the routing table
@@ -128,10 +127,12 @@ public:
   
   /**
    * @brief Removes a neighbor from the routing table
+   * @arg iface_index The interface index of
+   *  the neighbor to be removed
    * @arg address The address of the neighbor to be removed
    * @returns True if sucessfully removed, false if not found
    */
-  bool RemoveNeighbor(Ipv4Address address);
+  bool RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
   
   /**
    * @brief Removes a destination from the routing table
@@ -158,7 +159,7 @@ private:
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
-  map<Ipv4Address, NeighborInfo> nbs;
+  map<nb_t, NeighborInfo> nbs;
   
   list<uint32_t> free_rows;
   list<uint32_t> free_collumns;
