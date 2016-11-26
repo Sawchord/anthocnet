@@ -19,7 +19,7 @@
 #include "anthocnet-rtable.h"
 
 namespace ns3 {
-namespace anthocnet {
+namespace ahn {
 using namespace std;
     
 RoutingTableEntry::RoutingTableEntry() {
@@ -33,7 +33,7 @@ RoutingTableEntry::~RoutingTableEntry() {
 }
 
 
-DestinationInfo::DestinationInfo(unsigned int index, Time now) {
+DestinationInfo::DestinationInfo(uint32_t index, Time now) {
   
   this->index = index;
   this->last_time_used = now;
@@ -43,7 +43,7 @@ DestinationInfo::DestinationInfo(unsigned int index, Time now) {
 DestinationInfo::~DestinationInfo() {
 }
 
-NeighborInfo::NeighborInfo(unsigned int index, Time now) {
+NeighborInfo::NeighborInfo(uint32_t index, Time now) {
   
   this->index = index;
   this->last_lifesign = now;
@@ -57,11 +57,11 @@ RoutingTable::RoutingTable() {
   this->n_dst = 0;
   this->n_nb = 0;
   
-  for(unsigned int i = 0; i < MAX_NEIGHBORS; i++) {
+  for(uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     free_rows.push_back(i);
   }
   
-  for(unsigned int i = 0; i < MAX_DESTINATIONS; i++) {
+  for(uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     free_collumns.push_back(i);
   }
   
@@ -112,8 +112,8 @@ bool RoutingTable::RemoveNeighbor(Ipv4Address address) {
   }
   
   // First, reset the row in the array
-  unsigned int delete_index = it->second.index;
-  for (unsigned int i = 0; i < MAX_NEIGHBORS; i++) {
+  uint32_t delete_index = it->second.index;
+  for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     this->rtable[delete_index][i] = RoutingTableEntry();
   }
   
@@ -136,8 +136,8 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
   }
   
   // Reset the collumn in the array
-  unsigned int delete_index = it->second.index;
-  for (unsigned int i = 0; i < MAX_DESTINATIONS; i++) {
+  uint32_t delete_index = it->second.index;
+  for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     this->rtable[i][delete_index] = RoutingTableEntry();
   }
   

@@ -38,7 +38,7 @@
 #include "ns3/log.h"
 
 namespace ns3 {
-namespace anthocnet {
+namespace ahn {
 using namespace std;
   
 class RoutingTableEntry {
