@@ -37,9 +37,8 @@ DestinationInfo::DestinationInfo(uint32_t index, Time now) {
   
   this->index = index;
   this->last_time_used = now;
-  
-  
 }
+
 DestinationInfo::~DestinationInfo() {
 }
 

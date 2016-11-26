@@ -69,11 +69,14 @@ private:
 
 class AntHeader : public Header {
 public:
- //ctor
-  AntHeader (MessageType ant_type, 
+  //ctor
+  AntHeader (
     Ipv4Address src = Ipv4Address(),
     Ipv4Address dst = Ipv4Address()
   );
+  
+  //dtor
+  ~AntHeader();
   
   // Header serialization/deserialization
   static TypeId GetTypeId ();
@@ -88,7 +91,7 @@ public:
 private:
   
   // Needed to identyfy the type of ant
-  MessageType TypeTag; 
+  MessageType type; 
   
   // Not used for now, set 0 on send, ignored on recv
   uint8_t reserved;
