@@ -24,6 +24,7 @@
 #include "ns3/enum.h"
 #include "ns3/ipv4-address.h"
 #include <map>
+#include <list>
 #include "ns3/nstime.h"
 
 namespace ns3 {
@@ -65,6 +66,49 @@ private:
   MessageType type;
   bool valid;
 };
+
+class AntHeader : public Header {
+public:
+ //ctor
+  AntHeader (MessageType ant_type, 
+    Ipv4Address src = Ipv4Address(),
+    Ipv4Address dst = Ipv4Address()
+  );
+  
+  // Header serialization/deserialization
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  uint32_t GetSerializedSize () const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+  
+  bool operator== (AntHeader const & o) const;
+  
+private:
+  
+  // Needed to identyfy the type of ant
+  MessageType TypeTag; 
+  
+  // Not used for now, set 0 on send, ignored on recv
+  uint8_t reserved;
+  
+  // This field inidicates the time to life on a fwd ant
+  // and the maximum number of hops from src to dst on a bw ant
+  uint8_t ttl_or_max_hops;
+  
+  // The number of hops from src
+  uint8_t hops;
+  
+  // source and destination addresses
+  Ipv4Address src;
+  Ipv4Address dst;
+  
+  // All the ants travelled so far/ yet to travel
+  std::list<Ipv4Address> ant_stack;
+  
+};
+
 
 }
 }
