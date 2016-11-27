@@ -44,6 +44,8 @@ RoutingProtocol::RoutingProtocol ():
   
 RoutingProtocol::~RoutingProtocol() {}
 
+NS_OBJECT_ENSURE_REGISTERED(RoutingProtocol);
+
 
 TypeId RoutingProtocol::GetTypeId(void) {
   static TypeId tid = TypeId("ns3::ahn::RoutingProtocol")
@@ -113,6 +115,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   
   // Insert socket into the lists
   this->sockets[this->free_sockets.front()] = socket;
+  
   this->free_sockets.pop_front();
   this->socket_addresses.insert(std::make_pair(socket, iface));
   
@@ -158,7 +161,6 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN("AntHocNet does not support more than one address per interface");
     
-    // TODO: No finalizing ?
     return;
   }
   
@@ -241,7 +243,7 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
 
 void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   
-  NS_LOG_FUNCTION(this << ipv4);
+  NS_LOG_FUNCTION(this);
   
   NS_ASSERT (ipv4 != 0);
   NS_ASSERT (this->ipv4 == 0);

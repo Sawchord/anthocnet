@@ -327,7 +327,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
       NS_FATAL_ERROR ("No such protocol:" << m_protocol);
     }
 
-  if (m_protocol < 2)
+  if (m_protocol < 3)
     {
       internet.SetRoutingHelper (list);
       internet.Install (adhocNodes);
