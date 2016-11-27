@@ -189,11 +189,33 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
       .pheromone;
       
     }
-    
     *stream->GetStream () << "\n";
+  }
+}
+
+void RoutingTable::PurgeInterface(uint32_t interface) {
+  
+  // Since you cannot delete a entries of a map while 
+  // iterating over it, use mark and sweep
+  std::list<std::map<nb_t, NeighborInfo>::iterator > mark;
+  
+  // Iterate over neigbors and mark deletables
+  for(std::map<nb_t, NeighborInfo>::iterator it =
+    this->nbs.begin(); it != this->nbs.end(); ++it) {
+    if (it->first.first == interface) {
+      // Assign by value
+      mark.push_back(it);
+    }
   }
   
   
+  // Sweep deletables
+  for( 
+    std::list<std::map<nb_t, NeighborInfo>::iterator >::iterator
+    it = mark.begin(); it != mark.end(); ++it) {
+    this->RemoveNeighbor((**it).first.first,
+                         (**it).first.second);
+    }
 }
 
 }

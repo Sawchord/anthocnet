@@ -121,7 +121,28 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
 }
 
 void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
-  // STUB
+  
+  // TODO: Support MacLayer?
+  
+  NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface, 0).GetLocal ());
+  
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
+  Ptr<NetDevice> dev = l3->GetNetDevice(interface);
+  
+  Ptr<Socket> socket = this->FindSocketWithInterfaceAddress(
+    this->ipv4->GetAddress(interface, 0));
+  
+  NS_ASSERT(socket);
+  
+  uint32_t s_index = this->FindSocketIndex(socket);
+  
+  socket->Close();
+  this->sockets[s_index] = 0;
+  this->socket_addresses.erase(socket);
+  
+  // TODO: Close Broadcast, if any
+  this->rtable.PurgeInterface(s_index);
+  
 }
 
 void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
@@ -170,10 +191,36 @@ void RoutingProtocol::Start() {
     this->free_sockets.push_back(i);
   }
   
-  // Start Hello Timer here?
+  // TODO:Start Hello Timer here?
   
 }
 
+Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (Ipv4InterfaceAddress addr ) const
+{
+  NS_LOG_FUNCTION (this << addr);
+  for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j =
+    this->socket_addresses.begin (); j != this->socket_addresses.end (); ++j)
+  {
+    Ptr<Socket> socket = j->first;
+    Ipv4InterfaceAddress iface = j->second;
+    if (iface == addr)
+      return socket;
+  }
+  Ptr<Socket> socket;
+  return socket;
+}
+
+uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
+  uint32_t s_index = 0;
+  for (s_index = 0; s_index < MAX_SOCKETS; s_index++) {
+    if (this->sockets[s_index] == s) break;
+  }
+  return s_index;
+}
+
+
+// -------------------------------------------------------
+// Callback functions used in receiving and timers
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // STUB
 }

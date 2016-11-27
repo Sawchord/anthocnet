@@ -49,6 +49,7 @@ public:
   static const uint32_t AODV_PORT;
   
   // Inherited from Ipv4RoutingProtocol
+  // Look up their documentation in ns3 reference manual
   Ptr<Ipv4Route> RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr);
   bool RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
                    UnicastForwardCallback ucb, MulticastForwardCallback mcb,
@@ -65,6 +66,16 @@ private:
   // All the utiliy and callback functions of the protocol go here
   // Sets up the operation of the protocol
   void Start();
+  
+  Ptr<Socket> FindSocketWithInterfaceAddress
+    (Ipv4InterfaceAddress addr) const;
+  
+  /**
+   * @brief Finds the index of the Socket, used in the rtable.
+   * @arg socket The pointer to the sockeT;
+   * @returns The index into the socket table.
+   */  
+  uint32_t FindSocketIndex(Ptr<Socket>)const;
   
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);

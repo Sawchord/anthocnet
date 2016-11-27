@@ -23,6 +23,7 @@
 #define MAX_DESTINATIONS 100
 
 #include <map>
+#include <list>
 #include <iomanip>
 
 #include <cmath>
@@ -140,7 +141,18 @@ public:
    */
   bool RemoveDestination(Ipv4Address addess);
   
+  /**
+   * @brief Outputs a string representation of this RoutingTable.
+   */
   void Print(Ptr<OutputStreamWrapper> stream) const;
+  
+  /**
+   * @brief Removes all neighbors that use the interface
+   *  specified.
+   * @arg The interface to purgr
+   */
+  void PurgeInterface(uint32_t interface_index);
+  
   
 private:
   
