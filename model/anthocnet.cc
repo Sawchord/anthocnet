@@ -113,6 +113,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   
   // Insert socket into the lists
   this->sockets[this->free_sockets.front()] = socket;
+  this->free_sockets.pop_front();
   this->socket_addresses.insert(std::make_pair(socket, iface));
   
   
@@ -139,18 +140,103 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   socket->Close();
   this->sockets[s_index] = 0;
   this->socket_addresses.erase(socket);
+  this->free_sockets.push_front(s_index);
   
-  // TODO: Close Broadcast, if any
   this->rtable.PurgeInterface(s_index);
+  // TODO: Close Broadcast, if any
   
 }
 
 void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
-  // STUB
+  
+  NS_LOG_FUNCTION(this << "interface " << interface 
+    << " address " << address);
+  
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
+  if (!l3->IsUp(interface)) return;
+  
+  if (l3->GetNAddresses(interface) > 1) {
+    NS_LOG_WARN("AntHocNet does not support more than one address per interface");
+    
+    // TODO: No finalizing ?
+    return;
+  }
+  
+  Ipv4InterfaceAddress iface = l3->GetAddress(interface, 0);
+  Ptr<Socket> socket = this->FindSocketWithInterfaceAddress(iface);
+  
+  // Need to create socket, if it already exists, there is nothing to do
+  if (socket) return;
+  
+  // Create and set up socket
+  socket = Socket::CreateSocket(GetObject<Node>(), 
+    UdpSocketFactory::GetTypeId());
+  NS_ASSERT(socket != 0);
+  
+  socket->SetRecvCallback(MakeCallback(
+    &RoutingProtocol::Recv, this));
+  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+  socket->SetAllowBroadcast(true);
+  socket->SetIpRecvTtl(true);
+  
+  // Insert socket into the lists
+  this->sockets[this->free_sockets.front()] = socket;
+  this->free_sockets.pop_front();
+  this->socket_addresses.insert(std::make_pair(socket, iface));
+  
 }
 
 void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) {
-  // STUB
+  
+  NS_LOG_FUNCTION(this << "interface " << interface 
+  << " address " << address);
+  
+  Ptr<Socket> socket = FindSocketWithInterfaceAddress(address);
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  
+  if (!socket) {
+    NS_LOG_WARN("Attempt to delete iface not participating in AHN ignored");
+    return;
+  }
+  
+  
+  uint32_t s_index = this->FindSocketIndex(socket);  
+  socket->Close();
+  // If there is more than one address on this interface, close then
+  // socket and reopen it again with new addess
+  if (l3->GetNAddresses(interface)) {
+    NS_LOG_LOGIC("Address removed, reopen socket with new address");
+    Ipv4InterfaceAddress iface = l3->GetAddress(interface, 0);
+    
+    socket = Socket::CreateSocket (GetObject<Node> (),
+      UdpSocketFactory::GetTypeId ());
+    NS_ASSERT(socket!= 0);
+    
+    socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+    socket->BindToNetDevice(l3->GetNetDevice(interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    
+    this->sockets[this->free_sockets.front()] = socket;
+    this->free_sockets.pop_front();
+    this->socket_addresses.insert(std::make_pair(socket, iface));
+    
+  }
+  // if this was the only address on the interface, close the socket
+  else {
+    
+    NS_LOG_LOGIC("Address removed, closing socket");
+    
+    this->sockets[s_index] = 0;
+    this->socket_addresses.erase(socket);
+    this->free_sockets.push_front(s_index);
+    
+    this->rtable.PurgeInterface(s_index);
+  }
+  
+  
 }
 
 void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
