@@ -71,9 +71,9 @@ private:
     (Ipv4InterfaceAddress addr) const;
   
   /**
-   * @brief Finds the index of the Socket, used in the rtable.
-   * @arg socket The pointer to the sockeT;
-   * @returns The index into the socket table.
+   * \brief Finds the index of the Socket, used in the rtable.
+   * \param socket The pointer to the sockeT;
+   * \returns The index into the socket table.
    */  
   uint32_t FindSocketIndex(Ptr<Socket>)const;
   

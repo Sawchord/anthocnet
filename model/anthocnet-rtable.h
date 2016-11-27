@@ -126,30 +126,30 @@ public:
   bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
   
   /**
-   * @brief Removes a neighbor from the routing table
-   * @arg iface_index The interface index of
-   *  the neighbor to be removed
-   * @arg address The address of the neighbor to be removed
-   * @returns True if sucessfully removed, false if not found
+   * \brief Removes a neighbor from the routing table
+   * \param iface_index The interface index of
+   *        the neighbor to be removed
+   * \param address The address of the neighbor to be removed
+   * \returns True if sucessfully removed, false if not found
    */
   bool RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
   
   /**
-   * @brief Removes a destination from the routing table
-   * @arg address The address o fthe destination to be removed.
-   * @returns True if successfully removed, false if not found.
+   * \brief Removes a destination from the routing table
+   * \param address The address o fthe destination to be removed.
+   * \returns True if successfully removed, false if not found.
    */
   bool RemoveDestination(Ipv4Address addess);
   
   /**
-   * @brief Outputs a string representation of this RoutingTable.
+   * \brief Outputs a string representation of this RoutingTable.
    */
   void Print(Ptr<OutputStreamWrapper> stream) const;
   
   /**
-   * @brief Removes all neighbors that use the interface
-   *  specified.
-   * @arg The interface to purgr
+   * \brief Removes all neighbors that use the interface
+   *        specified.
+   * \param interface_index The interface to purge
    */
   void PurgeInterface(uint32_t interface_index);
   

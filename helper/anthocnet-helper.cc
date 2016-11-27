@@ -48,10 +48,40 @@ AntHocNetHelper::AssignStreams (NodeContainer c, int64_t stream) {
   
   int64_t current_stream = stream;
   
-  
-  // TODO: Implement Assignstreams
-  
-  
+  for (NodeContainer::Iterator it = c.Begin();
+    it != c.End(); ++it) {
+    
+    Ptr<Node> node = *it;
+    Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
+    NS_ASSERT_MSG(ipv4, "Ipv4 not installed on node");
+    Ptr<Ipv4RoutingProtocol> proto = ipv4->GetRoutingProtocol();
+    NS_ASSERT_MSG (proto, "Ipv4 routing not installed on node");
+    Ptr<ahn::RoutingProtocol> ahn =
+      DynamicCast<ahn::RoutingProtocol> (proto);
+    if (ahn) {
+      //current_stream += ahn->AssignStreams(current_stream);
+      continue;
+    }
+    
+    Ptr<Ipv4ListRouting> list = 
+      DynamicCast <Ipv4ListRouting> (proto);
+    if (list) {
+      int16_t priority;
+      Ptr<Ipv4RoutingProtocol> list_proto;
+      Ptr<ahn::RoutingProtocol> list_ahn;
+      
+      for (uint32_t i = 0; i< list->GetNRoutingProtocols(); i++) {
+        list_proto = list->GetRoutingProtocol(i, priority);
+        list_ahn = DynamicCast<ahn::RoutingProtocol>(list_proto);
+        
+        if (list_ahn) {
+          //current_stream += 
+            //list_ahn->AssignStreams (current_stream);
+            break;
+        }
+      }
+    }
+  }
   return (current_stream - stream);
 }
 
