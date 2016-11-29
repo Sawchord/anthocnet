@@ -174,8 +174,8 @@ private:
   // For neighbors, it is also important to know the interface
   map<nb_t, NeighborInfo> nbs;
   
-  list<uint32_t> free_rows;
-  list<uint32_t> free_collumns;
+  list<uint32_t>* free_rows;
+  list<uint32_t>* free_collumns;
   
   RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
   

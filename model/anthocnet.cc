@@ -64,6 +64,35 @@ TypeId RoutingProtocol::GetTypeId(void) {
   return tid;
 }
 
+void RoutingProtocol::DoInitialize() {
+  NS_LOG_FUNCTION(this);
+  
+  
+  
+  Ipv4RoutingProtocol::DoInitialize();
+}
+
+
+void RoutingProtocol::DoDispose() {
+    NS_LOG_FUNCTION(this);
+    
+    for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
+      if (this->sockets[i] != 0) {
+        this->sockets[i]->Close();
+    }
+    
+    for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::iterator
+      it = this->socket_addresses.begin();
+      it != this->socket_addresses.end(); ++it) {
+      it->first->Close();
+    }
+    
+    Ipv4RoutingProtocol::DoDispose ();
+  }
+}
+
+// ------------------------------------------------------------------
+// Implementation of Ipv4Protocol inherited functions
 Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
   // STUB
   return 0;
@@ -82,8 +111,8 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface,
     0).GetLocal ());
   
-  if (this->free_sockets.empty()) {
-    NS_LOG_ERROR("Out of free sockets");
+  if (interface >= MAX_INTERFACES) {
+    NS_LOG_ERROR("Interfaceindex exceeds MAX_INTERFACES");
   }
   
   // Get the interface pointer
@@ -114,9 +143,8 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   socket->SetIpRecvTtl(true);
   
   // Insert socket into the lists
-  this->sockets[this->free_sockets.front()] = socket;
+  this->sockets[interface] = socket;
   
-  this->free_sockets.pop_front();
   this->socket_addresses.insert(std::make_pair(socket, iface));
   
   
@@ -138,14 +166,11 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   
   NS_ASSERT(socket);
   
-  uint32_t s_index = this->FindSocketIndex(socket);
-  
   socket->Close();
-  this->sockets[s_index] = 0;
-  this->socket_addresses.erase(socket);
-  this->free_sockets.push_front(s_index);
+  this->sockets[interface] = 0;
   
-  this->rtable.PurgeInterface(s_index);
+  this->socket_addresses.erase(socket);
+  this->rtable.PurgeInterface(interface);
   // TODO: Close Broadcast, if any
   
 }
@@ -182,8 +207,7 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   socket->SetIpRecvTtl(true);
   
   // Insert socket into the lists
-  this->sockets[this->free_sockets.front()] = socket;
-  this->free_sockets.pop_front();
+  this->sockets[interface] = socket;
   this->socket_addresses.insert(std::make_pair(socket, iface));
   
 }
@@ -202,7 +226,6 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
   }
   
   
-  uint32_t s_index = this->FindSocketIndex(socket);  
   socket->Close();
   // If there is more than one address on this interface, close then
   // socket and reopen it again with new addess
@@ -221,8 +244,7 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     socket->SetAllowBroadcast(true);
     socket->SetIpRecvTtl(true);
     
-    this->sockets[this->free_sockets.front()] = socket;
-    this->free_sockets.pop_front();
+    this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
     
   }
@@ -231,11 +253,10 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     
     NS_LOG_LOGIC("Address removed, closing socket");
     
-    this->sockets[s_index] = 0;
+    this->sockets[interface] = 0;
     this->socket_addresses.erase(socket);
-    this->free_sockets.push_front(s_index);
     
-    this->rtable.PurgeInterface(s_index);
+    this->rtable.PurgeInterface(interface);
   }
   
   
@@ -274,9 +295,8 @@ void RoutingProtocol::Start() {
   NS_LOG_FUNCTION(this);
   
   // Initialize all sockets as null pointers
-  for (uint32_t i = 0; i < MAX_SOCKETS; i++) {
+  for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
     this->sockets[i] = 0;
-    this->free_sockets.push_back(i);
   }
   
   // TODO:Start Hello Timer here?
@@ -300,7 +320,7 @@ Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (Ipv4InterfaceAddres
 
 uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
   uint32_t s_index = 0;
-  for (s_index = 0; s_index < MAX_SOCKETS; s_index++) {
+  for (s_index = 0; s_index < MAX_INTERFACES; s_index++) {
     if (this->sockets[s_index] == s) break;
   }
   return s_index;

@@ -54,21 +54,26 @@ RoutingTable::RoutingTable() {
   this->n_dst = 0;
   this->n_nb = 0;
   
+  this->free_rows = new list<uint32_t>();
+  this->free_collumns = new list<uint32_t>();
+  
   for(uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
-    free_rows.push_back(i);
+    this->free_rows->push_back(i);
   }
   
   for(uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
-    free_collumns.push_back(i);
+    this->free_collumns->push_back(i);
   }
   
 }
 RoutingTable::~RoutingTable() {
+    delete(this->free_rows);
+    delete(this->free_collumns);
 }
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now) {
   
-  if (this->free_rows.empty()) {
+  if (this->free_rows->empty()) {
     NS_LOG_ERROR(this << "rtable full->no rows");
   }
   
@@ -82,8 +87,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
   
   // Insert Neighbor into std::map
   this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo(free_rows.front())));
-  this->free_rows.pop_front();
+    NeighborInfo(free_rows->front())));
+  this->free_rows->pop_front();
   
   // Increase number of neigbors
   this->n_nb++;
@@ -92,7 +97,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
-  if (this->free_collumns.empty()) {
+  if (this->free_collumns->empty()) {
     NS_LOG_ERROR(this << "rtable full->no collumns");
   }
   
@@ -104,8 +109,8 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
   // Insert Destination into std::map
   this->dsts.insert(std::make_pair(address, 
-    DestinationInfo(free_collumns.front())));
-  this->free_collumns.pop_front();
+    DestinationInfo(free_collumns->front())));
+  this->free_collumns->pop_front();
   
   this->n_dst++;
   return true;
@@ -129,7 +134,7 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   }
   
   // Add index to freestd::list
-  this->free_rows.push_front(delete_index);
+  this->free_rows->push_front(delete_index);
   
   // Then remove the entry from the std::map of neighbors
   this->nbs.erase(it);
@@ -153,7 +158,7 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
   }
   
   // Add the index to the freestd::list
-  this->free_collumns.push_front(delete_index);
+  this->free_collumns->push_front(delete_index);
   
   // Remove destination entry from the std::map
   this->dsts.erase(it);

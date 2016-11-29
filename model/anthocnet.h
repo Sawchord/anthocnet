@@ -31,7 +31,7 @@
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
 
-#define MAX_SOCKETS 10
+#define MAX_INTERFACES 10
 #define ANTHOCNET_PORT 5555
 
 
@@ -60,6 +60,11 @@ public:
   virtual void NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address);
   virtual void SetIpv4 (Ptr<Ipv4> ipv4);
   virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const;
+
+  virtual void DoDispose();
+  
+protected:
+    virtual void DoInitialize();
   
 private:
   
@@ -88,15 +93,15 @@ private:
   Ptr<Ipv4> ipv4;
   
   // Holds information about the interfaces
-  Ptr<Socket> sockets[MAX_SOCKETS];
-  list<uint32_t> free_sockets;
+  Ptr<Socket> sockets[MAX_INTERFACES];
+  //list<uint32_t>* free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
   
   
   //-----------------------------------------------
   // All the network config stuff go here 
   
-  // The time to life a new born forward and
+  // The time to life of a new born forward and
   uint8_t initial_ttl;
   
   // The frequency in which to send Hello Ants
