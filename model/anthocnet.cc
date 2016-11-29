@@ -76,10 +76,6 @@ void RoutingProtocol::DoInitialize() {
 void RoutingProtocol::DoDispose() {
     NS_LOG_FUNCTION(this);
     
-    for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
-      if (this->sockets[i] != 0) {
-        this->sockets[i]->Close();
-    }
     
     for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::iterator
       it = this->socket_addresses.begin();
@@ -88,7 +84,7 @@ void RoutingProtocol::DoDispose() {
     }
     
     Ipv4RoutingProtocol::DoDispose ();
-  }
+    
 }
 
 // ------------------------------------------------------------------

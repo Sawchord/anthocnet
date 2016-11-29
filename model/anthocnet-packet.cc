@@ -135,7 +135,7 @@ operator<< (std::ostream & os, TypeHeader const & h) {
 // Ant Header
 
 AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst) : 
-src(src), dst(dst){}
+src(src), dst(dst), T(0.0){}
 
 AntHeader::~AntHeader() {}
 
@@ -156,7 +156,7 @@ TypeId AntHeader::GetInstanceTypeId () const {
 uint32_t AntHeader::GetSerializedSize () const {
   //Size: 1 TypeTag 1 Reserverd 1 TTL/MaxHops 1 Hops
   // 4 Src 4 Src 4 Time
-  return 32 + this->ant_stack.size();
+  return 20 + this->ant_stack.size();
 }
 
 void AntHeader::Serialize (Buffer::Iterator i) const {
@@ -169,6 +169,9 @@ void AntHeader::Serialize (Buffer::Iterator i) const {
   // Write src and dst
   WriteTo (i, this->src);
   WriteTo (i, this->dst);
+  
+  // Write the time value
+  i.WriteHtonU64((uint64_t) this->T);
   
   // Serialize the AntStack
   for (std::list<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
@@ -191,6 +194,8 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   ReadFrom(i, this->src);
   ReadFrom(i, this->dst);
   
+  // Read the time value
+  this->T = (double) i.ReadNtohU64();
   
   // Erase the existing antstack
   this->ant_stack.erase(this->ant_stack.begin(), this->ant_stack.end());

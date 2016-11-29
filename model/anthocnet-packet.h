@@ -40,6 +40,11 @@ enum MessageType {
   AHNTYPE_ERR = 7 //!< Error Ant
 };
 
+/**
+ * \brief This is a class used to read 
+ *        out any Header Type that the AntHocNet 
+ *        protocol knows.
+ */
 class TypeHeader : public Header {
 public:
   
@@ -67,6 +72,30 @@ private:
   bool valid;
 };
 
+
+/**
+ * \brief Base class for all Ant types used
+ *        in this protocol. The field types do 
+ *        not change, only the way, these are 
+ *        accesses, interpreted and calculated
+ * \verbatim
+0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |     Type      |    Reserved   |  TTL/Max Hops |   Hop Count   |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                    Originator IP Address                      |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                    Destination IP Address                     |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                                                               |
+  +                  Aggregated Time Value                        +
+  |                                                               |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                         Ant Stack                             |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * \endverbatim
+ */
 class AntHeader : public Header {
 public:
   //ctor
@@ -107,9 +136,15 @@ private:
   Ipv4Address src;
   Ipv4Address dst;
   
+  double T;
+  
   // All the ants travelled so far/ yet to travel
   std::list<Ipv4Address> ant_stack;
   
+};
+
+class HelloAntHeader : public AntHeader {
+    
 };
 
 
