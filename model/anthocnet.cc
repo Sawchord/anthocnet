@@ -37,7 +37,7 @@ namespace ahn {
 
 //ctor
 RoutingProtocol::RoutingProtocol ():
-  initial_ttl(20),
+  initial_ttl(INITIAL_TTL),
   hello_interval(Seconds(1)),
   hello_timer(Timer::CANCEL_ON_DESTROY)
   {}

@@ -31,6 +31,7 @@ namespace ns3 {
 namespace ahn {
 
 enum MessageType {
+  AHNTYPE_FW_UNKNOWN = 0,
   AHNTYPE_FW_ANT = 1, //!< Forward Ant
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
   AHNTYPE_BW_ANT = 3, //!< Backward Ant
@@ -101,7 +102,10 @@ public:
   //ctor
   AntHeader (
     Ipv4Address src = Ipv4Address(),
-    Ipv4Address dst = Ipv4Address()
+    Ipv4Address dst = Ipv4Address(),
+    uint8_t ttl_or_max_hops = 20,
+    uint8_t hops = 0,
+    double T = 0.0
   );
   
   //dtor
@@ -132,10 +136,7 @@ public:
   
   // The way of accessing 
   
-private:
-  
-  // Needed to identyfy the type of ant
-  MessageType type; 
+protected:
   
   // Not used for now, set 0 on send, ignored on recv
   uint8_t reserved;
@@ -160,7 +161,7 @@ private:
 
 /**
  * \brief A HelloAnt is basically a ForwardAnt, 
- *        but without a Destination Address (Set all 0).
+ *        but without a Destination Address.
  *        Its TTL should always be 1 and its HopCount 0.
  *        All HelloAnts not following this convention need 
  *        to be discarded.
@@ -171,6 +172,12 @@ private:
  */
 class HelloAntHeader : public AntHeader {
 public:
+  // ctor
+  HelloAntHeader(Ipv4Address src);
+  // dtor
+  ~HelloAntHeader();
+  
+  virtual bool IsValid();
 };
 
 

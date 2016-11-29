@@ -19,8 +19,11 @@
 #ifndef ANTHOCNETRTABLE_H
 #define ANTHOCNETRTABLE_H
 
+// TODO: Make these settable by GetTypeId()
+//       instead of hardcoding them
 #define MAX_NEIGHBORS 30
 #define MAX_DESTINATIONS 100
+
 
 #include <map>
 #include <list>

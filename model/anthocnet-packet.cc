@@ -134,8 +134,12 @@ operator<< (std::ostream & os, TypeHeader const & h) {
 //----------------------------------------------------------
 // Ant Header
 
-AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst) : 
-src(src), dst(dst), T(0.0){}
+AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst, 
+  uint8_t ttl_or_max_hops, uint8_t hops, double T) : 
+reserved(0), 
+ttl_or_max_hops(ttl_or_max_hops), hops(hops),
+src(src), dst(dst), T(T)
+{}
 
 AntHeader::~AntHeader() {}
 
@@ -164,7 +168,6 @@ uint32_t AntHeader::GetSerializedSize () const {
 
 void AntHeader::Serialize (Buffer::Iterator i) const {
   // Write the first line
-  i.WriteU8 ((uint8_t) this->type);
   i.WriteU8 (0x0); // Reserved is always 0 for now
   i.WriteU8 (this->ttl_or_max_hops);
   i.WriteU8 (this->hops);
@@ -188,7 +191,6 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   Buffer::Iterator i = start;
   
   // Read the first line
-  this->type = (MessageType) i.ReadU8 ();
   this->reserved = 0x0; i.ReadU8 (); // Skip reserved
   this->ttl_or_max_hops = i.ReadU8 ();
   this->hops = i.ReadU8 ();
@@ -203,7 +205,7 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   // Erase the existing antstack
   this->ant_stack.erase(this->ant_stack.begin(), this->ant_stack.end());
   // Read the antstack
-  for (uint32_t c = 0; c<= this->hops; c++) {
+  for (uint32_t c = 0; c < this->hops; c++) {
     Ipv4Address temp;
     ReadFrom(i, temp);
     this->ant_stack.push_back(temp);
@@ -250,10 +252,26 @@ operator<< (std::ostream & os, AntHeader const & h) {
 }
 
 bool AntHeader::IsValid() {
+  // STUB
   // TODO: Make the check correct
   return true;
 }
 
+
+HelloAntHeader::HelloAntHeader (Ipv4Address src):
+AntHeader(src, Ipv4Address("255.255.255.255"), 1, 0, 0.0)
+{}
+
+HelloAntHeader::~HelloAntHeader() {}
+
+bool HelloAntHeader::IsValid() {
+  
+  if(this->ttl_or_max_hops != 1 || this->hops != 0) {
+    return false;
+  }
+  
+  return true;
+}
 
 }
 }

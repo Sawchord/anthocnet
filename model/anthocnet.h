@@ -31,9 +31,11 @@
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
 
+// TODO: Make these settable by GetTypeId()
+//       instead of hardcoding them
 #define MAX_INTERFACES 10
 #define ANTHOCNET_PORT 5555
-
+#define INITIAL_TTL
 
 namespace ns3 {
 namespace ahn {
