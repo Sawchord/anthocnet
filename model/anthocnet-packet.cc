@@ -153,6 +153,9 @@ TypeId AntHeader::GetInstanceTypeId () const {
   return GetTypeId ();
 }
 
+
+// ----------------------------------------------------
+// Implementation of functions inherited from Header class
 uint32_t AntHeader::GetSerializedSize () const {
   //Size: 1 TypeTag 1 Reserverd 1 TTL/MaxHops 1 Hops
   // 4 Src 4 Src 4 Time
@@ -225,12 +228,31 @@ void AntHeader::Print(std::ostream &os) const {
   }
 }
 
+// --------------------------------------------------------
+// Setters and Getters 
+Ipv4Address AntHeader::GetSrc() {
+    return this->src;
+}
+void AntHeader::SetSrc(Ipv4Address src) {
+    this->src = src;
+}
+Ipv4Address AntHeader::GetDst() {
+    return this->dst;
+}
+void AntHeader::SetDst(Ipv4Address dst) {
+    this->dst = dst;
+}
+
 std::ostream &
 operator<< (std::ostream & os, AntHeader const & h) {
   h.Print (os);
   return os;
 }
 
+bool AntHeader::IsValid() {
+  // TODO: Make the check correct
+  return true;
+}
 
 
 }

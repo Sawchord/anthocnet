@@ -108,14 +108,29 @@ public:
   ~AntHeader();
   
   // Header serialization/deserialization
+  // These functions do not need to be overwritten
+  // by inheriting AntTypes, thus there is no need
+  // for them to be virtual
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
   uint32_t GetSerializedSize () const;
-  void Serialize (Buffer::Iterator start) const;
-  uint32_t Deserialize (Buffer::Iterator start);
-  void Print (std::ostream &os) const;
+  void Serialize (Buffer::Iterator) const;
+  uint32_t Deserialize (Buffer::Iterator);
+  void Print (std::ostream&) const;
   
   bool operator== (AntHeader const & o) const;
+  
+  // Checks, wether this Ant is valid
+  virtual bool IsValid();
+  
+  // Access to Src and Dst fields should always be granted
+  Ipv4Address GetSrc();
+  void SetSrc(Ipv4Address);
+  
+  Ipv4Address GetDst();
+  void SetDst(Ipv4Address);
+  
+  // The way of accessing 
   
 private:
   
@@ -143,8 +158,19 @@ private:
   
 };
 
+/**
+ * \brief A HelloAnt is basically a ForwardAnt, 
+ *        but without a Destination Address (Set all 0).
+ *        Its TTL should always be 1 and its HopCount 0.
+ *        All HelloAnts not following this convention need 
+ *        to be discarded.
+ * \note Since a lot of fields in the Ant are unused, on 
+ *       might consider introducing a special HelloPacket,
+ *       which is not an Ant. However, since this is a proof
+ *       of concept, readability goes over conciseness.
+ */
 class HelloAntHeader : public AntHeader {
-    
+public:
 };
 
 

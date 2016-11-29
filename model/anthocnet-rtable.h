@@ -84,7 +84,7 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (uint32_t id, Time now = Simulator::Now());
+  NeighborInfo (uint32_t, Time = Simulator::Now());
   //dtor
   ~NeighborInfo();
   
