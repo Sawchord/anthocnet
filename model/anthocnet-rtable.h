@@ -70,7 +70,7 @@ class DestinationInfo {
 public:
   
   //ctor
-  DestinationInfo(uint32_t index, Time now = Simulator::Now());
+  DestinationInfo(uint32_t, Time);
   //dtor
   ~DestinationInfo();
   
@@ -79,7 +79,7 @@ public:
   
   // After a certain amount of time without usage
   // the node consideres the destination useless and deletes it
-  Time last_time_used;
+  Time expires_in;
   
 };
 
@@ -87,7 +87,7 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (Time = Simulator::Now());
+  NeighborInfo (Time);
   //dtor
   ~NeighborInfo();
   
@@ -158,6 +158,13 @@ public:
    * \param dst_expire The initia ttl of destination entries
    */
   void SetExpireTimes(Time, Time);
+  
+  /**
+   * \brief Updates the expire times of all neighbors and destinations.
+   *        Removes the ones, that are expired.
+   * \param interval The time interval, in which this function is called.
+   */
+  void Update(Time);
   
   
 private:

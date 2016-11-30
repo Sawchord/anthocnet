@@ -36,9 +36,9 @@ RoutingTableEntry::~RoutingTableEntry() {
 
 
 // ------------------------------------------------------
-DestinationInfo::DestinationInfo(uint32_t index, Time now) :
+DestinationInfo::DestinationInfo(uint32_t index, Time expire) :
   index(index),
-  last_time_used(now)
+  expires_in(expire)
   {}
 
 DestinationInfo::~DestinationInfo() {
@@ -46,8 +46,8 @@ DestinationInfo::~DestinationInfo() {
 
 
 // --------------------------------------------------------
-NeighborInfo::NeighborInfo(Time now) :
-  expires_in(now)
+NeighborInfo::NeighborInfo(Time expire) :
+  expires_in(expire)
   {}
 
 NeighborInfo::~NeighborInfo() {
@@ -66,7 +66,7 @@ RoutingTable::RoutingTable(Time nb_expire, Time dst_expire) :
 RoutingTable::~RoutingTable() {
 }
 
-bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now) {
+bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire) {
   
   if (iface_index < MAX_NEIGHBORS) {
     NS_LOG_ERROR("iface index to large");
@@ -88,14 +88,14 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
   
   // Insert Neighbor into std::map
   this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo()));
+    NeighborInfo(expire)));
   
   // Increase number of neigbors
   this->n_nb++;
   return true;
 }
 
-bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
+bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   
   if (this->n_dst == MAX_DESTINATIONS-1) {
     NS_LOG_ERROR(this << "Out of destination slots in rtable");
@@ -108,7 +108,8 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
     return false;
   }
   
-  // TODO: this is vastly inefficient and should be replaced in some sensible way
+  // TODO: this is vastly inefficient and 
+  // should be replaced in some sensible way
   bool usemap[MAX_DESTINATIONS] = {false};
   
   for (std::map<Ipv4Address, DestinationInfo>::iterator 
@@ -119,7 +120,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     if (!usemap[i]) {
       
-      this->dsts.insert(std::make_pair(address, DestinationInfo(i)));
+      this->dsts.insert(std::make_pair(address, DestinationInfo(i, expire)));
       
       break;
     }
@@ -210,30 +211,80 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
   
   // Since you cannot delete a entries of a map while 
   // iterating over it, use mark and sweep
-  std::list<std::map<nb_t, NeighborInfo>::iterator > mark;
+  std::list<nb_t> mark;
   
   // Iterate over neigbors and mark deletables
   for(std::map<nb_t, NeighborInfo>::iterator it =
     this->nbs.begin(); it != this->nbs.end(); ++it) {
     if (it->first.first == interface) {
       // Assign by value
-      mark.push_back(it);
+      mark.push_back(it->first);
     }
   }
   
   
   // Sweep deletables
-  for( 
-    std::list<std::map<nb_t, NeighborInfo>::iterator >::iterator
-    it = mark.begin(); it != mark.end(); ++it) {
-    this->RemoveNeighbor((**it).first.first,
-                         (**it).first.second);
+  for(std::list<nb_t>::iterator it = mark.begin(); it != mark.end(); ++it) {
+    
+    std::map<nb_t, NeighborInfo>::iterator it1 = this->nbs.find(*it);
+    
+    this->RemoveNeighbor(it1->first.first, it1->first.second);
     }
 }
 
 void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
   this->initial_lifetime_nb = nb_expire;
   this->initial_lifetime_dst = dst_expire;
+}
+
+
+void RoutingTable::Update(Time interval) {
+  
+  // Update neighbors
+  std::list<nb_t> nb_mark;
+  for (std::map<nb_t, NeighborInfo>::iterator it =
+    this->nbs.begin(); it != this->nbs.end(); ++it) {
+    
+    Time dt = it->second.expires_in - interval;
+    
+    if (dt <= Seconds(0)) {
+      nb_mark.push_back(it->first);
+    } else {
+      it->second.expires_in = dt;
+    }
+  }
+  
+  for (std::list<nb_t>::iterator it = nb_mark.begin();
+    it != nb_mark.end(); ++it) {
+    
+    std::map<nb_t, NeighborInfo>::iterator it1 = this->nbs.find(*it);
+    
+    this->RemoveNeighbor(it1->first.first, it1->first.second);
+  }
+  
+  // Update destinations
+  std::list<Ipv4Address> dst_mark;
+  for (std::map<Ipv4Address, DestinationInfo>::iterator
+    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
+    
+    Time dt = it->second.expires_in - interval;
+    
+    if (dt <= Seconds(0)) {
+      dst_mark.push_back(it->first);
+    } else {
+      it->second.expires_in = dt;
+    }
+  }
+  
+  for (std::list<Ipv4Address>::iterator it = dst_mark.begin();
+    it != dst_mark.end(); ++it) {
+    
+    std::map<Ipv4Address, DestinationInfo>::iterator it1 
+      = this->dsts.find(*it);
+    
+    this->RemoveDestination(it1->first);
+  }
+  
 }
 
 }

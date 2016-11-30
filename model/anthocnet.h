@@ -87,6 +87,9 @@ private:
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);
   
+  // Callback to do a deferred send
+  void Send(Ptr<Socket>, Ptr<Packet>, Ipv4Address);
+  
   // Send a HelloAnt every other second
   void HelloTimerExpire();
   

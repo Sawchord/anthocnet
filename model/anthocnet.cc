@@ -364,12 +364,52 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // STUB
 }
 
+// Callback function to send something in a deffered manner
+void RoutingProtocol::Send(Ptr<Socket> socket,
+  Ptr<Packet> packet, Ipv4Address destination) {
+  socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
+}
+
 void RoutingProtocol::HelloTimerExpire() {
-  //STUB
+  NS_LOG_FUNCTION(this);
+  
+  // send a hello over each socket
+  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
+    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+    
+    Ptr<Socket> socket = it->first;
+    Ipv4InterfaceAddress iface = it->second;
+    
+    Ipv4Address src = iface.GetLocal();
+    
+    HelloAntHeader hello_ant(src);
+    TypeHeader type_header(AHNTYPE_HELLO);
+    Ptr<Packet> packet = Create<Packet>();
+    
+    SocketIpTtlTag tag;
+    tag.SetTtl(1);
+    
+    packet->AddPacketTag(tag);
+    packet->AddHeader(hello_ant);
+    packet->AddHeader(type_header);
+    
+    // Send Hello via local broadcast
+    Ipv4Address destination("255.255.255.255");
+    
+    // TODO: Use real jitter in simulation
+    Time jitter = MilliSeconds(0);
+    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+      this, socket, packet, destination);
+  }
+  
+  this->hello_timer.Schedule(this->hello_interval);
 }
 
 void RoutingProtocol::RTableTimerExpire() {
-  // STUB
+  NS_LOG_FUNCTION(this);
+  
+  this->rtable.Update(this->rtable_update_interval);
+  this->rtable_update_timer.Schedule(this->rtable_update_interval);
 }
 
 
