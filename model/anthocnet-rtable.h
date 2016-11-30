@@ -87,12 +87,9 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (uint32_t, Time = Simulator::Now());
+  NeighborInfo (Time = Simulator::Now());
   //dtor
   ~NeighborInfo();
-  
-  // The index into the rtable array
-  uint32_t index;
   
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
   Time last_lifesign;
@@ -176,9 +173,6 @@ private:
   
   // For neighbors, it is also important to know the interface
   map<nb_t, NeighborInfo> nbs;
-  
-  list<uint32_t>* free_rows;
-  list<uint32_t>* free_collumns;
   
   RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
   

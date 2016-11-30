@@ -42,8 +42,7 @@ DestinationInfo::DestinationInfo(uint32_t index, Time now) :
 DestinationInfo::~DestinationInfo() {
 }
 
-NeighborInfo::NeighborInfo(uint32_t id, Time now) :
-  index(id),
+NeighborInfo::NeighborInfo(Time now) :
   last_lifesign(now)
   {}
 
@@ -54,27 +53,20 @@ RoutingTable::RoutingTable() {
   this->n_dst = 0;
   this->n_nb = 0;
   
-  this->free_rows = new list<uint32_t>();
-  this->free_collumns = new list<uint32_t>();
-  
-  for(uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
-    this->free_rows->push_back(i);
-  }
-  
-  for(uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
-    this->free_collumns->push_back(i);
-  }
-  
 }
 RoutingTable::~RoutingTable() {
-    delete(this->free_rows);
-    delete(this->free_collumns);
 }
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now) {
   
-  if (this->free_rows->empty()) {
-    NS_LOG_ERROR(this << "rtable full->no rows");
+  if (iface_index < MAX_NEIGHBORS) {
+    NS_LOG_ERROR("iface index to large");
+    return false;
+  }
+  
+  if (this->n_nb == MAX_NEIGHBORS-1) {
+      NS_LOG_ERROR("Out of neighbor slots in rtable");
+      return false;
   }
   
   nb_t new_nb = nb_t(iface_index, address);
@@ -87,8 +79,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
   
   // Insert Neighbor into std::map
   this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo(free_rows->front())));
-  this->free_rows->pop_front();
+    NeighborInfo()));
   
   // Increase number of neigbors
   this->n_nb++;
@@ -97,8 +88,9 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time n
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
-  if (this->free_collumns->empty()) {
-    NS_LOG_ERROR(this << "rtable full->no collumns");
+  if (this->n_dst == MAX_DESTINATIONS-1) {
+    NS_LOG_ERROR(this << "Out of destination slots in rtable");
+    return false;
   }
   
   // Check if destination already exists
@@ -107,10 +99,22 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
     return false;
   }
   
-  // Insert Destination into std::map
-  this->dsts.insert(std::make_pair(address, 
-    DestinationInfo(free_collumns->front())));
-  this->free_collumns->pop_front();
+  // TODO: this is vastly inefficient and should be replaced in some sensible way
+  bool usemap[MAX_DESTINATIONS] = {false};
+  
+  for (std::map<Ipv4Address, DestinationInfo>::iterator 
+    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
+     usemap[it->second.index] = true;
+  }
+  
+  for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
+    if (!usemap[i]) {
+      
+      this->dsts.insert(std::make_pair(address, DestinationInfo(i)));
+      
+      break;
+    }
+  }
   
   this->n_dst++;
   return true;
@@ -128,13 +132,11 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   }
   
   // First, reset the row in the array
-  uint32_t delete_index = it->second.index;
+  uint32_t delete_index = it->first.first;
   for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     this->rtable[delete_index][i] = RoutingTableEntry();
   }
   
-  // Add index to freestd::list
-  this->free_rows->push_front(delete_index);
   
   // Then remove the entry from the std::map of neighbors
   this->nbs.erase(it);
@@ -156,9 +158,6 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     this->rtable[i][delete_index] = RoutingTableEntry();
   }
-  
-  // Add the index to the freestd::list
-  this->free_collumns->push_front(delete_index);
   
   // Remove destination entry from the std::map
   this->dsts.erase(it);
@@ -183,7 +182,7 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
     
     *stream->GetStream() << it->first.first << ":" << it->first.second;
     
-    uint32_t nb_index = it->second.index;
+    uint32_t nb_index = it->first.first;
     
     for (std::map<Ipv4Address, DestinationInfo>::const_iterator 
       it1 = this->dsts.begin(); it1 != this->dsts.end(); ++it1) {
