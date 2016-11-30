@@ -34,6 +34,8 @@ RoutingTableEntry::~RoutingTableEntry() {
 }
 
 
+
+// ------------------------------------------------------
 DestinationInfo::DestinationInfo(uint32_t index, Time now) :
   index(index),
   last_time_used(now)
@@ -42,18 +44,25 @@ DestinationInfo::DestinationInfo(uint32_t index, Time now) :
 DestinationInfo::~DestinationInfo() {
 }
 
+
+// --------------------------------------------------------
 NeighborInfo::NeighborInfo(Time now) :
-  last_lifesign(now)
+  expires_in(now)
   {}
 
 NeighborInfo::~NeighborInfo() {
 }
 
-RoutingTable::RoutingTable() {
-  this->n_dst = 0;
-  this->n_nb = 0;
+
+
+
+RoutingTable::RoutingTable(Time nb_expire, Time dst_expire) :
+  n_dst(0),
+  n_nb(0),
+  initial_lifetime_nb(nb_expire),
+  initial_lifetime_dst(dst_expire)
+{}
   
-}
 RoutingTable::~RoutingTable() {
 }
 
@@ -121,14 +130,14 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time now) {
   
 }
 
-bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
+void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   nb_t rem_nb = nb_t(iface_index, address);
   
   // Check, if Neighbor exists
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
   if (it == this->nbs.end()) {
-    return false;
+    return;
   }
   
   // First, reset the row in the array
@@ -143,14 +152,14 @@ bool RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   // Decrease counter of neighbors
   this->n_nb--;
-  return true;
+  return;
 }
 
-bool RoutingTable::RemoveDestination(Ipv4Address address) {
+void RoutingTable::RemoveDestination(Ipv4Address address) {
   // Check, if the destination exists
   std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it == this->dsts.end()) {
-    return false;
+    return;
   }
   
   // Reset the collumn in the array
@@ -164,7 +173,7 @@ bool RoutingTable::RemoveDestination(Ipv4Address address) {
   
   // Decrease the counter of destination
   this->n_dst--;
-  return true;
+  return;
 }
 
 void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
@@ -220,6 +229,11 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
     this->RemoveNeighbor((**it).first.first,
                          (**it).first.second);
     }
+}
+
+void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
+  this->initial_lifetime_nb = nb_expire;
+  this->initial_lifetime_dst = dst_expire;
 }
 
 }

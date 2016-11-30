@@ -92,7 +92,7 @@ public:
   ~NeighborInfo();
   
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
-  Time last_lifesign;
+  Time expires_in;
   
 };
 
@@ -101,7 +101,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable();
+  RoutingTable(Time, Time);
   //dtor 
   ~RoutingTable();
     
@@ -130,16 +130,14 @@ public:
    * \param iface_index The interface index of
    *        the neighbor to be removed
    * \param address The address of the neighbor to be removed
-   * \returns True if sucessfully removed, false if not found
    */
-  bool RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
+  void RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
   
   /**
    * \brief Removes a destination from the routing table
    * \param address The address o fthe destination to be removed.
-   * \returns True if successfully removed, false if not found.
    */
-  bool RemoveDestination(Ipv4Address addess);
+  void RemoveDestination(Ipv4Address addess);
   
   /**
    * \brief Outputs a string representation of this RoutingTable.
@@ -152,6 +150,14 @@ public:
    * \param interface_index The interface to purge
    */
   void PurgeInterface(uint32_t interface_index);
+  
+  /**
+   * \brief Resets the initial expire times of neighbor and
+   *        destination entries.
+   * \param nb_expire The initial ttl of neighbor entries
+   * \param dst_expire The initia ttl of destination entries
+   */
+  void SetExpireTimes(Time, Time);
   
   
 private:
@@ -166,15 +172,18 @@ private:
   uint32_t n_dst;
   uint32_t n_nb;
   
-  list<Ipv4InterfaceAddress*> interfaces;
-  uint32_t n_ifaces;
-  
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
   map<nb_t, NeighborInfo> nbs;
   
   RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
+  
+  // The neighbors and destinations get deleted after a while
+  // Neighbors, if there are no HelloAnts incoming for a long time
+  Time initial_lifetime_nb;
+  // Destinations, if they are unused
+  Time initial_lifetime_dst;
   
 };
 

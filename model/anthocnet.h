@@ -35,7 +35,6 @@
 //       instead of hardcoding them
 #define MAX_INTERFACES 10
 #define ANTHOCNET_PORT 5555
-#define INITIAL_TTL
 
 namespace ns3 {
 namespace ahn {
@@ -84,8 +83,35 @@ private:
    */  
   uint32_t FindSocketIndex(Ptr<Socket>)const;
   
+  // ----------------------------------------------
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);
+  
+  // Send a HelloAnt every other second
+  void HelloTimerExpire();
+  
+  // Update the RoutingTable (mainly throw out old data)
+  void RTableTimerExpire();
+  
+  //-----------------------------------------------
+  // All the network config stuff go here 
+  
+  // The time to live of a new born forward and
+  uint8_t initial_ttl;
+  
+  // The frequency in which to send Hello Ants
+  Time hello_interval;
+  Timer hello_timer;
+  
+  // Frequency, in which to update the RoutingTable
+  Time rtable_update_interval;
+  Timer rtable_update_timer;
+  
+  // Time until a neighbor expires
+  Time nb_expire;
+  
+  // Time until a destination expires
+  Time dst_expire;
   
   //----------------------------------------------
   // All the global state of the protocol go here
@@ -98,18 +124,6 @@ private:
   Ptr<Socket> sockets[MAX_INTERFACES];
   //list<uint32_t>* free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
-  
-  
-  //-----------------------------------------------
-  // All the network config stuff go here 
-  
-  // The time to life of a new born forward and
-  uint8_t initial_ttl;
-  
-  // The frequency in which to send Hello Ants
-  Time hello_interval;
-  Timer hello_timer;
-  
   
   
 };

@@ -37,9 +37,14 @@ namespace ahn {
 
 //ctor
 RoutingProtocol::RoutingProtocol ():
-  initial_ttl(INITIAL_TTL),
+  initial_ttl(16),
   hello_interval(Seconds(1)),
-  hello_timer(Timer::CANCEL_ON_DESTROY)
+  hello_timer(Timer::CANCEL_ON_DESTROY),
+  rtable_update_interval(MilliSeconds(1000)),
+  rtable_update_timer(Timer::CANCEL_ON_DESTROY),
+  nb_expire(Seconds(5)),
+  dst_expire(Seconds(300)),
+  rtable(RoutingTable(nb_expire, dst_expire))
   {}
   
 RoutingProtocol::~RoutingProtocol() {}
@@ -58,7 +63,30 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeTimeAccessor(&RoutingProtocol::hello_interval),
     MakeTimeChecker()
   )
-  
+  .AddAttribute ("NeighborExpire",
+    "Time without HelloAnt, after which a neighbor is considered offline.",
+    TimeValue (Seconds(5)),
+    MakeTimeAccessor(&RoutingProtocol::nb_expire),
+    MakeTimeChecker()
+  )
+  .AddAttribute ("DestinationExpire",
+    "Time without traffic, after which a destination is considered offline.",
+    TimeValue (Seconds(300)),
+    MakeTimeAccessor(&RoutingProtocol::dst_expire),
+    MakeTimeChecker()
+  )
+  .AddAttribute("InitialTTL",
+    "The TTL value of a newly generated Ant.",
+    UintegerValue(16),
+    MakeUintegerAccessor(&RoutingProtocol::initial_ttl),
+    MakeUintegerChecker<uint8_t>()
+  )
+  .AddAttribute ("RTableUpdate",
+    "The interval, in which the RoutingTable is updates.",
+    TimeValue (MilliSeconds(1000)),
+    MakeTimeAccessor(&RoutingProtocol::rtable_update_interval),
+    MakeTimeChecker()
+  )
   // TODO: Add other attributes
   ;
   return tid;
@@ -295,11 +323,18 @@ void RoutingProtocol::Start() {
     this->sockets[i] = 0;
   }
   
-  // TODO:Start Hello Timer here?
+  // Start the HelloTimer
+  this->hello_timer.SetFunction(&RoutingProtocol::HelloTimerExpire, this);
+  this->hello_timer.Schedule(this->hello_interval);
   
+  // Start the RTableUpdateTimer
+  this->rtable_update_timer.SetFunction(
+    &RoutingProtocol::RTableTimerExpire, this);
+  this->rtable_update_timer.Schedule(this->rtable_update_interval);
 }
 
-Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (Ipv4InterfaceAddress addr ) const
+Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (
+  Ipv4InterfaceAddress addr ) const
 {
   NS_LOG_FUNCTION (this << addr);
   for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j =
@@ -328,6 +363,16 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // STUB
 }
+
+void RoutingProtocol::HelloTimerExpire() {
+  //STUB
+}
+
+void RoutingProtocol::RTableTimerExpire() {
+  // STUB
+}
+
+
 
 }
 }
