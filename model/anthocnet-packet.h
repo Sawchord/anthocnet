@@ -127,6 +127,12 @@ public:
   // Checks, wether this Ant is valid
   virtual bool IsValid();
   
+  /**
+   * \brief
+   * \returns Hops count of this Ant.
+   */
+  uint8_t GetHops();
+  
   // Access to Src and Dst fields should always be granted
   Ipv4Address GetSrc();
   void SetSrc(Ipv4Address);
@@ -134,7 +140,6 @@ public:
   Ipv4Address GetDst();
   void SetDst(Ipv4Address);
   
-  // The way of accessing 
   
 protected:
   
@@ -228,6 +233,11 @@ public:
    */
   Ipv4Address PeekSrc();
   
+  /**
+   * \brief
+   * \returns TTL of this Ant.
+   */
+  uint8_t GetTTL();
   
 };
   
@@ -242,7 +252,7 @@ public:
 class BackwardAntHeader : public AntHeader {
 public:
   // ctor
-  BackwardAntHeader(ForwardAntHeader);
+  BackwardAntHeader(ForwardAntHeader&);
   //dtor
   ~BackwardAntHeader();
   
@@ -255,20 +265,26 @@ public:
   /** 
    * \brief Updates the node to be used by this node.
    *        Updates stack, hop count and T_ind value.
-   * \note Update must occur before retriving any information
-   *       out of this node. (Contrary to the ForwardAnt)
+   * \note Update must occur before using this node, but src address
+   *       must be retrieved before. (Contrary to the ForwardAnt)
    * \param Ipv4Address The address of this node. Needed for validity check
-   * \param double The T_mac value of this node. See paper
-   * \returns true, if the updated Ant is resendable,
-   *          false, if not (this is dst). 
+   * \param double The T_mac value of this node. (See paper)
+   * \returns The neighbor, which send the ant.
    */
-  bool Update (Ipv4Address, double);
+  Ipv4Address Update (Ipv4Address, double);
+  
   
   /**
    * \brief
    * \returns The address to which to send this Ant along its path
    */
   Ipv4Address PeekDst();
+  
+  /**
+   * \brief
+   * \returns MaxHops of this Ant.
+   */
+  uint8_t GetMaxHops();
   
 };
 

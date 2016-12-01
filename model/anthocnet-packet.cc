@@ -244,6 +244,11 @@ Ipv4Address AntHeader::GetDst() {
 void AntHeader::SetDst(Ipv4Address dst) {
     this->dst = dst;
 }
+uint8_t AntHeader::GetHops () {
+  return this->hops;
+}
+
+
 
 std::ostream &
 operator<< (std::ostream & os, AntHeader const & h) {
@@ -256,7 +261,8 @@ bool AntHeader::IsValid() {
   return true;
 }
 
-
+// -------------------------------------------------
+// HelloAnt stuff
 HelloAntHeader::HelloAntHeader (Ipv4Address src):
 AntHeader(src, Ipv4Address("255.255.255.255"), 1, 0, 0.0)
 {}
@@ -277,6 +283,9 @@ bool HelloAntHeader::IsValid() {
   return true;
 }
 
+
+// ----------------------------------------------
+// ForwardAnt stunff
 ForwardAntHeader::ForwardAntHeader(
   Ipv4Address src, Ipv4Address dst, uint8_t ttl) :
   AntHeader(src, dst, ttl, 0, 0.0)
@@ -316,9 +325,18 @@ Ipv4Address ForwardAntHeader::PeekSrc() {
 }
 
 
-BackwardAntHeader::BackwardAntHeader(ForwardAntHeader input_ant) {
-  //STUB
+uint8_t ForwardAntHeader::GetTTL() {
+  return this->ttl_or_max_hops;
 }
+
+
+// ---------------------------------------------------
+// Backward ant stuff
+BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
+  AntHeader(ia.GetDst(), ia.GetSrc(),ia.GetHops(), 0, 0.0)
+  {
+    // TODO: Copy antstack
+  }
 
 BackwardAntHeader::~BackwardAntHeader() {
 }
@@ -340,13 +358,44 @@ bool BackwardAntHeader::IsValid() {
   return true;
 }
 
-bool BackwardAntHeader::Update(Ipv4Address this_node, double T_ind) {
-  return false;
+Ipv4Address BackwardAntHeader::Update(Ipv4Address this_node, double T_ind) {
+  
+  // Check, if this Ant has reached its destination
+  // In this case,there is only one entry on the stack and the
+  // following code would fail.
+  if (this->ttl_or_max_hops == this->hops) {
+    return this->ant_stack[0];
+  }
+  
+  // Retrive src
+  Ipv4Address ans = this->ant_stack[this->ttl_or_max_hops - this->hops];
+  
+  // Update ant
+  this->hops++;
+  this->T += T_ind;
+  this->ant_stack.pop_back();
+  
+  return ans;
 }
 
 Ipv4Address BackwardAntHeader::PeekDst() {
-  return 0;
+  
+  // Same reason as in Update
+  if (this->ttl_or_max_hops == this->hops) {
+    return 0;
+  }
+  
+  // The top of the stack is the address of this node
+  // and it needs to stay that way. Thus, the destination is the 
+  // entry right bellow that one.
+  return this->ant_stack[this->ttl_or_max_hops - this->hops - 1];
+  
 }
+
+uint8_t BackwardAntHeader::GetMaxHops() {
+  return this->ttl_or_max_hops;
+}
+
 
 }
 }
