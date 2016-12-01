@@ -180,7 +180,7 @@ void AntHeader::Serialize (Buffer::Iterator i) const {
   i.WriteHtonU64((uint64_t) this->T);
   
   // Serialize the AntStack
-  for (std::list<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
+  for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {
     WriteTo(i, *it);
   }
@@ -224,7 +224,7 @@ void AntHeader::Print(std::ostream &os) const {
   << "Destination: " << this->dst
   << "AntStack: ";
   
-  for (std::list<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
+  for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {
     os << *it;
   }
@@ -252,8 +252,7 @@ operator<< (std::ostream & os, AntHeader const & h) {
 }
 
 bool AntHeader::IsValid() {
-  // STUB
-  // TODO: Make the check correct
+  
   return true;
 }
 
@@ -266,11 +265,87 @@ HelloAntHeader::~HelloAntHeader() {}
 
 bool HelloAntHeader::IsValid() {
   
+  // Check the super method
+  if (!AntHeader::IsValid()) {
+    return false;
+  }
+  
   if(this->ttl_or_max_hops != 1 || this->hops != 0) {
     return false;
   }
   
   return true;
+}
+
+ForwardAntHeader::ForwardAntHeader(
+  Ipv4Address src, Ipv4Address dst, uint8_t ttl) :
+  AntHeader(src, dst, ttl, 0, 0.0)
+  {}
+
+ForwardAntHeader::~ForwardAntHeader() {
+}
+
+bool ForwardAntHeader::IsValid() {
+  
+  // Check the super method
+  if (!AntHeader::IsValid()) {
+    return false;
+  }
+  
+  // TODO: More sanity checks
+  
+  return true;
+}
+
+bool ForwardAntHeader::Update(Ipv4Address this_node) {
+  
+  if (this->ttl_or_max_hops == 0) {
+    return false;
+  }
+  
+  this->hops++;
+  this->ttl_or_max_hops--;
+  
+  this->ant_stack.push_back(this_node);
+  
+  return true;
+}
+
+Ipv4Address ForwardAntHeader::PeekSrc() {
+  return this->ant_stack[this->hops];
+}
+
+
+BackwardAntHeader::BackwardAntHeader(ForwardAntHeader input_ant) {
+  //STUB
+}
+
+BackwardAntHeader::~BackwardAntHeader() {
+}
+
+bool BackwardAntHeader::IsValid() {
+  
+  // Check the super method
+  if (!AntHeader::IsValid()) {
+    return false;
+  }
+  
+  // Max_Hops must always be larger than hop count
+  if (this->ttl_or_max_hops < this->hops) {
+    return false;
+  }
+  
+  // TODO: More sanity checks
+  
+  return true;
+}
+
+bool BackwardAntHeader::Update(Ipv4Address this_node, double T_ind) {
+  return false;
+}
+
+Ipv4Address BackwardAntHeader::PeekDst() {
+  return 0;
 }
 
 }

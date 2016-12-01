@@ -24,7 +24,7 @@
 #include "ns3/enum.h"
 #include "ns3/ipv4-address.h"
 #include <map>
-#include <list>
+#include <vector>
 #include "ns3/nstime.h"
 
 namespace ns3 {
@@ -85,7 +85,7 @@ private:
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   |     Type      |    Reserved   |  TTL/Max Hops |   Hop Count   |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |                    Originator IP Address                      |
+  |                        Source IP Address                      |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   |                    Destination IP Address                     |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -155,7 +155,7 @@ protected:
   double T;
   
   // All the ants travelled so far/ yet to travel
-  std::list<Ipv4Address> ant_stack;
+  std::vector<Ipv4Address> ant_stack;
   
 };
 
@@ -165,19 +165,111 @@ protected:
  *        Its TTL should always be 1 and its HopCount 0.
  *        All HelloAnts not following this convention need 
  *        to be discarded.
- * \note Since a lot of fields in the Ant are unused, on 
- *       might consider introducing a special HelloPacket,
- *       which is not an Ant. However, since this is a proof
- *       of concept, readability goes over conciseness.
+ *        The Stack of the Ant is empty.
+ * \note  Since a lot of fields in the Ant are unused, on 
+ *        might consider introducing a special HelloPacket,
+ *        which is not an Ant. However, since this is a proof
+ *        of concept, readability goes over conciseness.
  */
 class HelloAntHeader : public AntHeader {
 public:
   // ctor
-  HelloAntHeader(Ipv4Address src);
+  HelloAntHeader(Ipv4Address);
   // dtor
   ~HelloAntHeader();
   
   virtual bool IsValid();
+};
+
+
+/**
+ * \brief The ForwardAnt is created to find a new route to
+ *        a destination. Every node including the originator
+ *        push their address on the stack. The next node can
+ *        peek at the top element on the stack if it needs to.
+ * \note  Strictly, the originator does not need to push its address
+ *        on the Stack, and the receiving nodes do not need to be
+ *        able to peek on the stack, since all of this information 
+ *        can be retrieved by looking at the IP header.
+ *        However beeing implemented on top of IP, AntHocNet cannot
+ *        make the general assumption of beeing implemented on top
+ *        of an IP protocol. It can also be implemented directly on top
+ *        of a MAC layer.
+ */
+class ForwardAntHeader : public AntHeader {
+public:
+  
+  //ctor
+  ForwardAntHeader(Ipv4Address, Ipv4Address, uint8_t);
+  //dtor
+  ~ForwardAntHeader();
+  
+  /**
+   * \brief Checks, wether this Ant is well formed.
+   * \returns True, if ant is well formed, false otherwise.
+   */
+  virtual bool IsValid();
+  
+  /**
+   * \brief Does all the processing on the ant, that is required
+   *        to forward it. Updates Stack, hop count and ttl.
+   * \note The Ant should be updated, after all important information for
+   *       this node is retrieved. (Contrary to the BackwardAnt)
+   * \param Ipv4Address The Address of this node.
+   * \returns true if the Ant was updated sucessfully, and can be resend.
+   *          false if the Ant cannot be resend. (Reached end of life or 
+   *          this node is the destination)
+   */
+  bool Update(Ipv4Address);
+  
+  /**
+   * \brief Looks at the address on top of stack.
+   * \returns The address on top of the stack
+   */
+  Ipv4Address PeekSrc();
+  
+  
+};
+  
+
+
+/**
+ * \brief The BackwardAnt. It can only be created out of a ForwardAnt.
+ * \note If a node wants to generate a Backward and, it has to Update the Forward,
+ *       then generate the BackwardAnt. It does not need to be updated
+ *       again after that.
+ */
+class BackwardAntHeader : public AntHeader {
+public:
+  // ctor
+  BackwardAntHeader(ForwardAntHeader);
+  //dtor
+  ~BackwardAntHeader();
+  
+  /**
+   * \brief Checks, whether this Ant is well formed.
+   * \returns True, if ant is well formed, false otherwise.
+   */
+  virtual bool IsValid();
+  
+  /** 
+   * \brief Updates the node to be used by this node.
+   *        Updates stack, hop count and T_ind value.
+   * \note Update must occur before retriving any information
+   *       out of this node. (Contrary to the ForwardAnt)
+   * \param Ipv4Address The address of this node. Needed for validity check
+   * \param double The T_mac value of this node. See paper
+   * \returns true, if the updated Ant is resendable,
+   *          false, if not (this is dst). 
+   */
+  bool Update (Ipv4Address, double);
+  
+  /**
+   * \brief
+   * \returns The address to which to send this Ant along its path
+   */
+  Ipv4Address PeekDst();
+  
 };
 
 
