@@ -364,6 +364,14 @@ Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (
   return socket;
 }
 
+int64_t RoutingProtocol::AssignStreams (int64_t stream)
+{
+  NS_LOG_FUNCTION (this << stream);
+  uniform_random->SetStream (stream);
+  return 1;
+}
+
+
 uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
   uint32_t s_index = 0;
   for (s_index = 0; s_index < MAX_INTERFACES; s_index++) {
@@ -462,13 +470,20 @@ void RoutingProtocol::HelloTimerExpire() {
     packet->AddHeader(hello_ant);
     packet->AddHeader(type_header);
     
+    
     // Send Hello via local broadcast
-    //Ipv4Address destination("255.255.255.255");
-    Ipv4Address destination = iface.GetBroadcast();
+    Ipv4Address destination("255.255.255.255");
     
+    // Alternatively send via Subnet broadcast?
+    //Ipv4Address destination = iface.GetBroadcast();
+    // This one requests routes from the routing protocol
+    // FIXME: Which is better?
     
-    // TODO: Use real jitter in simulation
-    Time jitter = MilliSeconds(0);
+    // Jittery send simulates clock divergence
+//     // FIXME: Next line causes segfault
+    //Time jitter = MilliSeconds(MilliSeconds
+    //  (uniform_random->GetInteger (0, 10)));
+    Time jitter = Seconds(0);
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
       this, socket, packet, destination);
   }
@@ -491,10 +506,10 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
   
   NS_LOG_FUNCTION (this << src << dst << iface);
   
-  if (dst != Ipv4Address("255.255.255.255")) {
-    NS_LOG_WARN("Received HelloAnt, that was not sended broadcast");
-    return;
-  }
+//   if (dst != Ipv4Address("255.255.255.255")) {
+//     NS_LOG_WARN("Received HelloAnt, that was not send broadcast");
+//     return;
+//   }
   
   HelloAntHeader ant;
   packet->RemoveHeader(ant);

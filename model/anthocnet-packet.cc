@@ -165,9 +165,9 @@ TypeId AntHeader::GetInstanceTypeId () const {
 // ----------------------------------------------------
 // Implementation of functions inherited from Header class
 uint32_t AntHeader::GetSerializedSize () const {
-  //Size: 1 TypeTag 1 Reserverd 1 TTL/MaxHops 1 Hops
+  //Size: 1 Reserverd 1 TTL/MaxHops 1 Hops
   // 4 Src 4 Src 4 Time
-  return 20 + this->ant_stack.size();
+  return 19 + this->ant_stack.size();
 }
 
 void AntHeader::Serialize (Buffer::Iterator i) const {
@@ -268,7 +268,10 @@ bool AntHeader::IsValid() {
 // -------------------------------------------------
 // HelloAnt stuff
 HelloAntHeader::HelloAntHeader():
-AntHeader(0, 0, 1, 0, 0.0)
+// NOTE: Nullpointers as Ipv4Addresses do not work
+// the logger prints them on inialization and that raises a 
+// NULL-Pointer induced segfault.
+AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), 1, 0, 0.0)
 {}
 
 HelloAntHeader::HelloAntHeader (Ipv4Address src):

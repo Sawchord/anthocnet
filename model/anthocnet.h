@@ -77,6 +77,16 @@ private:
     (Ipv4InterfaceAddress addr) const;
   
   /**
+  * Assign a fixed random variable stream number to the random variables
+  * used by this model.  Return the number of streams (possibly zero) that
+  * have been assigned.
+  *
+  * \param stream first stream index to use
+  * \return the number of stream indices assigned by this model
+  */
+  int64_t AssignStreams (int64_t stream);
+    
+  /**
    * \brief Finds the index of the Socket, used in the rtable.
    * \param socket The pointer to the sockeT;
    * \returns The index into the socket table.
@@ -127,6 +137,8 @@ private:
   
   // Time until a destination expires
   Time dst_expire;
+  
+  Ptr<UniformRandomVariable> uniform_random;
   
   //----------------------------------------------
   // All the global state of the protocol go here
