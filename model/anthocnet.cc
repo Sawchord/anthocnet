@@ -118,6 +118,7 @@ void RoutingProtocol::DoDispose() {
 // ------------------------------------------------------------------
 // Implementation of Ipv4Protocol inherited functions
 Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
+  NS_LOG_FUNCTION(this << "oif" << oif);
   // STUB
   return 0;
 }
@@ -127,6 +128,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
                  UnicastForwardCallback ucb, MulticastForwardCallback mcb,
                  LocalDeliverCallback lcb, ErrorCallback ecb) {
   // STUB
+  
+  NS_LOG_FUNCTION(this);
   return false;
 }
 
@@ -149,9 +152,10 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   }
   
   Ipv4InterfaceAddress iface = l3->GetAddress (interface, 0);
-  if (iface.GetLocal () == Ipv4Address ("127.0.0.1"))
+  if (iface.GetLocal () == Ipv4Address ("127.0.0.1")) {
     return;
-  
+  }
+    
   // Set up the socket to be able to receive
   Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),
     UdpSocketFactory::GetTypeId ());
@@ -160,8 +164,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   socket->SetRecvCallback(MakeCallback(
       &RoutingProtocol::Recv, this));
   
-  socket->Bind(InetSocketAddress(iface.GetLocal(),
-                                 ANTHOCNET_PORT));
+  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
   
   socket->SetAllowBroadcast(true);
   socket->SetIpRecvTtl(true);
@@ -201,11 +204,15 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
 
 void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
   
-  NS_LOG_FUNCTION(this << "interface " << interface 
-    << " address " << address);
+//   NS_LOG_FUNCTION(this << "interface" << interface 
+//     << " address" << address);
   
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
-  if (!l3->IsUp(interface)) return;
+  // FIXME: Why does AODV worl with the following lines, but anthocnet not?
+//   if (!l3->IsUp(interface)) {
+//     NS_LOG_WARN("Interface is still down");
+//     return;
+//   }
   
   if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN("AntHocNet does not support more than one address per interface");
@@ -217,7 +224,10 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   Ptr<Socket> socket = this->FindSocketWithInterfaceAddress(iface);
   
   // Need to create socket, if it already exists, there is nothing to do
-  if (socket) return;
+  if (socket) {
+    NS_LOG_FUNCTION(this << "interface" << interface 
+    << " address" << address << "socket" << socket);
+  };
   
   // Create and set up socket
   socket = Socket::CreateSocket(GetObject<Node>(), 
@@ -233,6 +243,11 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   // Insert socket into the lists
   this->sockets[interface] = socket;
   this->socket_addresses.insert(std::make_pair(socket, iface));
+  
+  
+  NS_LOG_FUNCTION(this << "interface" << interface 
+    << " address" << address << "socket" << socket);
+  return;
   
 }
 
@@ -370,6 +385,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   Ipv4Address src = inet_source.GetIpv4();
   Ipv4Address dst;
+  uint32_t iface;
+  
   // TODO: Do broadcast addresses get received here or not?
   // Get the type of the ant
   TypeHeader type;
@@ -382,6 +399,15 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
     dst = this->socket_addresses[socket].GetLocal();
+    
+    // Find the interface
+    for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
+      if (this->sockets[i] == socket) {
+        iface = i;
+        break;
+      }
+    }
+    
   }
   else {
     dst = Ipv4Address("255.255.255.255");
@@ -390,10 +416,10 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   switch (type.Get()) {
     case AHNTYPE_HELLO:
-      this->HandleHelloAnt(packet, src, dst);
+      this->HandleHelloAnt(packet, src, dst, iface);
       break;
     case AHNTYPE_FW_ANT:
-      this->HandleHelloAnt(packet, src, dst);
+      this->HandleForwardAnt(packet, src, dst);
       break;
     case AHNTYPE_BW_ANT:
       this->HandleBackwardAnt(packet, src, dst);
@@ -409,6 +435,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
+  NS_LOG_FUNCTION(this << destination);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
 
@@ -436,7 +463,9 @@ void RoutingProtocol::HelloTimerExpire() {
     packet->AddHeader(type_header);
     
     // Send Hello via local broadcast
-    Ipv4Address destination("255.255.255.255");
+    //Ipv4Address destination("255.255.255.255");
+    Ipv4Address destination = iface.GetBroadcast();
+    
     
     // TODO: Use real jitter in simulation
     Time jitter = MilliSeconds(0);
@@ -458,8 +487,22 @@ void RoutingProtocol::RTableTimerExpire() {
 // Handlers of the different Ants
 
 void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst) {
-  //STUB
+  Ipv4Address src, Ipv4Address dst, uint32_t iface) {
+  
+  NS_LOG_FUNCTION (this << src << dst << iface);
+  
+  if (dst != Ipv4Address("255.255.255.255")) {
+    NS_LOG_WARN("Received HelloAnt, that was not sended broadcast");
+    return;
+  }
+  
+  HelloAntHeader ant;
+  packet->RemoveHeader(ant);
+  
+  NS_LOG_UNCOND("Updating neigbor " << src << " " << iface);
+  
+  this->rtable.UpdateNeighbor(iface, src);
+  return;
 
 }
 

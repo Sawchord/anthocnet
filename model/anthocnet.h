@@ -100,7 +100,7 @@ private:
   // Ant Handers
   
   // Handles receiving of a HelloAnt
-  void HandleHelloAnt(Ptr<Packet>, Ipv4Address, Ipv4Address);
+  void HandleHelloAnt(Ptr<Packet>, Ipv4Address, Ipv4Address, uint32_t);
   
   // Handles receiving of a ForwardAnt
   void HandleForwardAnt(Ptr<Packet>, Ipv4Address, Ipv4Address);

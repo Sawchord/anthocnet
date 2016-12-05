@@ -179,6 +179,7 @@ protected:
 class HelloAntHeader : public AntHeader {
 public:
   // ctor
+  HelloAntHeader();
   HelloAntHeader(Ipv4Address);
   // dtor
   ~HelloAntHeader();

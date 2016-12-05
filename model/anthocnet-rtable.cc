@@ -66,7 +66,7 @@ RoutingTable::RoutingTable(Time nb_expire, Time dst_expire) :
 RoutingTable::~RoutingTable() {
 }
 
-bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire) {
+bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   if (iface_index < MAX_NEIGHBORS) {
     NS_LOG_ERROR("iface index to large");
@@ -81,6 +81,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
+  // FIXME: Most functions need to check, for themselves,
+  // whether the neighbor exist. Is it necessary to do this?
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
   if (it != this->nbs.end()) {
     return false;
@@ -88,7 +90,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   
   // Insert Neighbor into std::map
   this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo(expire)));
+    NeighborInfo(this->initial_lifetime_nb)));
   
   // Increase number of neigbors
   this->n_nb++;
@@ -237,6 +239,20 @@ void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
   this->initial_lifetime_dst = dst_expire;
 }
 
+
+void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
+  
+  nb_t new_nb = nb_t(iface_index, address);
+  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
+  if (it == this->nbs.end()) {
+    this->AddNeighbor(iface_index, address);
+    return;
+  }
+  
+  it->second.expires_in = this->initial_lifetime_nb;
+  return;
+  
+}
 
 void RoutingTable::Update(Time interval) {
   

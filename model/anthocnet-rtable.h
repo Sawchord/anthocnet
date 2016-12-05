@@ -115,12 +115,11 @@ public:
    * @arg now The time when this addition was made
    * @returns True if neighbor was added, false if neighbor was already present
    */
-  bool AddNeighbor(uint32_t iface_index, Ipv4Address address, Time now = Simulator::Now());
+  bool AddNeighbor(uint32_t iface_index, Ipv4Address address);
   
   /**
    * @brief Adds a destination to the routing table
    * @arg address The address of the destination
-   * @arg now The time, when this addition was made.
    * @returns True if neighbor was added, false if neighbor already present.
    */
   bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
@@ -145,7 +144,7 @@ public:
   void Print(Ptr<OutputStreamWrapper> stream) const;
   
   /**
-   * \brief Removes all neighbors that use the interface
+   * \brief Removes all neighbors that are reachable via the interface
    *        specified.
    * \param interface_index The interface to purge
    */
@@ -158,6 +157,15 @@ public:
    * \param dst_expire The initia ttl of destination entries
    */
   void SetExpireTimes(Time, Time);
+  
+  /**
+   * \brief Updates a neighbor entry on receiving a HelloAnt
+   *        either by adding the neighbors to the table or
+   *        resetting its expire time, if it already exist.
+   * \param iface_index The interface on which to reach the neighbor/
+   * \param address The address of the neighbor.
+   */
+  void UpdateNeighbor(uint32_t , Ipv4Address);
   
   /**
    * \brief Updates the expire times of all neighbors and destinations.

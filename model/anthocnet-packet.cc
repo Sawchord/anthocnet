@@ -138,7 +138,6 @@ operator<< (std::ostream & os, TypeHeader const & h) {
 
 //----------------------------------------------------------
 // Ant Header
-
 AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst, 
   uint8_t ttl_or_max_hops, uint8_t hops, double T) : 
 reserved(0), 
@@ -268,6 +267,10 @@ bool AntHeader::IsValid() {
 
 // -------------------------------------------------
 // HelloAnt stuff
+HelloAntHeader::HelloAntHeader():
+AntHeader(0, 0, 1, 0, 0.0)
+{}
+
 HelloAntHeader::HelloAntHeader (Ipv4Address src):
 AntHeader(src, Ipv4Address("255.255.255.255"), 1, 0, 0.0)
 {}
