@@ -96,6 +96,18 @@ private:
   // Update the RoutingTable (mainly throw out old data)
   void RTableTimerExpire();
   
+  // -------------------------------------------------
+  // Ant Handers
+  
+  // Handles receiving of a HelloAnt
+  void HandleHelloAnt(Ptr<Packet>, Ipv4Address, Ipv4Address);
+  
+  // Handles receiving of a ForwardAnt
+  void HandleForwardAnt(Ptr<Packet>, Ipv4Address, Ipv4Address);
+  
+  // Handles receiving of a BackwardAnt
+  void HandleBackwardAnt(Ptr<Packet>, Ipv4Address, Ipv4Address);
+  
   //-----------------------------------------------
   // All the network config stuff go here 
   

@@ -120,6 +120,11 @@ void TypeHeader::Print (std::ostream &os) const {
       os << "UNKNOWN_TYPE";
   }
 }
+/*
+bool TypeHeader::IsValid() {
+    // TODO : Implement somethins usefull
+    return true;
+}*/
 
 bool TypeHeader::operator== (TypeHeader const & o) const {
   return (type == o.type && valid == o.valid);

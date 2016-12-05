@@ -361,7 +361,49 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 // -------------------------------------------------------
 // Callback functions used in receiving and timers
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
-  // STUB
+  NS_LOG_FUNCTION(this << socket);
+  
+  // retrieve soucre
+  Address source_address;
+  Ptr<Packet>packet = socket->RecvFrom(source_address);
+  InetSocketAddress inet_source = InetSocketAddress::ConvertFrom(source_address);
+  
+  Ipv4Address src = inet_source.GetIpv4();
+  Ipv4Address dst;
+  // TODO: Do broadcast addresses get received here or not?
+  // Get the type of the ant
+  TypeHeader type;
+  packet->RemoveHeader(type);
+  
+  if (!type.IsValid()) {
+    NS_LOG_WARN("Received ant of unknown type on " << this << ". -> Dropped");
+    return;
+  }
+  
+  if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
+    dst = this->socket_addresses[socket].GetLocal();
+  }
+  else {
+    dst = Ipv4Address("255.255.255.255");
+  }
+  
+  
+  switch (type.Get()) {
+    case AHNTYPE_HELLO:
+      this->HandleHelloAnt(packet, src, dst);
+      break;
+    case AHNTYPE_FW_ANT:
+      this->HandleHelloAnt(packet, src, dst);
+      break;
+    case AHNTYPE_BW_ANT:
+      this->HandleBackwardAnt(packet, src, dst);
+      break;
+    
+    default:
+      NS_LOG_WARN("Unimplemented Handlers.");
+      return;
+  }
+    
 }
 
 // Callback function to send something in a deffered manner
@@ -412,7 +454,27 @@ void RoutingProtocol::RTableTimerExpire() {
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
 }
 
+// -------------------------------------------------------
+// Handlers of the different Ants
 
+void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
+  Ipv4Address src, Ipv4Address dst) {
+  //STUB
 
+}
+
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
+  Ipv4Address src, Ipv4Address dst) {
+  //STUB
+
+}
+
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
+  Ipv4Address src, Ipv4Address dst) {
+  //STUB
+
+}
+
+// End of namespaces
 }
 }
