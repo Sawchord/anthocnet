@@ -165,8 +165,8 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   // is down, and this one, if AddAddress did not skipp.
   // But if we don't initialize (and send twice, it does not work
   // Skipping any one of the two send leads to failure
-  if (true) {
-  //if (this->sockets[interface] == 0) {
+  //if (true) {
+  if (this->sockets[interface] == 0) {
     Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
       UdpSocketFactory::GetTypeId());
     NS_ASSERT(socket != 0);
@@ -181,6 +181,19 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
     // Insert socket into the lists
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
+    
+    // Need to add a broadcast socket
+    socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+    NS_ASSERT(socket != 0);
+    
+    socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
+    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    this->bcast_addresses.insert(std::make_pair(socket, iface));
     
     //NS_LOG_FUNCTION (this << "interface" << interface << " local address" << 
     //  this->ipv4->GetAddress (interface, 0).GetLocal ());
@@ -227,14 +240,13 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   // FIXME: If this 
   // Since on cannot open sockets on a closed interface, we have wait for
   // NotifyInterfaceUp
-  //if (!l3->IsUp(interface)) {
-  //  NS_LOG_FUNCTION(this << "Added address");
-  //  return;
-  //}
+  if (!l3->IsUp(interface)) {
+    NS_LOG_FUNCTION(this << "Added address");
+    return;
+  }
   
   if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN("AntHocNet does not support more than one address per interface");
-    
     return;
   }
   
@@ -266,6 +278,19 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
     
+    // Need to add a broadcast socket
+    socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+    NS_ASSERT(socket != 0);
+    
+    socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
+    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    this->bcast_addresses.insert(std::make_pair(socket, iface));
+    
     
     NS_LOG_FUNCTION(this << "interface" << interface 
       << " address" << address << "socket" << socket);
@@ -291,7 +316,6 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
   // Remove all traces of this address from the routing table
   this->sockets[interface] = 0;
   this->socket_addresses.erase(socket);
-  
   this->rtable.PurgeInterface(interface);
   
   socket->Close();
@@ -316,6 +340,19 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
+    
+    // Need to add a broadcast socket
+    socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+    NS_ASSERT(socket != 0);
+    
+    socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
+    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    this->bcast_addresses.insert(std::make_pair(socket, iface));
     
     NS_LOG_FUNCTION(this << "interface " << interface 
       << " address " << address << "reopened socket");
@@ -441,8 +478,9 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
   
-  NS_LOG_FUNCTION(this << "socket" << socket);  
-    dst = this->socket_addresses[socket].GetLocal();
+  dst = this->socket_addresses[socket].GetLocal();
+  NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
+    << "local" << dst);  
     
     // FIXME: This is broken
     // Find the interface

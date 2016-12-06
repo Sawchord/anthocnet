@@ -151,7 +151,7 @@ private:
   Ptr<Socket> sockets[MAX_INTERFACES];
   //list<uint32_t>* free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
-  
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress> bcast_addresses;
   
 };
 }

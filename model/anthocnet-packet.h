@@ -184,6 +184,8 @@ public:
   // dtor
   ~HelloAntHeader();
   
+  static TypeId GetTypeId ();
+  
   virtual bool IsValid();
 };
 

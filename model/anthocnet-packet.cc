@@ -120,11 +120,6 @@ void TypeHeader::Print (std::ostream &os) const {
       os << "UNKNOWN_TYPE";
   }
 }
-/*
-bool TypeHeader::IsValid() {
-    // TODO : Implement somethins usefull
-    return true;
-}*/
 
 bool TypeHeader::operator== (TypeHeader const & o) const {
   return (type == o.type && valid == o.valid);
@@ -279,6 +274,14 @@ AntHeader(src, Ipv4Address("255.255.255.255"), 1, 0, 0.0)
 {}
 
 HelloAntHeader::~HelloAntHeader() {}
+
+TypeId HelloAntHeader::GetTypeId () {
+  static TypeId tid = TypeId ("ns3::ahn::HelloAntHeader")
+  .SetParent<AntHeader> ()
+  .SetGroupName("AntHocNet")
+  .AddConstructor<HelloAntHeader> ();
+  return tid;
+}
 
 bool HelloAntHeader::IsValid() {
   
