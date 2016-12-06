@@ -66,7 +66,12 @@ RoutingTable::RoutingTable(Time nb_expire, Time dst_expire) :
 RoutingTable::~RoutingTable() {
 }
 
+
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
+  return this->AddNeighbor(iface_index, address, this->initial_lifetime_nb);
+}
+
+bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire) {
   
   NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
@@ -88,7 +93,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   // Insert Neighbor into std::map
   this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo(this->initial_lifetime_nb)));
+    NeighborInfo(expire)));
   
   // Increase number of neigbors
   this->n_nb++;

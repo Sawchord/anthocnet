@@ -16,6 +16,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <string>
+
 #include "anthocnet-packet.h"
 #include "ns3/address-utils.h"
 #include "ns3/packet.h"
@@ -216,12 +218,11 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
 }
 
 void AntHeader::Print(std::ostream &os) const {
-  os << "TypeTag: (unimplemented)"
-  << "TTL/MaxHops: " << this->ttl_or_max_hops
-  << "Number of Hops: " << this->hops
-  << "Source Address: " << this->src
-  << "Destination: " << this->dst
-  << "AntStack: ";
+  os << " TTL/MaxHops: " << std::to_string(this->ttl_or_max_hops)
+  << " Number of Hops: " << std::to_string(this->hops)
+  << " Source Address: " << this->src
+  << " Destination: " << this->dst
+  << " AntStack: ";
   
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {

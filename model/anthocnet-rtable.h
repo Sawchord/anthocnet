@@ -116,6 +116,8 @@ public:
    * @returns True if neighbor was added, false if neighbor was already present
    */
   bool AddNeighbor(uint32_t iface_index, Ipv4Address address);
+  bool AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire);
+  
   
   /**
    * @brief Adds a destination to the routing table
