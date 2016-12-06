@@ -21,8 +21,8 @@
 
 // TODO: Make these settable by GetTypeId()
 //       instead of hardcoding them
-#define MAX_NEIGHBORS 30
-#define MAX_DESTINATIONS 100
+#define MAX_NEIGHBORS 300
+#define MAX_DESTINATIONS 1000
 
 
 #include <map>

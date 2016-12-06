@@ -68,15 +68,13 @@ RoutingTable::~RoutingTable() {
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
   
-  if (iface_index < MAX_NEIGHBORS) {
-    NS_LOG_ERROR("iface index to large");
+  NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
+  
+  if (iface_index >= MAX_NEIGHBORS) {
+    NS_LOG_ERROR("iface index to large index: " << iface_index);
     return false;
   }
   
-  if (this->n_nb == MAX_NEIGHBORS-1) {
-      NS_LOG_ERROR("Out of neighbor slots in rtable");
-      return false;
-  }
   
   nb_t new_nb = nb_t(iface_index, address);
   
@@ -98,6 +96,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
 }
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
+  
+  NS_LOG_FUNCTION(this << "address" << address);
   
   if (this->n_dst == MAX_DESTINATIONS-1) {
     NS_LOG_ERROR(this << "Out of destination slots in rtable");
@@ -134,6 +134,11 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
 }
 
 void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
+  
+  if (iface_index >= MAX_NEIGHBORS) {
+    NS_LOG_ERROR("iface index to large index: " << iface_index);
+    return;
+  }
   
   nb_t rem_nb = nb_t(iface_index, address);
   

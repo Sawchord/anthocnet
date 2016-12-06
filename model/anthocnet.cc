@@ -135,8 +135,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
 
 // Add an interface to an operational AntHocNet instance
 void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
-  NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface,
-    0).GetLocal ());
+  NS_LOG_FUNCTION (this << "interface" << interface << " local address" << 
+    this->ipv4->GetAddress (interface, 0).GetLocal ());
   
   if (interface >= MAX_INTERFACES) {
     NS_LOG_ERROR("Interfaceindex exceeds MAX_INTERFACES");
@@ -204,15 +204,14 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
 
 void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
   
-//   NS_LOG_FUNCTION(this << "interface" << interface 
-//     << " address" << address);
-  
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
-  // FIXME: Why does AODV worl with the following lines, but anthocnet not?
-//   if (!l3->IsUp(interface)) {
-//     NS_LOG_WARN("Interface is still down");
-//     return;
-//   }
+  // FIXME: Why does AODV work with the following lines, but anthocnet not?
+  // It makes no sense to restrict this function to interfaces, that are already
+  // up, however AODV does so and it works. AntHocNet does not work. Whats the difference.
+  //   if (!l3->IsUp(interface)) {
+  //     NS_LOG_WARN("Interface is still down");
+  //     return;
+  //   }
   
   if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN("AntHocNet does not support more than one address per interface");
@@ -227,7 +226,8 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   if (socket) {
     NS_LOG_FUNCTION(this << "interface" << interface 
     << " address" << address << "socket" << socket);
-  };
+    return;
+  }
   
   // Create and set up socket
   socket = Socket::CreateSocket(GetObject<Node>(), 
@@ -375,9 +375,15 @@ int64_t RoutingProtocol::AssignStreams (int64_t stream)
 uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
   uint32_t s_index = 0;
   for (s_index = 0; s_index < MAX_INTERFACES; s_index++) {
-    if (this->sockets[s_index] == s) break;
+    if (this->sockets[s_index] == s) {
+      NS_LOG_FUNCTION(this << "index" << s_index << "socket" << s);
+      return s_index;
+    }
   }
-  return s_index;
+  
+  NS_LOG_FUNCTION(this << "failed to find socket" << s);
+  return 0;
+  
 }
 
 
@@ -406,21 +412,27 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   }
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
+  
+    
     dst = this->socket_addresses[socket].GetLocal();
     
+    // FIXME: This is broken
     // Find the interface
-    for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
-      if (this->sockets[i] == socket) {
-        iface = i;
-        break;
-      }
-    }
+//     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
+//       if (this->sockets[i] == socket) {
+//         iface = i;
+//         
+//         break;
+//       }
+//     }
+    iface = this->FindSocketIndex(socket);
     
   }
   else {
     dst = Ipv4Address("255.255.255.255");
   }
   
+  NS_LOG_UNCOND("Found interface with ID " << iface << " on destnation " << dst);
   
   switch (type.Get()) {
     case AHNTYPE_HELLO:
@@ -443,7 +455,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
-  NS_LOG_FUNCTION(this << destination);
+  NS_LOG_FUNCTION(this << "packet" << packet << "destination" << destination);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
 
@@ -474,13 +486,13 @@ void RoutingProtocol::HelloTimerExpire() {
     // Send Hello via local broadcast
     Ipv4Address destination("255.255.255.255");
     
+    // FIXME: Is this better?
     // Alternatively send via Subnet broadcast?
     //Ipv4Address destination = iface.GetBroadcast();
     // This one requests routes from the routing protocol
-    // FIXME: Which is better?
     
     // Jittery send simulates clock divergence
-//     // FIXME: Next line causes segfault
+    // FIXME: Next line causes segfault
     //Time jitter = MilliSeconds(MilliSeconds
     //  (uniform_random->GetInteger (0, 10)));
     Time jitter = Seconds(0);
@@ -506,15 +518,17 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
   
   NS_LOG_FUNCTION (this << src << dst << iface);
   
-//   if (dst != Ipv4Address("255.255.255.255")) {
-//     NS_LOG_WARN("Received HelloAnt, that was not send broadcast");
-//     return;
-//   }
+  // FIXME: The HelloAnts are send broadcast, yet on receive, they
+  // have the dst field of the receiving node. Is this a simulator thing?
+  //   if (dst != Ipv4Address("255.255.255.255")) {
+  //     NS_LOG_WARN("Received HelloAnt, that was not send broadcast");
+  //     return;
+  //   }
   
   HelloAntHeader ant;
   packet->RemoveHeader(ant);
   
-  NS_LOG_UNCOND("Updating neigbor " << src << " " << iface);
+  //NS_LOG_UNCOND("Updating neigbor " << src << " " << iface);
   
   this->rtable.UpdateNeighbor(iface, src);
   return;
