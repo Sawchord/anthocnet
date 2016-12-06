@@ -45,7 +45,12 @@ RoutingProtocol::RoutingProtocol ():
   nb_expire(Seconds(5)),
   dst_expire(Seconds(300)),
   rtable(RoutingTable(nb_expire, dst_expire))
-  {}
+  {
+    for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
+      this->sockets[i] = 0;
+    }
+    
+  }
   
 RoutingProtocol::~RoutingProtocol() {}
 
@@ -135,47 +140,61 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
 
 // Add an interface to an operational AntHocNet instance
 void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
-  NS_LOG_FUNCTION (this << "interface" << interface << " local address" << 
-    this->ipv4->GetAddress (interface, 0).GetLocal ());
+  
   
   if (interface >= MAX_INTERFACES) {
     NS_LOG_ERROR("Interfaceindex exceeds MAX_INTERFACES");
   }
   
   // Get the interface pointer
-  Ptr<Ipv4L3Protocol> l3 =
-    this->ipv4->GetObject<Ipv4L3Protocol>();
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   
   if (l3->GetNAddresses (interface) > 1) {
-    NS_LOG_ERROR ("AntHocNet does not support more than one\
-    address per interface for now.");
+    NS_LOG_WARN ("interface has more than one address. \
+    Only first will be used.");
   }
   
   Ipv4InterfaceAddress iface = l3->GetAddress (interface, 0);
   if (iface.GetLocal () == Ipv4Address ("127.0.0.1")) {
     return;
   }
+  
+  // If there is not yet a socket in use, set one up
+  // FIXME: Right now, the socket is initialized twice.
+  // Actually, it should skip the one in AddAddress, if the interface
+  // is down, and this one, if AddAddress did not skipp.
+  // But if we don't initialize (and send twice, it does not work
+  // Skipping any one of the two send leads to failure
+  if (true) {
+  //if (this->sockets[interface] == 0) {
+    Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+    NS_ASSERT(socket != 0);
     
-  // Set up the socket to be able to receive
-  Ptr<Socket> socket = Socket::CreateSocket (GetObject<Node> (),
-    UdpSocketFactory::GetTypeId ());
-  NS_ASSERT(socket != 0);
-  
-  socket->SetRecvCallback(MakeCallback(
+    socket->SetRecvCallback(MakeCallback(
       &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    
+    // Insert socket into the lists
+    this->sockets[interface] = socket;
+    this->socket_addresses.insert(std::make_pair(socket, iface));
+    
+    //NS_LOG_FUNCTION (this << "interface" << interface << " local address" << 
+    //  this->ipv4->GetAddress (interface, 0).GetLocal ());
+    
+    NS_LOG_FUNCTION(this << "interface" << interface 
+      << " address" << this->ipv4->GetAddress (interface, 0) << "socket" << socket);
+    
+  }
+  else {
+    NS_LOG_FUNCTION(this << "Address was already set up" <<
+      this->ipv4->GetAddress (interface, 0).GetLocal ());
+  }
   
-  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
   
-  socket->SetAllowBroadcast(true);
-  socket->SetIpRecvTtl(true);
-  
-  // Insert socket into the lists
-  this->sockets[interface] = socket;
-  
-  this->socket_addresses.insert(std::make_pair(socket, iface));
-  
-  
-  // TODO: Need broadcast address?
   // TODO: Support from MacLayer in detecting offline Neighbors
 }
 
@@ -185,8 +204,8 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   
   NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface, 0).GetLocal ());
   
-  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
-  Ptr<NetDevice> dev = l3->GetNetDevice(interface);
+  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
+  //Ptr<NetDevice> dev = l3->GetNetDevice(interface);
   
   Ptr<Socket> socket = this->FindSocketWithInterfaceAddress(
     this->ipv4->GetAddress(interface, 0));
@@ -194,24 +213,24 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   NS_ASSERT(socket);
   
   socket->Close();
-  this->sockets[interface] = 0;
   
+  this->sockets[interface] = 0;
   this->socket_addresses.erase(socket);
   this->rtable.PurgeInterface(interface);
-  // TODO: Close Broadcast, if any
   
 }
 
 void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
   
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
-  // FIXME: Why does AODV work with the following lines, but anthocnet not?
-  // It makes no sense to restrict this function to interfaces, that are already
-  // up, however AODV does so and it works. AntHocNet does not work. Whats the difference.
-  //   if (!l3->IsUp(interface)) {
-  //     NS_LOG_WARN("Interface is still down");
-  //     return;
-  //   }
+  
+  // FIXME: If this 
+  // Since on cannot open sockets on a closed interface, we have wait for
+  // NotifyInterfaceUp
+  //if (!l3->IsUp(interface)) {
+  //  NS_LOG_FUNCTION(this << "Added address");
+  //  return;
+  //}
   
   if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN("AntHocNet does not support more than one address per interface");
@@ -225,36 +244,41 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   // Need to create socket, if it already exists, there is nothing to do
   if (socket) {
     NS_LOG_FUNCTION(this << "interface" << interface 
-    << " address" << address << "socket" << socket);
+    << " address" << address << "socket" << socket << "nothing to do");
     return;
   }
   
-  // Create and set up socket
-  socket = Socket::CreateSocket(GetObject<Node>(), 
-    UdpSocketFactory::GetTypeId());
-  NS_ASSERT(socket != 0);
-  
-  socket->SetRecvCallback(MakeCallback(
-    &RoutingProtocol::Recv, this));
-  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
-  socket->SetAllowBroadcast(true);
-  socket->SetIpRecvTtl(true);
-  
-  // Insert socket into the lists
-  this->sockets[interface] = socket;
-  this->socket_addresses.insert(std::make_pair(socket, iface));
-  
-  
-  NS_LOG_FUNCTION(this << "interface" << interface 
-    << " address" << address << "socket" << socket);
-  return;
+  // If this is the first address on this interface
+  // create a socket to operate on
+  if (l3->GetNAddresses(interface) == 1) {
+    socket = Socket::CreateSocket(GetObject<Node>(), 
+      UdpSocketFactory::GetTypeId());
+    NS_ASSERT(socket != 0);
+    
+    socket->SetRecvCallback(MakeCallback(
+      &RoutingProtocol::Recv, this));
+    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->SetAllowBroadcast(true);
+    socket->SetIpRecvTtl(true);
+    
+    // Insert socket into the lists
+    this->sockets[interface] = socket;
+    this->socket_addresses.insert(std::make_pair(socket, iface));
+    
+    
+    NS_LOG_FUNCTION(this << "interface" << interface 
+      << " address" << address << "socket" << socket);
+    return;
+    
+  }
+  else {
+    NS_LOG_FUNCTION(this << "Additional address not used for now");
+  }
   
 }
 
 void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) {
-  
-  NS_LOG_FUNCTION(this << "interface " << interface 
-  << " address " << address);
   
   Ptr<Socket> socket = FindSocketWithInterfaceAddress(address);
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -264,11 +288,18 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     return;
   }
   
+  // Remove all traces of this address from the routing table
+  this->sockets[interface] = 0;
+  this->socket_addresses.erase(socket);
+  
+  this->rtable.PurgeInterface(interface);
   
   socket->Close();
-  // If there is more than one address on this interface, close then
-  // socket and reopen it again with new addess
-  if (l3->GetNAddresses(interface)) {
+  // If there is more than one address on this interface, we reopen
+  // a new socket on another interface to continue the work
+  // However, since this node will be considered a new node, it will
+  // have to restart the operation from the beginning.
+  if (l3->GetNAddresses(interface) > 0) {
     NS_LOG_LOGIC("Address removed, reopen socket with new address");
     Ipv4InterfaceAddress iface = l3->GetAddress(interface, 0);
     
@@ -286,16 +317,14 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
     
+    NS_LOG_FUNCTION(this << "interface " << interface 
+      << " address " << address << "reopened socket");
+    
   }
   // if this was the only address on the interface, close the socket
   else {
-    
-    NS_LOG_LOGIC("Address removed, closing socket");
-    
-    this->sockets[interface] = 0;
-    this->socket_addresses.erase(socket);
-    
-    this->rtable.PurgeInterface(interface);
+    NS_LOG_FUNCTION(this << "interface " << interface 
+      << " address " << address << "closed completely");
   }
   
   
@@ -382,7 +411,7 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
   }
   
   NS_LOG_FUNCTION(this << "failed to find socket" << s);
-  return 0;
+  return MAX_INTERFACES;
   
 }
 
@@ -390,7 +419,6 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 // -------------------------------------------------------
 // Callback functions used in receiving and timers
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
-  NS_LOG_FUNCTION(this << socket);
   
   // retrieve soucre
   Address source_address;
@@ -413,7 +441,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
   
-    
+  NS_LOG_FUNCTION(this << "socket" << socket);  
     dst = this->socket_addresses[socket].GetLocal();
     
     // FIXME: This is broken
@@ -432,7 +460,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     dst = Ipv4Address("255.255.255.255");
   }
   
-  NS_LOG_UNCOND("Found interface with ID " << iface << " on destnation " << dst);
+  NS_LOG_FUNCTION("Found interface with ID " << iface << " on destination " << dst);
   
   switch (type.Get()) {
     case AHNTYPE_HELLO:
@@ -455,7 +483,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
-  NS_LOG_FUNCTION(this << "packet" << packet << "destination" << destination);
+  NS_LOG_FUNCTION(this << "packet" << packet << "destination" << destination << "socket" << socket);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
 
@@ -466,6 +494,7 @@ void RoutingProtocol::HelloTimerExpire() {
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
     
+    
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
     
@@ -475,21 +504,16 @@ void RoutingProtocol::HelloTimerExpire() {
     TypeHeader type_header(AHNTYPE_HELLO);
     Ptr<Packet> packet = Create<Packet>();
     
-    SocketIpTtlTag tag;
-    tag.SetTtl(1);
+    //SocketIpTtlTag tag;
+    //tag.SetTtl(1);
     
-    packet->AddPacketTag(tag);
+    //packet->AddPacketTag(tag);
     packet->AddHeader(hello_ant);
     packet->AddHeader(type_header);
     
     
     // Send Hello via local broadcast
     Ipv4Address destination("255.255.255.255");
-    
-    // FIXME: Is this better?
-    // Alternatively send via Subnet broadcast?
-    //Ipv4Address destination = iface.GetBroadcast();
-    // This one requests routes from the routing protocol
     
     // Jittery send simulates clock divergence
     // FIXME: Next line causes segfault
