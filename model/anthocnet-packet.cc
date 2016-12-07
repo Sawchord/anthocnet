@@ -382,7 +382,7 @@ Ipv4Address BackwardAntHeader::Update(Ipv4Address this_node, double T_ind) {
     return this->ant_stack[0];
   }
   
-  // Retrive src
+  // Retrieve src
   Ipv4Address ans = this->ant_stack[this->ttl_or_max_hops - this->hops];
   
   // Update ant

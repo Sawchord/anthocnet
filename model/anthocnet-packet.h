@@ -30,7 +30,7 @@
 namespace ns3 {
 namespace ahn {
 
-enum MessageType {
+typedef enum MessageType {
   AHNTYPE_FW_UNKNOWN = 0,
   AHNTYPE_FW_ANT = 1, //!< Forward Ant
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
@@ -39,7 +39,7 @@ enum MessageType {
   AHNTYPE_DATA = 5, //!< Data packet (NEEDED?)
   AHNTYPE_RREP_ANT = 6, //!< RouteRepair Ant
   AHNTYPE_ERR = 7 //!< Error Ant
-};
+} mtype_t;
 
 /**
  * \brief This is a class used to read 
@@ -118,8 +118,8 @@ public:
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
   uint32_t GetSerializedSize () const;
-  void Serialize (Buffer::Iterator) const;
-  uint32_t Deserialize (Buffer::Iterator);
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
   void Print (std::ostream&) const;
   
   bool operator== (AntHeader const & o) const;
@@ -135,10 +135,10 @@ public:
   
   // Access to Src and Dst fields should always be granted
   Ipv4Address GetSrc();
-  void SetSrc(Ipv4Address);
+  void SetSrc(Ipv4Address src);
   
   Ipv4Address GetDst();
-  void SetDst(Ipv4Address);
+  void SetDst(Ipv4Address dst);
   
   
 protected:
@@ -180,7 +180,7 @@ class HelloAntHeader : public AntHeader {
 public:
   // ctor
   HelloAntHeader();
-  HelloAntHeader(Ipv4Address);
+  HelloAntHeader(Ipv4Address src);
   // dtor
   ~HelloAntHeader();
   
@@ -208,7 +208,7 @@ class ForwardAntHeader : public AntHeader {
 public:
   
   //ctor
-  ForwardAntHeader(Ipv4Address, Ipv4Address, uint8_t);
+  ForwardAntHeader(Ipv4Address src, Ipv4Address dst, uint8_t ttl);
   //dtor
   ~ForwardAntHeader();
   
@@ -223,12 +223,12 @@ public:
    *        to forward it. Updates Stack, hop count and ttl.
    * \note The Ant should be updated, after all important information for
    *       this node is retrieved. (Contrary to the BackwardAnt)
-   * \param Ipv4Address The Address of this node.
+   * \param this_node The Address of this node.
    * \returns true if the Ant was updated sucessfully, and can be resend.
    *          false if the Ant cannot be resend. (Reached end of life or 
    *          this node is the destination)
    */
-  bool Update(Ipv4Address);
+  bool Update(Ipv4Address this_node);
   
   /**
    * \brief Looks at the address on top of stack.
@@ -255,7 +255,7 @@ public:
 class BackwardAntHeader : public AntHeader {
 public:
   // ctor
-  BackwardAntHeader(ForwardAntHeader&);
+  BackwardAntHeader(ForwardAntHeader& ia);
   //dtor
   ~BackwardAntHeader();
   
@@ -270,11 +270,11 @@ public:
    *        Updates stack, hop count and T_ind value.
    * \note Update must occur before using this node, but src address
    *       must be retrieved before. (Contrary to the ForwardAnt)
-   * \param Ipv4Address The address of this node. Needed for validity check
-   * \param double The T_mac value of this node. (See paper)
+   * \param this_node The address of this node. Needed for validity check
+   * \param T_ind The T_mac value of this node. (See paper)
    * \returns The neighbor, which send the ant.
    */
-  Ipv4Address Update (Ipv4Address, double);
+  Ipv4Address Update (Ipv4Address this_node, double T_ind);
   
   
   /**

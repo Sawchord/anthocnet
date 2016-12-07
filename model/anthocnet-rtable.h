@@ -70,7 +70,7 @@ class DestinationInfo {
 public:
   
   //ctor
-  DestinationInfo(uint32_t, Time);
+  DestinationInfo(uint32_t index, Time expire);
   //dtor
   ~DestinationInfo();
   
@@ -87,7 +87,7 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (Time);
+  NeighborInfo (Time expire);
   //dtor
   ~NeighborInfo();
   
@@ -101,7 +101,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Time, Time);
+  RoutingTable(Time nb_expire, Time dst_expire);
   //dtor 
   ~RoutingTable();
     
@@ -158,7 +158,7 @@ public:
    * \param nb_expire The initial ttl of neighbor entries
    * \param dst_expire The initia ttl of destination entries
    */
-  void SetExpireTimes(Time, Time);
+  void SetExpireTimes(Time nb_expire, Time dst_expire);
   
   /**
    * \brief Updates a neighbor entry on receiving a HelloAnt
@@ -167,14 +167,14 @@ public:
    * \param iface_index The interface on which to reach the neighbor/
    * \param address The address of the neighbor.
    */
-  void UpdateNeighbor(uint32_t , Ipv4Address);
+  void UpdateNeighbor(uint32_t iface_index, Ipv4Address address);
   
   /**
    * \brief Updates the expire times of all neighbors and destinations.
    *        Removes the ones, that are expired.
    * \param interval The time interval, in which this function is called.
    */
-  void Update(Time);
+  void Update(Time interval);
   
   
 private:

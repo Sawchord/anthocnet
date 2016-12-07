@@ -492,15 +492,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
     << "local" << dst);  
     
-    // FIXME: This is broken
-    // Find the interface
-//     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
-//       if (this->sockets[i] == socket) {
-//         iface = i;
-//         
-//         break;
-//       }
-//     }
     iface = this->FindSocketIndex(socket);
     
   }
