@@ -430,7 +430,6 @@ void RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::
 void RoutingProtocol::Start() {
   NS_LOG_FUNCTION(this);
   
-  
   // Start the HelloTimer
   this->hello_timer.SetFunction(&RoutingProtocol::HelloTimerExpire, this);
   this->hello_timer.Schedule(this->hello_interval);
@@ -523,10 +522,10 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleHelloAnt(packet, src, dst, iface);
       break;
     case AHNTYPE_FW_ANT:
-      this->HandleForwardAnt(packet, src, dst);
+      this->HandleForwardAnt(packet, src, dst, iface);
       break;
     case AHNTYPE_BW_ANT:
-      this->HandleBackwardAnt(packet, src, dst);
+      this->HandleBackwardAnt(packet, src, dst, iface);
       break;
     
     default:
@@ -579,8 +578,10 @@ void RoutingProtocol::HelloTimerExpire() {
     NS_LOG_FUNCTION(this << "iface" << iface << "packet" << *packet);
     
     // Jittery send simulates clock divergence
-    // FIXME: Next line causes segfault
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+    
+    // FIXME: The simulation does not work with a set jitter.
+    // Is this due to a bug, or is it due to all nodes sneding at once
     //Time jitter = MilliSeconds(10);
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
       this, socket, packet, destination);
@@ -596,6 +597,52 @@ void RoutingProtocol::RTableTimerExpire() {
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
 }
 
+
+void RoutingProtocol::HandleQueue() {
+  
+  mtype_t type;
+  Ptr<Packet> packet;
+  Time new_T_max;
+  
+  if (this->vip_queue.Dequeue(type, packet, new_T_max)) {
+    NS_LOG_FUNCTION(this << "handle vip queue" << "type" << type
+      << "packet" << packet << "new_T_max" << new_T_max);
+    
+    switch (type) {
+      
+      case AHNTYPE_HELLO:
+        
+        break;
+      case AHNTYPE_BW_ANT:
+        break;
+      default:
+        NS_LOG_WARN("type " << type << "should not be in vip queue");
+      
+    }
+    
+    
+  } 
+  else if (this->packet_queue.Dequeue(type, packet, new_T_max)) {
+    NS_LOG_FUNCTION(this << "handle normie queue" << "type" << type
+      << "packet" << packet << "new_T_max" << new_T_max);
+    
+    
+    switch (type) {
+      case AHNTYPE_FW_ANT:
+        break;
+      default:
+        NS_LOG_WARN("type " << type << "should not be in normie queue");
+      
+    }
+    
+  }
+  else {
+    NS_LOG_FUNCTION(this << "nothing to do");
+  }
+  
+}
+
+
 // -------------------------------------------------------
 // Handlers of the different Ants
 
@@ -604,17 +651,8 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
   
   NS_LOG_FUNCTION (this << src << dst << iface);
   
-  // FIXME: The HelloAnts are send broadcast, yet on receive, they
-  // have the dst field of the receiving node. Is this a simulator thing?
-  //   if (dst != Ipv4Address("255.255.255.255")) {
-  //     NS_LOG_WARN("Received HelloAnt, that was not send broadcast");
-  //     return;
-  //   }
-  
   HelloAntHeader ant;
   packet->RemoveHeader(ant);
-  
-  //NS_LOG_UNCOND("Updating neigbor " << src << " " << iface);
   
   this->rtable.UpdateNeighbor(iface, src);
   return;
@@ -622,13 +660,13 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
 }
 
 void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst) {
+  Ipv4Address src, Ipv4Address dst, uint32_t iface) {
   //STUB
 
 }
 
 void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst) {
+  Ipv4Address src, Ipv4Address dst,  uint32_t iface) {
   //STUB
 
 }
