@@ -30,7 +30,8 @@ max_len(max_len), timeout(initial_timeout)
 IncomePacketQueue::~IncomePacketQueue() {}
 
 
-bool IncomePacketQueue::Enqueue(mtype_t type, Ptr<Packet> packet, Time now) {
+bool IncomePacketQueue::Enqueue(mtype_t type, uint32_t iface, Ptr<Packet> packet, 
+    Time now) {
   
   QueueEntry old_qe;
   
@@ -52,6 +53,7 @@ bool IncomePacketQueue::Enqueue(mtype_t type, Ptr<Packet> packet, Time now) {
   // Create and enqueue entry
   QueueEntry qe;
   qe.type = type;
+  qe.iface = iface;
   qe.received_in = now;
   qe.expire_in = this->timeout;
   qe.packet = packet;
@@ -62,8 +64,8 @@ bool IncomePacketQueue::Enqueue(mtype_t type, Ptr<Packet> packet, Time now) {
   return true;
 }
 
-bool IncomePacketQueue::Dequeue(mtype_t& type, Ptr<Packet>& packet,
-  Time& T_max, Time now) {
+bool IncomePacketQueue::Dequeue(mtype_t& type, uint32_t& iface,
+  Ptr<Packet>& packet, Time& T_max, Time now) {
   
   while (true) {
     
@@ -84,6 +86,7 @@ bool IncomePacketQueue::Dequeue(mtype_t& type, Ptr<Packet>& packet,
     }
     
     type = qe.type;
+    iface = qe.iface;
     packet = qe.packet;
     T_max = T;
     

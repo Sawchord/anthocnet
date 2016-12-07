@@ -42,6 +42,7 @@ struct QueueEntry {
   
   mtype_t type;
   
+  uint32_t iface;
   Ptr<Packet> packet;
   
   Time received_in;
@@ -64,7 +65,7 @@ public:
    * \param now The current Simulator time
    * \returns True if enqued, false if dropped
    */
-  bool Enqueue(mtype_t type, Ptr<Packet> packet, Time now = Simulator::Now());
+  bool Enqueue(mtype_t type, uint32_t iface, Ptr<Packet> packet, Time now = Simulator::Now());
   
   /**
    * \brief Deques the first not expired entry
@@ -74,7 +75,7 @@ public:
    * \param now The current simulator time
    * \returns True if deqeued an entry false if empty
    */
-  bool Dequeue(mtype_t& type, Ptr<Packet>& packet, Time& T_max, Time now = Simulator::Now());
+  bool Dequeue(mtype_t& type, uint32_t& iface, Ptr<Packet>& packet, Time& T_max, Time now = Simulator::Now());
   
 private:
   

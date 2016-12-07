@@ -113,13 +113,13 @@ private:
   void HandleQueue();
   
   // Handles receiving of a HelloAnt
-  void HandleHelloAnt(Ptr<Packet>, Ipv4Address, Ipv4Address, uint32_t);
+  void HandleHelloAnt(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a ForwardAnt
-  void HandleForwardAnt(Ptr<Packet>, Ipv4Address, Ipv4Address, uint32_t);
+  void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a BackwardAnt
-  void HandleBackwardAnt(Ptr<Packet>, Ipv4Address, Ipv4Address, uint32_t);
+  void HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface);
   
   //-----------------------------------------------
   // All the network config stuff go here 

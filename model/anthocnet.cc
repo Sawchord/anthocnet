@@ -492,7 +492,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   Ipv4Address dst;
   uint32_t iface;
   
-  // TODO: Do broadcast addresses get received here or not?
   // Get the type of the ant
   TypeHeader type;
   packet->RemoveHeader(type);
@@ -506,7 +505,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   dst = this->socket_addresses[socket].GetLocal();
   NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
-    << "local" << dst);  
+    << "src" << src << "dst" << dst);  
     
     iface = this->FindSocketIndex(socket);
     
@@ -517,22 +516,28 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   NS_LOG_FUNCTION("Found interface with ID " << iface << " on destination " << dst);
   
+  // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO:
-      this->HandleHelloAnt(packet, src, dst, iface);
+      this->vip_queue.Enqueue(AHNTYPE_HELLO, iface, packet);
       break;
     case AHNTYPE_FW_ANT:
-      this->HandleForwardAnt(packet, src, dst, iface);
+      this->packet_queue.Enqueue(AHNTYPE_FW_ANT, iface, packet);
       break;
     case AHNTYPE_BW_ANT:
-      this->HandleBackwardAnt(packet, src, dst, iface);
+      this->vip_queue.Enqueue(AHNTYPE_BW_ANT, iface, packet);
       break;
     
     default:
       NS_LOG_WARN("Unimplemented Handlers.");
       return;
   }
-    
+  
+  // TODO: Get better simulation of T_mac
+  Time jitter = MilliSeconds (uniform_random->GetInteger (1, 10));
+  // Schedule the handling of the queue
+  Simulator::Schedule(jitter, &RoutingProtocol::HandleQueue, this);
+  return;
 }
 
 // Callback function to send something in a deffered manner
@@ -580,7 +585,7 @@ void RoutingProtocol::HelloTimerExpire() {
     // Jittery send simulates clock divergence
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     
-    // FIXME: The simulation does not work with a set jitter.
+    // FIXME: The simulation does not work with jitter set to fixed value
     // Is this due to a bug, or is it due to all nodes sneding at once
     //Time jitter = MilliSeconds(10);
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
@@ -600,30 +605,28 @@ void RoutingProtocol::RTableTimerExpire() {
 
 void RoutingProtocol::HandleQueue() {
   
+  uint32_t iface;
   mtype_t type;
   Ptr<Packet> packet;
   Time new_T_max;
   
-  if (this->vip_queue.Dequeue(type, packet, new_T_max)) {
-    NS_LOG_FUNCTION(this << "handle vip queue" << "type" << type
+  if (this->vip_queue.Dequeue(type, iface, packet, new_T_max)) {
+    NS_LOG_FUNCTION(this << "handle vip queue" << "type" << type << "iface" << iface
       << "packet" << packet << "new_T_max" << new_T_max);
     
     switch (type) {
       
       case AHNTYPE_HELLO:
-        
+        this->HandleHelloAnt(packet, iface);
         break;
       case AHNTYPE_BW_ANT:
         break;
       default:
-        NS_LOG_WARN("type " << type << "should not be in vip queue");
-      
+        NS_LOG_WARN("type " << type << "should not be in vip queue"); 
     }
-    
-    
   } 
-  else if (this->packet_queue.Dequeue(type, packet, new_T_max)) {
-    NS_LOG_FUNCTION(this << "handle normie queue" << "type" << type
+  else if (this->packet_queue.Dequeue(type, iface, packet, new_T_max)) {
+    NS_LOG_FUNCTION(this << "handle normie queue" << "type" << type << "iface" << iface
       << "packet" << packet << "new_T_max" << new_T_max);
     
     
@@ -631,42 +634,38 @@ void RoutingProtocol::HandleQueue() {
       case AHNTYPE_FW_ANT:
         break;
       default:
-        NS_LOG_WARN("type " << type << "should not be in normie queue");
-      
+        NS_LOG_WARN("type " << type << "should not be in normie queue"); 
     }
-    
   }
   else {
     NS_LOG_FUNCTION(this << "nothing to do");
   }
-  
 }
 
 
 // -------------------------------------------------------
 // Handlers of the different Ants
 
-void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst, uint32_t iface) {
+void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   
-  NS_LOG_FUNCTION (this << src << dst << iface);
+  NS_LOG_FUNCTION (this << iface);
   
   HelloAntHeader ant;
   packet->RemoveHeader(ant);
+  
+  Ipv4Address src = ant.GetSrc();
   
   this->rtable.UpdateNeighbor(iface, src);
   return;
 
 }
 
-void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst, uint32_t iface) {
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   //STUB
 
 }
 
-void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
-  Ipv4Address src, Ipv4Address dst,  uint32_t iface) {
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface) {
   //STUB
 
 }
