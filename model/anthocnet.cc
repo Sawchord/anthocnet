@@ -45,10 +45,15 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
+  rqueue_max_len(64),
+  queue_expire(MilliSeconds(100)),
   nb_expire(Seconds(5)),
-  dst_expire(Seconds(300)),
-  rtable(RoutingTable(nb_expire, dst_expire))
+  dst_expire(Seconds(30)),
+  rtable(RoutingTable(nb_expire, dst_expire)),
+  packet_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
+  vip_queue(IncomePacketQueue(rqueue_max_len, queue_expire))
   {
+    // Initialize the sockets
     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
       this->sockets[i] = 0;
     }
@@ -79,7 +84,7 @@ TypeId RoutingProtocol::GetTypeId(void) {
   )
   .AddAttribute ("DestinationExpire",
     "Time without traffic, after which a destination is considered offline.",
-    TimeValue (Seconds(300)),
+    TimeValue (Seconds(30)),
     MakeTimeAccessor(&RoutingProtocol::dst_expire),
     MakeTimeChecker()
   )
@@ -89,8 +94,20 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeUintegerAccessor(&RoutingProtocol::initial_ttl),
     MakeUintegerChecker<uint8_t>()
   )
+  .AddAttribute("PacketQueueLength",
+    "The length of the packet queues.",
+    UintegerValue(64),
+    MakeUintegerAccessor(&RoutingProtocol::rqueue_max_len),
+    MakeUintegerChecker<uint32_t>()
+  )
+  .AddAttribute ("PacketQueueExpire",
+    "After this Time, a packet in the packet queue is considered outdated and dropped",
+    TimeValue (MilliSeconds(100)),
+    MakeTimeAccessor(&RoutingProtocol::queue_expire),
+    MakeTimeChecker()
+  )
   .AddAttribute ("RTableUpdate",
-    "The interval, in which the RoutingTable is updates.",
+    "The interval, in which the RoutingTable is updated.",
     TimeValue (MilliSeconds(1000)),
     MakeTimeAccessor(&RoutingProtocol::rtable_update_interval),
     MakeTimeChecker()

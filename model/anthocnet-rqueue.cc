@@ -32,10 +32,24 @@ IncomePacketQueue::~IncomePacketQueue() {}
 
 bool IncomePacketQueue::Enqueue(mtype_t type, Ptr<Packet> packet, Time now) {
   
+  QueueEntry old_qe;
+  
+  // Check if queue is full
   if (this->len == this->max_len-1) {
-    return false;
+    
+    // If the first entry is expired, we can save this
+    old_qe = this->queue.front();
+    
+    if ( (now - old_qe.received_in) > old_qe.expire_in)  {
+      this->queue.pop();
+      this->len--;
+    }
+    else {
+      return false;
+    }
   }
   
+  // Create and enqueue entry
   QueueEntry qe;
   qe.type = type;
   qe.received_in = now;
@@ -43,7 +57,6 @@ bool IncomePacketQueue::Enqueue(mtype_t type, Ptr<Packet> packet, Time now) {
   qe.packet = packet;
   
   this->queue.push(qe);
-  
   this->len++;
   
   return true;
@@ -61,10 +74,11 @@ bool IncomePacketQueue::Dequeue(mtype_t& type, Ptr<Packet>& packet,
     // Get next element from Queue
     QueueEntry qe = this->queue.front();
     this->queue.pop();
+    this->len--;
     
     Time T = now - qe.received_in;
     
-    // Check if it is expired
+    // Drop expired entries
     if (T > qe.expire_in) {
       continue;
     }
@@ -73,9 +87,10 @@ bool IncomePacketQueue::Dequeue(mtype_t& type, Ptr<Packet>& packet,
     packet = qe.packet;
     T_max = T;
     
-    
+    return true;
   }
-  return true;
+  
+  return false;
 }
 
 

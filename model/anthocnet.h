@@ -107,7 +107,7 @@ private:
   void RTableTimerExpire();
   
   // -------------------------------------------------
-  // Ant Handers
+  // Ant Handlers
   
   // Handles receiving of a HelloAnt
   void HandleHelloAnt(Ptr<Packet>, Ipv4Address, Ipv4Address, uint32_t);
@@ -132,6 +132,11 @@ private:
   Time rtable_update_interval;
   Timer rtable_update_timer;
   
+  // Maximal receive queue length
+  uint32_t rqueue_max_len;
+  // Expire time of the queues
+  Time queue_expire;
+  
   // Time until a neighbor expires
   Time nb_expire;
   
@@ -143,6 +148,11 @@ private:
   //----------------------------------------------
   // All the global state of the protocol go here
   RoutingTable rtable;
+  
+  // The normal packet queue
+  IncomePacketQueue packet_queue;
+  // The very important packet queue
+  IncomePacketQueue vip_queue;
   
   // The IP protocol
   Ptr<Ipv4> ipv4;
