@@ -323,7 +323,47 @@ void RoutingTable::Update(Time interval) {
 void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   Ipv4Address nb, double T_sd, uint32_t hops) {
     
-    
+  // First search the destination and add it if it did not exist.
+   // Check if destination already exists
+  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
+  if (dst_it != this->dsts.end()) {
+    this->AddDestination(dst);
+    dst_it = this->dsts.find(dst);
+  }
+  
+  // Do the same for neigbors
+  nb_t nbt = nb_t(iface, nb);
+  std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.find(nbt);
+  if (nb_it != this->nbs.end()) {
+    this->AddNeighbor(iface, nb);
+    nb_it = this->nbs.find(nbt);
+  }
+  
+  // Since both, the Neighbor and the Destination are found active,
+  // reset their expiration dates.
+  nb_it->second.expires_in = this->initial_lifetime_nb;
+  dst_it->second.expires_in = this->initial_lifetime_dst;
+  
+  NS_ASSERT(nb_it->first.first  == iface);
+  
+  // Get the indexes of dst and nb into the pheromone table
+  uint32_t nb_index = nb_it->first.first;
+  uint32_t dst_index = dst_it->second.index;
+  
+  double T_id = 1.0 / ((T_sd + hops * this->T_hop) / 2);
+  
+  // Update the routing table
+  RoutingTableEntry ra = this->rtable[dst_index][nb_index];
+  if (ra.pheromone == NAN) {
+    ra.pheromone = T_id;
+  }
+  else {
+    ra.pheromone = this->gamma_pheromone*ra.pheromone +
+      (1.0 - this->gamma_pheromone) * T_id;
+  }
+  
+  this->rtable[dst_index][nb_index] = ra;
+  return;
 }
 
 }

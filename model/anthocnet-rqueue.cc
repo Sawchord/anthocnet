@@ -16,11 +16,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "ns3/log.h"
 
 #include "anthocnet-rqueue.h"
 #include "anthocnet-packet.h"
 
 namespace ns3 {
+NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingQueue");
 namespace ahn {
 
 IncomePacketQueue::IncomePacketQueue(uint32_t max_len, Time initial_timeout) :
@@ -82,6 +84,7 @@ bool IncomePacketQueue::Dequeue(mtype_t& type, uint32_t& iface,
     
     // Drop expired entries
     if (T > qe.expire_in) {
+      NS_LOG_FUNCTION(this << "Dropped packet: " << *(qe.packet));
       continue;
     }
     
