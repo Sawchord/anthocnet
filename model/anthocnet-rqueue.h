@@ -77,6 +77,11 @@ public:
    */
   bool Dequeue(mtype_t& type, uint32_t& iface, Ptr<Packet>& packet, Time& T_max, Time now = Simulator::Now());
   
+  /**
+   * \brief Returns the number of entries currently in this queue.
+   */
+  uint32_t GetNEntries();
+  
 private:
   
   std::queue<QueueEntry> queue;

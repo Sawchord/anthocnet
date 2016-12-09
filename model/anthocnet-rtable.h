@@ -101,7 +101,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Time nb_expire, Time dst_expire);
+  RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double gamma);
   //dtor 
   ~RoutingTable();
     
@@ -118,14 +118,6 @@ public:
   bool AddNeighbor(uint32_t iface_index, Ipv4Address address);
   bool AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire);
   
-  
-  /**
-   * @brief Adds a destination to the routing table
-   * @arg address The address of the destination
-   * @returns True if neighbor was added, false if neighbor already present.
-   */
-  bool AddDestination(Ipv4Address address, Time now = Simulator::Now());
-  
   /**
    * \brief Removes a neighbor from the routing table
    * \param iface_index The interface index of
@@ -133,6 +125,18 @@ public:
    * \param address The address of the neighbor to be removed
    */
   void RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
+  
+  
+  
+  
+  /**
+   * @brief Adds a destination to the routing table
+   * @arg address The address of the destination
+   * @returns True if neighbor was added, false if neighbor already present.
+   */
+  bool AddDestination(Ipv4Address address);
+  bool AddDestination(Ipv4Address address, Time expire);
+  
   
   /**
    * \brief Removes a destination from the routing table
@@ -146,8 +150,7 @@ public:
   void Print(Ptr<OutputStreamWrapper> stream) const;
   
   /**
-   * \brief Removes all neighbors that are reachable via the interface
-   *        specified.
+   * \brief Removes all neighbors that are reachable via the interface specified.
    * \param interface_index The interface to purge
    */
   void PurgeInterface(uint32_t interface_index);
@@ -176,6 +179,17 @@ public:
    */
   void Update(Time interval);
   
+  /**
+   * \brief Handles the RoutingTable side of receiving a Backward ant.
+   * \param dst The destination of the path that is set up. 
+   * \note The destination of the path is the source of the backward ant.
+   * \param iface The interface index on which the neigbor sending this ant is.
+   * \param nb The neighbor which send the ant to this node.
+   * \param T_sd The time value of the and
+   * \param hops The hop count of this ant
+   */
+  void ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
+  Ipv4Address nb, double T_sd, uint32_t hops);
   
 private:
   
@@ -189,6 +203,9 @@ private:
   uint32_t n_dst;
   uint32_t n_nb;
   
+  double T_hop;
+  double gamma_pheromone;
+  
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
@@ -201,6 +218,9 @@ private:
   Time initial_lifetime_nb;
   // Destinations, if they are unused
   Time initial_lifetime_dst;
+  
+  
+  
   
 };
 

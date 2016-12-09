@@ -56,9 +56,11 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Time nb_expire, Time dst_expire) :
+RoutingTable::RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double gamma) :
   n_dst(0),
   n_nb(0),
+  T_hop(T_hop),
+  gamma_pheromone(gamma),
   initial_lifetime_nb(nb_expire),
   initial_lifetime_dst(dst_expire)
 {}
@@ -84,8 +86,6 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
-  // FIXME: Most functions need to check, for themselves,
-  // whether the neighbor exist. Is it necessary to do this?
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
   if (it != this->nbs.end()) {
     return false;
@@ -98,6 +98,42 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   // Increase number of neigbors
   this->n_nb++;
   return true;
+}
+
+void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
+  
+  if (iface_index >= MAX_NEIGHBORS) {
+    NS_LOG_ERROR("iface index to large index: " << iface_index);
+    return;
+  }
+  
+  nb_t rem_nb = nb_t(iface_index, address);
+  
+  // Check, if Neighbor exists
+  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
+  if (it == this->nbs.end()) {
+    return;
+  }
+  
+  // First, reset the row in the array
+  uint32_t delete_index = it->first.first;
+  for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
+    this->rtable[delete_index][i] = RoutingTableEntry();
+  }
+  
+  
+  // Then remove the entry from the std::map of neighbors
+  this->nbs.erase(it);
+  
+  // Decrease counter of neighbors
+  this->n_nb--;
+  return;
+}
+
+
+
+bool RoutingTable::AddDestination(Ipv4Address address) {
+    return this->AddDestination(address, this->initial_lifetime_dst);
 }
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
@@ -138,35 +174,6 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   
 }
 
-void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
-  
-  if (iface_index >= MAX_NEIGHBORS) {
-    NS_LOG_ERROR("iface index to large index: " << iface_index);
-    return;
-  }
-  
-  nb_t rem_nb = nb_t(iface_index, address);
-  
-  // Check, if Neighbor exists
-  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
-  if (it == this->nbs.end()) {
-    return;
-  }
-  
-  // First, reset the row in the array
-  uint32_t delete_index = it->first.first;
-  for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
-    this->rtable[delete_index][i] = RoutingTableEntry();
-  }
-  
-  
-  // Then remove the entry from the std::map of neighbors
-  this->nbs.erase(it);
-  
-  // Decrease counter of neighbors
-  this->n_nb--;
-  return;
-}
 
 void RoutingTable::RemoveDestination(Ipv4Address address) {
   // Check, if the destination exists
@@ -311,6 +318,12 @@ void RoutingTable::Update(Time interval) {
     this->RemoveDestination(it1->first);
   }
   
+}
+
+void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
+  Ipv4Address nb, double T_sd, uint32_t hops) {
+    
+    
 }
 
 }

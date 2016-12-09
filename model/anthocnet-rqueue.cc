@@ -96,6 +96,10 @@ bool IncomePacketQueue::Dequeue(mtype_t& type, uint32_t& iface,
   return false;
 }
 
+uint32_t IncomePacketQueue::GetNEntries() {
+    return this->len;
+}
+
 
 // End of namespaces
 }

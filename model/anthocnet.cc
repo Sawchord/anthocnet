@@ -49,7 +49,11 @@ RoutingProtocol::RoutingProtocol ():
   queue_expire(MilliSeconds(100)),
   nb_expire(Seconds(5)),
   dst_expire(Seconds(30)),
-  rtable(RoutingTable(nb_expire, dst_expire)),
+  alpha_T_mac(0.7),
+  T_hop(0.2),
+  gamma_pheromone(0.7),
+  avr_T_mac(Seconds(0)),
+  rtable(RoutingTable(nb_expire, dst_expire, T_hop, gamma_pheromone)),
   packet_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
   vip_queue(IncomePacketQueue(rqueue_max_len, queue_expire))
   {
@@ -99,6 +103,25 @@ TypeId RoutingProtocol::GetTypeId(void) {
     UintegerValue(64),
     MakeUintegerAccessor(&RoutingProtocol::rqueue_max_len),
     MakeUintegerChecker<uint32_t>()
+  )
+  .AddAttribute("AlphaTMac",
+    "The alpha value of the running average of T_mac.",
+    DoubleValue(0.7),
+    MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
+    MakeDoubleChecker<double>()
+  )
+  
+  .AddAttribute("THop",
+    "The THop heuristic used to calculate initial pheromone values",
+    DoubleValue(0.2),
+    MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("GammaPheromone",
+    "The pheromone uses a running average with a decline defined by gamma",
+    DoubleValue(0.7),
+    MakeDoubleAccessor(&RoutingProtocol::gamma_pheromone),
+    MakeDoubleChecker<double>()
   )
   .AddAttribute ("PacketQueueExpire",
     "After this Time, a packet in the packet queue is considered outdated and dropped",

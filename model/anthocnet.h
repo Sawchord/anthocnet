@@ -146,10 +146,25 @@ private:
   // Time until a destination expires
   Time dst_expire;
   
+  // The alpha value of the runinng average calculation
+  double alpha_T_mac;
+  
+  // The T_hop heuristic
+  double T_hop;
+  
+  // The pheromones gamma value
+  double gamma_pheromone;
+  
+  
   Ptr<UniformRandomVariable> uniform_random;
   
   //----------------------------------------------
   // All the global state of the protocol go here
+  
+  // The running average of the T_max value
+  Time avr_T_mac;
+  
+  // The routing table
   RoutingTable rtable;
   
   // The normal packet queue
