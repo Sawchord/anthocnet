@@ -326,7 +326,7 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   // First search the destination and add it if it did not exist.
    // Check if destination already exists
   std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
-  if (dst_it != this->dsts.end()) {
+  if (dst_it == this->dsts.end()) {
     this->AddDestination(dst);
     dst_it = this->dsts.find(dst);
   }
@@ -334,7 +334,7 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   // Do the same for neigbors
   nb_t nbt = nb_t(iface, nb);
   std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.find(nbt);
-  if (nb_it != this->nbs.end()) {
+  if (nb_it == this->nbs.end()) {
     this->AddNeighbor(iface, nb);
     nb_it = this->nbs.find(nbt);
   }
@@ -364,6 +364,78 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   
   this->rtable[dst_index][nb_index] = ra;
   return;
+}
+
+
+void RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
+  Ptr<UniformRandomVariable> vr) {
+  
+  uint32_t select = vr->GetInteger(0, this->n_nb);
+  
+  std::map<nb_t, NeighborInfo>::iterator it = this->nbs.begin();
+  
+  for (uint32_t i = 0; i < this->n_nb; i++) {
+    
+    if (i == select) {
+      iface = it->first.first;
+      nb = it->first.second;
+      return;
+    }
+    ++it;
+  }
+}
+
+void RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
+  uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
+  
+  // Set the power modifier.
+  double power;
+  if (proactive) {
+    power = 1.0;
+  }else {
+    power = 2.0;
+  }
+  
+  //Get the destination index:
+  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
+  if (dst_it == this->dsts.end()) {
+    // Return random route, if there is no data about the neigbor
+    this->AddDestination(dst);
+    this->SelectRandomRoute(iface, nb, vr);
+    return;
+  }
+  
+  uint32_t dst_index = dst_it->second.index;
+  
+  // Calculate the total pheromone value
+  double total_pheromone = 0.0;
+  for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
+    nb_it != this->nbs.end(); ++nb_it) {
+    
+    uint32_t nb_index = nb_it->first.first;
+    total_pheromone += pow(this->rtable[dst_index][nb_index].pheromone , power);
+  }
+  
+  
+  double select = vr->GetValue(0.0, 1.0);
+  double selected = 0.0;
+  
+  // To select with right probability, a random uniform variable between 
+  // 0 and 1 is generated, then it iterates over the neighbors, calculates their
+  // probability and adds it to an aggregator. If the aggregator gets over the 
+  // random value, the particular Neighbor is selected.
+  for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
+    nb_it != this->nbs.end(); ++nb_it) {
+    
+    uint32_t nb_index = nb_it->first.first;
+    NeighborInfo nbi = nb_it->second;
+    selected += pow(this->rtable[dst_index][nb_index].pheromone, power);
+    
+    if (selected > select) {
+      iface = nb_it->first.first;
+      nb = nb_it->first.second;
+    }
+  }
 }
 
 }

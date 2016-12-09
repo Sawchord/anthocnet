@@ -482,7 +482,7 @@ Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (
 int64_t RoutingProtocol::AssignStreams (int64_t stream)
 {
   NS_LOG_FUNCTION (this << stream);
-  uniform_random->SetStream (stream);
+  this->uniform_random->SetStream (stream);
   return 1;
 }
 
@@ -557,7 +557,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   }
   
   // TODO: Get better simulation of T_mac
-  Time jitter = MilliSeconds (uniform_random->GetInteger (1, 10));
+  Time jitter = MilliSeconds (this->uniform_random->GetInteger (1, 10));
   // Schedule the handling of the queue
   Simulator::Schedule(jitter, &RoutingProtocol::HandleQueue, this);
   return;

@@ -31,6 +31,7 @@
 
 #include <cmath>
 
+#include "ns3/random-variable-stream.h"
 #include "ns3/ipv4.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv4-route.h"
@@ -189,7 +190,31 @@ public:
    * \param hops The hop count of this ant
    */
   void ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
-  Ipv4Address nb, double T_sd, uint32_t hops);
+    Ipv4Address nb, double T_sd, uint32_t hops);
+  
+  /**
+   * \brief Returns a random route to a valid neighbor of this node.
+   * \param iface Returns the interface index of this node.
+   * \param nb The address of the neighbor
+   * \param vr Give access to the uniform random variable
+   */
+  void SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
+    Ptr<UniformRandomVariable> vr);
+  
+  /**
+   * \brief Stocastically selects an interface and a neighbor from
+   *        the routing table to route the packet towards the destination to.
+   * \param dst The destination to route the packet to.
+   * \param proactive Selects, whether proactive routing is done.
+   *        This effects how the probabilities are chosen
+   * \param iface References the interface index, to which to route the packet.
+   * \param ns Gives the selected neighbor to route the packet towards.
+   * \param vr Give the rtable access to the uniform random variable.
+   */
+  void SelectRoute(Ipv4Address dst, bool proactive,
+    uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
+      
+  
   
 private:
   
