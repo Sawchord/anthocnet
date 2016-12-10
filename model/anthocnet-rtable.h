@@ -190,7 +190,7 @@ public:
    * \param hops The hop count of this ant
    */
   void ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
-    Ipv4Address nb, double T_sd, uint32_t hops);
+    Ipv4Address nb, uint64_t T_sd, uint32_t hops);
   
   /**
    * \brief Returns a random route to a valid neighbor of this node.

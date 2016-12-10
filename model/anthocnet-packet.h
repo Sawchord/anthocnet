@@ -105,7 +105,7 @@ public:
     Ipv4Address dst = Ipv4Address(),
     uint8_t ttl_or_max_hops = 20,
     uint8_t hops = 0,
-    double T = 0.0
+    uint64_t T = 0
   );
   
   //dtor
@@ -132,6 +132,7 @@ public:
    * \returns Hops count of this Ant.
    */
   uint8_t GetHops();
+  uint64_t GetT();
   
   // Access to Src and Dst fields should always be granted
   Ipv4Address GetSrc();
@@ -205,6 +206,7 @@ public:
  *        of a MAC layer.
  */
 class ForwardAntHeader : public AntHeader {
+  friend class BackwardAntHeader;
 public:
   
   //ctor
@@ -253,8 +255,10 @@ public:
  *       again after that.
  */
 class BackwardAntHeader : public AntHeader {
+  friend class ForwardAntHeader;
 public:
   // ctor
+  BackwardAntHeader();
   BackwardAntHeader(ForwardAntHeader& ia);
   //dtor
   ~BackwardAntHeader();
@@ -270,11 +274,10 @@ public:
    *        Updates stack, hop count and T_ind value.
    * \note Update must occur before using this node, but src address
    *       must be retrieved before. (Contrary to the ForwardAnt)
-   * \param this_node The address of this node. Needed for validity check
    * \param T_ind The T_mac value of this node. (See paper)
    * \returns The neighbor, which send the ant.
    */
-  Ipv4Address Update (Ipv4Address this_node, double T_ind);
+  Ipv4Address Update (uint64_t T_ind);
   
   
   /**

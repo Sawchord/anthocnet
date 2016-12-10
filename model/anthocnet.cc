@@ -167,7 +167,8 @@ void RoutingProtocol::DoDispose() {
 
 // ------------------------------------------------------------------
 // Implementation of Ipv4Protocol inherited functions
-Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
+Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, 
+  Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
   NS_LOG_FUNCTION(this << "oif" << oif << "header" << header);
   
   //if (header.GetDestination() == oif->GetBroadcast()) {
@@ -631,11 +632,11 @@ void RoutingProtocol::HandleQueue() {
   uint32_t iface;
   mtype_t type;
   Ptr<Packet> packet;
-  Time new_T_max;
+  Time new_T_mac;
   
-  if (this->vip_queue.Dequeue(type, iface, packet, new_T_max)) {
+  if (this->vip_queue.Dequeue(type, iface, packet, new_T_mac)) {
     NS_LOG_FUNCTION(this << "handle vip queue" << "type" << type << "iface" << iface
-      << "packet" << packet << "new_T_max" << new_T_max);
+      << "packet" << packet << "new_T_mac" << new_T_mac);
     
     switch (type) {
       
@@ -643,14 +644,15 @@ void RoutingProtocol::HandleQueue() {
         this->HandleHelloAnt(packet, iface);
         break;
       case AHNTYPE_BW_ANT:
+        this->HandleBackwardAnt(packet, iface, new_T_mac);
         break;
       default:
         NS_LOG_WARN("type " << type << "should not be in vip queue"); 
     }
   } 
-  else if (this->packet_queue.Dequeue(type, iface, packet, new_T_max)) {
+  else if (this->packet_queue.Dequeue(type, iface, packet, new_T_mac)) {
     NS_LOG_FUNCTION(this << "handle normie queue" << "type" << type << "iface" << iface
-      << "packet" << packet << "new_T_max" << new_T_max);
+      << "packet" << packet << "new_T_mac" << new_T_mac);
     
     
     switch (type) {
@@ -688,10 +690,48 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface) {
-  //STUB
-
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Time T_mac) {
+  
+  // Deserialize the ant
+  BackwardAntHeader ant;
+  packet->RemoveHeader(ant);
+  
+  // Update the running average on T_mac
+  this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;
+  
+  // Calculate the T_ind value used to update this ant
+  uint64_t T_ind =  (this->vip_queue.GetNEntries() + 1) * this->avr_T_mac.GetMilliSeconds();
+  Ipv4Address nb = ant.Update(T_ind);
+  
+  Ipv4Address dst = ant.PeekDst();
+  
+  // Now the RoutingTable needs an update
+  this->rtable.ProcessBackwardAnt(dst, iface, nb, 
+    ant.GetT(), ant.GetHops());
+  
+  // Now resend the backward ant
+  Ptr<Packet> packet2 = Create<Packet>();
+  TypeHeader type_header(AHNTYPE_BW_ANT);
+  
+  SocketIpTtlTag tag;
+  tag.SetTtl(this->initial_ttl);
+  
+  packet2->AddPacketTag(tag);
+  packet2->AddHeader(ant);
+  packet2->AddHeader(type_header);
+  
+  Ptr<Socket> socket = this->sockets[iface];
+  
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    this, socket, packet2, dst);
+  
+  NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
+  
+  return;
 }
+
+
 
 // End of namespaces
 }

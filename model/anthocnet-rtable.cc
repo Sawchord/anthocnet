@@ -321,7 +321,7 @@ void RoutingTable::Update(Time interval) {
 }
 
 void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
-  Ipv4Address nb, double T_sd, uint32_t hops) {
+  Ipv4Address nb, uint64_t T_sd, uint32_t hops) {
     
   // First search the destination and add it if it did not exist.
    // Check if destination already exists

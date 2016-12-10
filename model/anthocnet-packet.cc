@@ -136,7 +136,7 @@ operator<< (std::ostream & os, TypeHeader const & h) {
 //----------------------------------------------------------
 // Ant Header
 AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst, 
-  uint8_t ttl_or_max_hops, uint8_t hops, double T) : 
+  uint8_t ttl_or_max_hops, uint8_t hops, uint64_t T) : 
 reserved(0), 
 ttl_or_max_hops(ttl_or_max_hops), hops(hops),
 src(src), dst(dst), T(T)
@@ -247,7 +247,9 @@ void AntHeader::SetDst(Ipv4Address dst) {
 uint8_t AntHeader::GetHops () {
   return this->hops;
 }
-
+uint64_t AntHeader::GetT() {
+  return this->T;
+}
 
 
 std::ostream &
@@ -347,10 +349,17 @@ uint8_t ForwardAntHeader::GetTTL() {
 
 // ---------------------------------------------------
 // Backward ant stuff
+BackwardAntHeader::BackwardAntHeader() :
+  AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), 1, 0, 0)
+{}
+
 BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
-  AntHeader(ia.GetDst(), ia.GetSrc(),ia.GetHops(), 0, 0.0)
+  AntHeader(ia.GetDst(), ia.GetSrc(), ia.GetHops(), 0, 0)
   {
     // TODO: Copy antstack
+    for (uint32_t i = 0; i < ia.GetHops(); i++) {
+      this->ant_stack.push_back(ia.ant_stack[i]);
+    }
   }
 
 BackwardAntHeader::~BackwardAntHeader() {
@@ -373,7 +382,7 @@ bool BackwardAntHeader::IsValid() {
   return true;
 }
 
-Ipv4Address BackwardAntHeader::Update(Ipv4Address this_node, double T_ind) {
+Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   
   // Check, if this Ant has reached its destination
   // In this case,there is only one entry on the stack and the
