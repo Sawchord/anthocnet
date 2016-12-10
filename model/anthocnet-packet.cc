@@ -303,6 +303,9 @@ bool HelloAntHeader::IsValid() {
 
 // ----------------------------------------------
 // ForwardAnt stunff
+ForwardAntHeader::ForwardAntHeader() :
+  AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), 1, 0, 0)
+{}
 ForwardAntHeader::ForwardAntHeader(
   Ipv4Address src, Ipv4Address dst, uint8_t ttl) :
   AntHeader(src, dst, ttl, 0, 0.0)

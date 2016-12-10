@@ -687,7 +687,63 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
 
 void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   //STUB
-
+  
+  ForwardAntHeader ant;
+  packet->RemoveHeader(ant);
+  
+  if (!ant.IsValid()) {
+    NS_LOG_WARN("Received invalid ForwardAnt ->Dropped");
+    return;
+  }
+  
+  // Get the ip address of the interface, on which this ant
+  // was received
+  Ptr<Socket> socket = this->sockets[iface];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator it
+    = this->socket_addresses.find(socket);
+  
+  Ipv4Address this_node = it->second.GetLocal();
+  
+  if (ant.GetTTL() == 0) {
+    NS_LOG_FUNCTION(this << "Outlived ant" << ant << "->droped");
+    return;
+  }
+  
+  Ipv4Address final_dst = ant.GetDst();
+  
+  if (final_dst == this_node) {
+    // TODO: convert to backward ant
+    NS_LOG_FUNCTION(this << "received a fwant for this node. converting to bwant");
+    return;
+  }
+  
+  // TODO: Implement random broadcast
+  Ipv4Address next_nb;
+  uint32_t next_iface;
+  this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random);
+  
+  ant.Update(this_node);
+  Ptr<Packet> packet2 = Create<Packet>();
+  TypeHeader type_header(AHNTYPE_FW_ANT);
+  
+  SocketIpTtlTag tag;
+  tag.SetTtl(ant.GetTTL());
+  
+  packet2->AddPacketTag(tag);
+  packet2->AddHeader(ant);
+  packet2->AddHeader(type_header);
+  
+  
+  
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    this, socket, packet2, next_nb);
+  
+  NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
+  
+  return;
+  
+  
 }
 
 void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Time T_mac) {
@@ -695,6 +751,11 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Deserialize the ant
   BackwardAntHeader ant;
   packet->RemoveHeader(ant);
+  
+  if (!ant.IsValid()) {
+    NS_LOG_WARN("Received invalid BackwardAnt ->Dropped");
+    return;
+  }
   
   // Update the running average on T_mac
   this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;
@@ -714,7 +775,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   TypeHeader type_header(AHNTYPE_BW_ANT);
   
   SocketIpTtlTag tag;
-  tag.SetTtl(this->initial_ttl);
+  tag.SetTtl(ant.GetMaxHops() - ant.GetHops() + 1);
   
   packet2->AddPacketTag(tag);
   packet2->AddHeader(ant);
