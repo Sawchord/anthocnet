@@ -359,7 +359,6 @@ BackwardAntHeader::BackwardAntHeader() :
 BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
   AntHeader(ia.GetDst(), ia.GetSrc(), ia.GetHops(), 0, 0)
   {
-    // TODO: Copy antstack
     for (uint32_t i = 0; i < ia.GetHops(); i++) {
       this->ant_stack.push_back(ia.ant_stack[i]);
     }

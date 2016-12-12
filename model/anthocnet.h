@@ -76,6 +76,9 @@ private:
   Ptr<Socket> FindSocketWithInterfaceAddress
     (Ipv4InterfaceAddress addr) const;
   
+  Ptr<Ipv4Route> LoopbackRoute(const Ipv4Header& hdr, 
+    Ptr<NetDevice> oif) const;
+  
   /**
   * Assign a fixed random variable stream number to the random variables
   * used by this model.  Return the number of streams (possibly zero) that
@@ -163,6 +166,8 @@ private:
   
   // The running average of the T_max value
   Time avr_T_mac;
+  
+  Ptr<NetDevice> lo;
   
   // The routing table
   RoutingTable rtable;
