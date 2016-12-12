@@ -407,12 +407,10 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   // Fail, if there are no entries to that destination at all
   if (dst_it == this->dsts.end()) {
     
-    // This should be done by the RoutingRrotocol itslef, 
-    // if and only if needed
-    //this->AddDestination(dst);
-    
     return false;
   }
+  
+  
   
   uint32_t dst_index = dst_it->second.index;
   // Calculate the total pheromone value
@@ -461,6 +459,10 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     if (selected > select) {
       iface = nb_it->first.first;
       nb = nb_it->first.second;
+      
+      // Using this destination means it is relevant, update timeout
+      dst_it->second.expires_in = this->initial_lifetime_dst;
+      
       return true;
     }
   }

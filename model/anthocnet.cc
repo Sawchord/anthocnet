@@ -200,6 +200,24 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
     return route;
   }
   
+  // Try to find a destination in the rtable right away
+  Ipv4Address dst = header.GetDestination();
+  uint32_t iface;
+  Ipv4Address nb;
+  if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    Ptr<Ipv4Route> route(new Ipv4Route);
+    
+    // TODO: Check the oif??
+    route->SetOutputDevice(oif);
+    route->SetGateway(nb);
+    route->SetDestination(dst);
+    
+    return route;
+  }
+  
+  // If not found, send it to loopback to handle it in the packet cache.
+  // TODO:Start a forward ant to search a route.
+  
   // TEST: Always return loopback interface
   //Ptr<Ipv4Route> route;
   
@@ -212,19 +230,58 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   sockerr = Socket::ERROR_NOTERROR;
   Ptr<Ipv4Route> route;
   
-  //Ipv4Address dst = 
-  
   
   return 0;
 }
 
 
-bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
-                 UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                 LocalDeliverCallback lcb, ErrorCallback ecb) {
-  // STUB
+bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, 
+  Ptr<const NetDevice> idev,
+  UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+  LocalDeliverCallback lcb, ErrorCallback ecb) {
   
-  NS_LOG_FUNCTION(this);
+  // NS_LOG_FUNCTION(this);
+  
+  NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
+  
+  // Fail if no interfaces
+  if (this->socket_addresses.empty()) {
+    NS_LOG_LOGIC("No active interfaces");
+    return false;
+  }
+  
+  // Get dst and origin
+  Ipv4Address dst = header.GetDestination();
+  Ipv4Address origin = header.GetSource();
+  
+  NS_LOG_FUNCTION(this << "origin" << origin << "dst" << dst);
+  
+  // Fail if Multicast 
+  if (dst.IsMulticast()) {
+    NS_LOG_LOGIC("AntHocNet no support multicast");
+    return false;
+  }
+  
+  // TODO: Get the socket on the NetDevice
+  // TODO: Check if this is the node
+  
+  
+  uint32_t iface;
+  Ipv4Address nb;
+  
+  // TODO: Search for a route, 
+  if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    
+    
+    
+    
+  }
+  // TODO: cache data if no route
+  else {
+    
+    
+  }
+  
   return false;
 }
 
@@ -312,7 +369,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
     socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
     socket->SetAllowBroadcast(true);
     socket->SetIpRecvTtl(true);
-    socket->BindToNetDevice (l3->GetNetDevice (interface));
+    socket->BindToNetDevice (l3->GetNetDevice(interface));
     
     // Insert socket into the lists
     this->sockets[interface] = socket;
@@ -524,6 +581,19 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   // Set the loopback device
   this->lo = ipv4->GetNetDevice(0);
   
+  // Open socket on the loopback
+  Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+  socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
+  
+  socket->BindToNetDevice(this->lo);
+  socket->SetAllowBroadcast(true);
+  socket->SetIpRecvTtl(true);
+  
+  this->sockets[0] = socket;
+  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));
+  
+  
   // Initiate the protocol and start operating
   Simulator::ScheduleNow (&RoutingProtocol::Start, this);
 }
@@ -620,11 +690,13 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
   
-  dst = this->socket_addresses[socket].GetLocal();
-  NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
+    
+    // TODO: Why does the next line not segfault?
+    NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
     << "src" << src << "dst" << dst);  
     
     iface = this->FindSocketIndex(socket);
+    dst = this->socket_addresses[socket].GetLocal();
     
   }
   else {
@@ -657,7 +729,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   return;
 }
 
-// Callback function to send something in a deffered manner
+// Callback function to  something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
   NS_LOG_FUNCTION(this << "packet" << packet << "destination" << destination << "socket" << socket);
@@ -669,7 +741,6 @@ void RoutingProtocol::HelloTimerExpire() {
   // send a hello over each socket
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
-    
     
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
@@ -780,7 +851,6 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
 }
 
 void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time T_mac) {
-  //STUB
   
   ForwardAntHeader ant;
   packet->RemoveHeader(ant);
@@ -824,14 +894,14 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     packet2->AddHeader(bwant);
     packet2->AddHeader(type_header);
     
-    Ptr<Socket> socket = this->sockets[iface];
+    Ptr<Socket> socket2 = this->sockets[iface];
     
     NS_LOG_FUNCTION(this << "received a fwant for this node. converting to bwant");
     NS_LOG_FUNCTION(this << "sending bwant" << "iface" << iface << "dst" << dst);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-      this, socket, packet2, dst);
+      this, socket2, packet2, dst);
     
     return;
   }
@@ -845,6 +915,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     
   }
   
+  
+  
   ant.Update(this_node);
   Ptr<Packet> packet2 = Create<Packet>();
   TypeHeader type_header(AHNTYPE_FW_ANT);
@@ -855,7 +927,6 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   packet2->AddPacketTag(tag);
   packet2->AddHeader(ant);
   packet2->AddHeader(type_header);
-  
   
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
