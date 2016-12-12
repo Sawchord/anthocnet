@@ -74,6 +74,7 @@ private:
 };
 
 
+
 /**
  * \brief Base class for all Ant types used
  *        in this protocol. The field types do 

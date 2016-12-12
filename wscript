@@ -12,6 +12,7 @@ def build(bld):
         'model/anthocnet.cc',
         'model/anthocnet-rqueue.cc',
         'model/anthocnet-rtable.cc',
+        'model/anthocnet-pcache.cc',
         'model/anthocnet-packet.cc',
         'helper/anthocnet-helper.cc',
         ]
@@ -27,6 +28,7 @@ def build(bld):
         'model/anthocnet.h',
         'model/anthocnet-rqueue.h',
         'model/anthocnet-rtable.h',
+        'model/anthocnet-pcache.h',
         'model/anthocnet-packet.h',
         'helper/anthocnet-helper.h',
         ]

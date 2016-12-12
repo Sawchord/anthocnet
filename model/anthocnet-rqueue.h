@@ -67,6 +67,7 @@ public:
    */
   bool Enqueue(mtype_t type, uint32_t iface, Ptr<Packet> packet, Time now = Simulator::Now());
   
+  
   /**
    * \brief Deques the first not expired entry
    * \param type Sets the type of the message

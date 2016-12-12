@@ -367,8 +367,10 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
 }
 
 
-void RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
+bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
   Ptr<UniformRandomVariable> vr) {
+  
+  if (this->n_nb == 0) return false;
   
   uint32_t select = vr->GetInteger(0, this->n_nb);
   
@@ -379,13 +381,16 @@ void RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
     if (i == select) {
       iface = it->first.first;
       nb = it->first.second;
-      return;
+      return true;
     }
     ++it;
   }
+  
+  // Never come here
+  return false;
 }
 
-void RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
+bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
   
   // Set the power modifier.
@@ -398,22 +403,39 @@ void RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   
   //Get the destination index:
   std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
+  
+  // Fail, if there are no entries to that destination at all
   if (dst_it == this->dsts.end()) {
-    // Return random route, if there is no data about the neigbor
-    this->AddDestination(dst);
-    this->SelectRandomRoute(iface, nb, vr);
-    return;
+    
+    // This should be done by the RoutingRrotocol itslef, 
+    // if and only if needed
+    //this->AddDestination(dst);
+    
+    return false;
   }
   
   uint32_t dst_index = dst_it->second.index;
-  
   // Calculate the total pheromone value
   double total_pheromone = 0.0;
+  uint32_t initialized = 0;
+  
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
     nb_it != this->nbs.end(); ++nb_it) {
     
     uint32_t nb_index = nb_it->first.first;
+    
+    // Skip the unititialized entries
+    if (this->rtable[dst_index][nb_index].pheromone == NAN) {
+      continue;
+    }
+    initialized++;
+    
     total_pheromone += pow(this->rtable[dst_index][nb_index].pheromone , power);
+  }
+  
+  // Fail, if there are no initialized entries (same as no entires at all)
+  if (initialized == 0) {
+    return false;
   }
   
   
@@ -429,13 +451,22 @@ void RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     
     uint32_t nb_index = nb_it->first.first;
     NeighborInfo nbi = nb_it->second;
+    
+    if (this->rtable[dst_index][nb_index].pheromone == NAN) {
+      continue;
+    }
+    
     selected += pow(this->rtable[dst_index][nb_index].pheromone, power);
     
     if (selected > select) {
       iface = nb_it->first.first;
       nb = nb_it->first.second;
+      return true;
     }
   }
+  
+  // Never come here
+  return false;
 }
 
 }

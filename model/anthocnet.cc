@@ -47,7 +47,9 @@ RoutingProtocol::RoutingProtocol ():
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
   rqueue_max_len(64),
   queue_expire(MilliSeconds(1000)),
-  nb_expire(Seconds(5)),
+  dcache_expire(MilliSeconds(5000)),
+  fwacache_expire(MilliSeconds(1000)),
+  nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
   alpha_T_mac(0.7),
   T_hop(0.2),
@@ -55,7 +57,9 @@ RoutingProtocol::RoutingProtocol ():
   avr_T_mac(Seconds(0)),
   rtable(RoutingTable(nb_expire, dst_expire, T_hop, gamma_pheromone)),
   packet_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
-  vip_queue(IncomePacketQueue(rqueue_max_len, queue_expire))
+  vip_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
+  data_cache(dcache_expire),
+  fwant_cache(fwacache_expire)
   {
     // Initialize the sockets
     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
@@ -129,6 +133,18 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeTimeAccessor(&RoutingProtocol::queue_expire),
     MakeTimeChecker()
   )
+  .AddAttribute ("DataCacheExpire",
+    "Time datapackets waits for a route to be found. Packets are dropped if expires",
+    TimeValue (MilliSeconds(5000)),
+    MakeTimeAccessor(&RoutingProtocol::dcache_expire),
+    MakeTimeChecker()
+  )
+  .AddAttribute ("ForwardAntExpire",
+    "Time the ForwanrdAnts are cached to discover doubles",
+    TimeValue (MilliSeconds(1000)),
+    MakeTimeAccessor(&RoutingProtocol::fwacache_expire),
+    MakeTimeChecker()
+  )
   .AddAttribute ("RTableUpdate",
     "The interval, in which the RoutingTable is updated.",
     TimeValue (MilliSeconds(1000)),
@@ -176,6 +192,27 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
     return this->LoopbackRoute(header, oif);
   }
   
+  // Fail if there are no interfaces
+  if (this->socket_addresses.empty()) {
+    sockerr = Socket::ERROR_NOROUTETOHOST;
+    NS_LOG_LOGIC ("No valid interfaces");
+    Ptr<Ipv4Route> route;
+    return route;
+  }
+  
+  // TEST: Always return loopback interface
+  //Ptr<Ipv4Route> route;
+  
+  return this->LoopbackRoute(header, oif);
+  
+  // END TEST
+  
+  // Otherwise, one could lookup the address and only defer it, if no
+  // route was found, but since the 
+  sockerr = Socket::ERROR_NOTERROR;
+  Ptr<Ipv4Route> route;
+  
+  //Ipv4Address dst = 
   
   
   return 0;
@@ -713,6 +750,7 @@ void RoutingProtocol::HandleQueue() {
     
     switch (type) {
       case AHNTYPE_FW_ANT:
+        this->HandleForwardAnt(packet, iface, new_T_mac);
         break;
       default:
         NS_LOG_WARN("type " << type << "should not be in normie queue"); 
@@ -741,7 +779,7 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time T_mac) {
   //STUB
   
   ForwardAntHeader ant;
@@ -798,10 +836,14 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
     return;
   }
   
-  // TODO: Implement random broadcast
   Ipv4Address next_nb;
   uint32_t next_iface;
-  this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random);
+  if(!this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random)) {
+    
+    // TODO: Implement broadcast
+    return;
+    
+  }
   
   ant.Update(this_node);
   Ptr<Packet> packet2 = Create<Packet>();
@@ -837,6 +879,8 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
     NS_LOG_WARN("Received invalid BackwardAnt ->Dropped");
     return;
   }
+  
+  // TODO: Check if this Node is the destination and manage behaviour
   
   // Update the running average on T_mac
   this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;

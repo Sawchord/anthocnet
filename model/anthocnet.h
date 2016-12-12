@@ -21,6 +21,7 @@
 #include "anthocnet-rtable.h"
 #include "anthocnet-rqueue.h"
 #include "anthocnet-packet.h"
+#include "anthocnet-pcache.h"
 
 #include <list>
 
@@ -119,7 +120,7 @@ private:
   void HandleHelloAnt(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a ForwardAnt
-  void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface);
+  void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time T_mac);
   
   // Handles receiving of a BackwardAnt
   void HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface, Time T_mac);
@@ -142,6 +143,12 @@ private:
   uint32_t rqueue_max_len;
   // Expire time of the queues
   Time queue_expire;
+  
+  // Time until an entry in the datacache expires and the packet is dropped
+  Time dcache_expire;
+  
+  // Time the forwardants are kept in the cache
+  Time fwacache_expire;
   
   // Time until a neighbor expires
   Time nb_expire;
@@ -176,6 +183,12 @@ private:
   IncomePacketQueue packet_queue;
   // The very important packet queue
   IncomePacketQueue vip_queue;
+  
+  // The Cache for the data that has no route yet
+  PacketCache data_cache;
+  
+  // The cache for forward ants
+  PacketCache fwant_cache;
   
   // The IP protocol
   Ptr<Ipv4> ipv4;

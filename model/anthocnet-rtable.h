@@ -197,8 +197,9 @@ public:
    * \param iface Returns the interface index of this node.
    * \param nb The address of the neighbor
    * \param vr Give access to the uniform random variable
+   * \returns true, if a random route was selected, false if no interfaces
    */
-  void SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
+  bool SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
     Ptr<UniformRandomVariable> vr);
   
   /**
@@ -210,8 +211,10 @@ public:
    * \param iface References the interface index, to which to route the packet.
    * \param ns Gives the selected neighbor to route the packet towards.
    * \param vr Give the rtable access to the uniform random variable.
+   * \return true, if a route was selcted, false, if no route could be 
+   *         selected, since there where no enrties for dst.
    */
-  void SelectRoute(Ipv4Address dst, bool proactive,
+  bool SelectRoute(Ipv4Address dst, bool proactive,
     uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
       
   

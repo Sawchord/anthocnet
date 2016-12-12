@@ -54,6 +54,7 @@ bool IncomePacketQueue::Enqueue(mtype_t type, uint32_t iface, Ptr<Packet> packet
   
   // Create and enqueue entry
   QueueEntry qe;
+  
   qe.type = type;
   qe.iface = iface;
   qe.received_in = now;
