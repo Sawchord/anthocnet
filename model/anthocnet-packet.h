@@ -31,7 +31,7 @@ namespace ns3 {
 namespace ahn {
 
 typedef enum MessageType {
-  AHNTYPE_FW_UNKNOWN = 0,
+  AHNTYPE_UNKNOWN = 0,
   AHNTYPE_FW_ANT = 1, //!< Forward Ant
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
   AHNTYPE_BW_ANT = 3, //!< Backward Ant

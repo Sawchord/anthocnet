@@ -35,6 +35,10 @@ namespace ahn {
 struct CacheEntry {
   mtype_t type;
   uint32_t iface;
+  
+  Ipv4Header header;
+  
+  
   Ptr<const Packet> packet;
   
   Ipv4RoutingProtocol::UnicastForwardCallback ucb;
@@ -66,12 +70,11 @@ private:
   
   // Standard expire time if no other specified
   Time initial_expire;
-  
   std::map<Ipv4Address, std::vector<CacheEntry> > cache;
   
-  
-  
 };
+
+
 } 
 }
 

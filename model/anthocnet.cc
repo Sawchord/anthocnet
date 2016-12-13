@@ -216,17 +216,10 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   }
   
   // If not found, send it to loopback to handle it in the packet cache.
-  // TODO:Start a forward ant to search a route.
+  this->StartForwardAnt(dst);
   
-  // TEST: Always return loopback interface
   sockerr = Socket::ERROR_NOTERROR;
   return this->LoopbackRoute(header, oif);
-  // END TEST
-  
-  // Otherwise, one could lookup the address and only defer it, if no
-  // route was found, but since the 
-  //Ptr<Ipv4Route> route;
-  return 0;
 }
 
 
@@ -291,17 +284,19 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     
   }
   // If there is no route, cache the data to wait for a route
-  // Also TODO: start a forward ant towards the destination
+  // Also start a forward ant towards the destination
   else {
     
     CacheEntry ce;
     ce.type = AHNTYPE_DATA;
     ce.iface = 0;
+    ce.header = header;
     ce.packet = p;
     ce.ucb = ucb;
     ce.ecb = ecb;
     
     this->data_cache.CachePacket(dst, ce);
+    this->StartForwardAnt(dst);
     
   }
   
@@ -693,10 +688,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   uint32_t iface;
   Ipv4Address nb;
   
-  // First check, whether we have valid entries
-  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
-    // TODO broadcast
-  }
+  NS_LOG_FUNCTION(this);
   
   // If destination was found, send an ant
   Ptr<Socket> socket = this->sockets[iface];
@@ -706,8 +698,15 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   Ipv4Address this_node = it->second.GetLocal();
   
   ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+  
+  // Broadcast if no valid entries
+  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    this->BroadcastForwardAnt(ant);
+  }
+  
   this->UnicastForwardAnt(iface, nb, ant);
 }
+
 
 void RoutingProtocol::UnicastForwardAnt(uint32_t iface, 
   Ipv4Address dst, ForwardAntHeader ant) {
@@ -735,6 +734,7 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   NS_LOG_FUNCTION(this << "sending fwant" << ant);
 }
 
+
 void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   Ipv4Address dst, BackwardAntHeader ant) {
   
@@ -761,15 +761,39 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   NS_LOG_FUNCTION(this << "sending bwant" << ant);
 }
 
+
 void RoutingProtocol::BroadcastForwardAnt(ForwardAntHeader ant) {
   
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
     
-    // STUB
+    Ptr<Socket> socket = it->first;
+    Ipv4InterfaceAddress iface = it->second;
     
+    TypeHeader type_header(AHNTYPE_FW_ANT);
+    
+    Ptr<Packet> packet = Create<Packet> ();
+    SocketIpTtlTag tag;
+    tag.SetTtl(ant.GetTTL());
+    
+    packet->AddPacketTag(tag);
+    packet->AddHeader(ant);
+    packet->AddHeader(type_header);
+    
+    Ipv4Address destination;
+    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+        destination = Ipv4Address ("255.255.255.255");
+    } else { 
+        destination = iface.GetBroadcast ();
+    }
+    
+    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+      this, socket, packet, destination);
     
   }
+  
+  NS_LOG_FUNCTION(this << "broadcast ant" << ant);
 }
 
 // -------------------------------------------------------
@@ -865,14 +889,11 @@ void RoutingProtocol::HelloTimerExpire() {
     packet->AddHeader(type_header);
     
     Ipv4Address destination;
-    if (iface.GetMask () == Ipv4Mask::GetOnes ())
-      {
+    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
         destination = Ipv4Address ("255.255.255.255");
-      }
-    else
-      { 
+    } else { 
         destination = iface.GetBroadcast ();
-      }
+    }
     
     NS_LOG_FUNCTION(this << "iface" << iface << "packet" << *packet);
     
@@ -969,6 +990,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   // No need to update the avr_T_mac, since this is the non-priviledged
   // queue.
   
+  // TODO: Cache FW ants and recognize doubled ants.
+  
   // Get the ip address of the interface, on which this ant
   // was received
   Ptr<Socket> socket = this->sockets[iface];
@@ -1013,24 +1036,19 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     return;
   }
   
+  ant.Update(this_node);
+  NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
+  
   Ipv4Address next_nb;
   uint32_t next_iface;
   if(!this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random)) {
-    
-    // TODO: Implement broadcast
+    this->BroadcastForwardAnt(ant);
     return;
     
   }
   
-  ant.Update(this_node);
-  
   this->UnicastForwardAnt(next_iface, next_nb, ant);
-
-  NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
-  
   return;
-  
-  
 }
 
 void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Time T_mac) {
@@ -1055,8 +1073,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   
   // Check if this Node is the destination and manage behaviour
   if (dst == 0) {
-    // TODO: Empty out the data cache
-    
+    this->SendCachedData();
   }
   
   
@@ -1072,10 +1089,41 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
 
 
 void RoutingProtocol::SendCachedData() {
-  // STUB
   
+  NS_LOG_FUNCTION(this);
+  
+  // Iterate over all cached destinations
+  std::vector <Ipv4Address> dsts = this->data_cache.GetDestinations();
+  for (uint32_t i = 0; i < dsts.size(); i++) {
+    
+    Ipv4Address dst = dsts[i];
+    std::vector<CacheEntry> cv = this->data_cache.GetCache(dst);
+    
+    if (cv.empty()) {
+      continue;
+    }
+    
+    for (uint32_t j = 0; j < cv.size(); j++) {
+      uint32_t iface;
+      Ipv4Address nb;
+      
+      CacheEntry ce = cv[j];
+      
+      if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+        Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
+        
+        // Create the route and call UnicastForwardCallback
+        rt->SetSource(ce.header.GetSource());
+        rt->SetDestination(dst);
+        rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
+        rt->SetGateway(nb);
+        
+        ce.ucb(rt, ce.packet, ce.header);
+      }
+      
+    }
+  }
 }
-
 
 // End of namespaces
 }

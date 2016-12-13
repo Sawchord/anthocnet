@@ -50,7 +50,6 @@ void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce) {
 
 std::vector<CacheEntry> PacketCache::GetCache(Ipv4Address dst, Time now) {
   
-  // TODO: This segfaults?
   std::vector<CacheEntry> retv;
   
   std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.find(dst);
