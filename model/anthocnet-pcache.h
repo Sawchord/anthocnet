@@ -35,7 +35,7 @@ namespace ahn {
 struct CacheEntry {
   mtype_t type;
   uint32_t iface;
-  Ptr<Packet> packet;
+  Ptr<const Packet> packet;
   
   Ipv4RoutingProtocol::UnicastForwardCallback ucb;
   Ipv4RoutingProtocol::ErrorCallback ecb;
@@ -44,8 +44,6 @@ struct CacheEntry {
   Time expire_in;
   
 };
-  
-  
   
 class PacketCache {
 public:
@@ -59,13 +57,19 @@ void CachePacket(Ipv4Address dst, CacheEntry ce);
 
   
 std::vector<CacheEntry> GetCache(Ipv4Address dst, Time now = Simulator::Now());
-  
+
+std::vector<Ipv4Address> GetDestinations();
+
+void RemoveCache(Ipv4Address dst);
+
 private:
   
   // Standard expire time if no other specified
   Time initial_expire;
   
   std::map<Ipv4Address, std::vector<CacheEntry> > cache;
+  
+  
   
 };
 } 

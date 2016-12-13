@@ -97,6 +97,10 @@ private:
    */  
   uint32_t FindSocketIndex(Ptr<Socket>)const;
   
+  void StartForwardAnt(Ipv4Address dst);
+  
+  void SendCachedData();
+  
   // ----------------------------------------------
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);

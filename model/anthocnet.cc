@@ -219,18 +219,13 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   // TODO:Start a forward ant to search a route.
   
   // TEST: Always return loopback interface
-  //Ptr<Ipv4Route> route;
-  
+  sockerr = Socket::ERROR_NOTERROR;
   return this->LoopbackRoute(header, oif);
-  
   // END TEST
   
   // Otherwise, one could lookup the address and only defer it, if no
   // route was found, but since the 
-  sockerr = Socket::ERROR_NOTERROR;
-  Ptr<Ipv4Route> route;
-  
-  
+  //Ptr<Ipv4Route> route;
   return 0;
 }
 
@@ -240,13 +235,13 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
   LocalDeliverCallback lcb, ErrorCallback ecb) {
   
-  // NS_LOG_FUNCTION(this);
   
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
     NS_LOG_LOGIC("No active interfaces");
+    // TODO Error callback
     return false;
   }
   
@@ -259,26 +254,54 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // Fail if Multicast 
   if (dst.IsMulticast()) {
     NS_LOG_LOGIC("AntHocNet no support multicast");
+    // TODO Error callback
     return false;
   }
   
-  // TODO: Get the socket on the NetDevice
-  // TODO: Check if this is the node
+  // Get the socket and InterfaceAdress of the reciving net device
+  // uint32_t recv_iface = idev->GetIfIndex(); // Works too?
+  uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
+  Ptr<Socket> recv_socket = this->sockets[recv_iface];
+  Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
+  NS_LOG_FUNCTION(this << "iface_index" << recv_iface << "socket" 
+    << recv_socket << "sockaddress" << recv_sockaddress);
   
+  // Check if this is the node and local deliver
+  if (recv_sockaddress.GetLocal() == dst) {
+    NS_LOG_LOGIC("Local delivery");
+    lcb(p, header, recv_iface);
+    return true;
+  }
   
   uint32_t iface;
   Ipv4Address nb;
   
-  // TODO: Search for a route, 
+  //Search for a route, 
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
     
+    // Create the route and call UnicastForwardCallback
+    rt->SetSource(origin);
+    rt->SetDestination(dst);
+    rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
+    rt->SetGateway(nb);
     
-    
+    ucb(rt, p, header);
+    return true;
     
   }
-  // TODO: cache data if no route
+  // If there is no route, cache the data to wait for a route
+  // Also TODO: start a forward ant towards the destination
   else {
     
+    CacheEntry ce;
+    ce.type = AHNTYPE_DATA;
+    ce.iface = 0;
+    ce.packet = p;
+    ce.ucb = ucb;
+    ce.ecb = ecb;
+    
+    this->data_cache.CachePacket(dst, ce);
     
   }
   
@@ -666,6 +689,11 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 }
 
 
+void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
+  
+  
+}
+
 // -------------------------------------------------------
 // Callback functions used in receiving and timers
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
@@ -951,8 +979,6 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
     return;
   }
   
-  // TODO: Check if this Node is the destination and manage behaviour
-  
   // Update the running average on T_mac
   this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;
   
@@ -961,6 +987,13 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   Ipv4Address nb = ant.Update(T_ind);
   
   Ipv4Address dst = ant.PeekDst();
+  // Check if this Node is the destination and manage behaviour
+  
+  if (dst == 0) {
+    // TODO: Empty out the data cache
+    
+  }
+  
   
   // Now the RoutingTable needs an update
   this->rtable.ProcessBackwardAnt(dst, iface, nb, 
@@ -988,6 +1021,11 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   return;
 }
 
+
+void RoutingProtocol::SendCachedData() {
+  // STUB
+  
+}
 
 
 // End of namespaces

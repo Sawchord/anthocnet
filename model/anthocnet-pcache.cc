@@ -70,14 +70,21 @@ std::vector<CacheEntry> PacketCache::GetCache(Ipv4Address dst, Time now) {
       retv.push_back(it->second[i]);
     }
   }
-  
-  
-  
-  
-  
   return retv;
 }
 
+
+std::vector<Ipv4Address> PacketCache::GetDestinations() {
+    std::vector<Ipv4Address> retv;
+    
+    for (std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it;
+      it != this->cache.end(); ++it) {
+      
+      retv.push_back(it->first);
+    }
+    
+    return retv;
+}
 
 
 // End of namespaces
