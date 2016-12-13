@@ -308,9 +308,15 @@ ForwardAntHeader::ForwardAntHeader() :
 {}
 ForwardAntHeader::ForwardAntHeader(
   Ipv4Address src, Ipv4Address dst, uint8_t ttl) :
-  AntHeader(src, dst, ttl, 0, 0.0)
+  AntHeader(src, dst, ttl, 0, 0) {
+    this->ant_stack.push_back(dst);
+    
+  }
+ForwardAntHeader::ForwardAntHeader(uint8_t ttl) :
+  AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), ttl, 0, 0)
   {}
-
+  
+  
 ForwardAntHeader::~ForwardAntHeader() {
 }
 

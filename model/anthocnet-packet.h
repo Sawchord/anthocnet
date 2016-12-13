@@ -213,6 +213,7 @@ public:
   //ctor
   ForwardAntHeader();
   ForwardAntHeader(Ipv4Address src, Ipv4Address dst, uint8_t ttl);
+  ForwardAntHeader(uint8_t ttl);
   //dtor
   ~ForwardAntHeader();
   

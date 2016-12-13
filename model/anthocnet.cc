@@ -690,8 +690,86 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 
 
 void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
+  uint32_t iface;
+  Ipv4Address nb;
   
+  // First check, whether we have valid entries
+  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    // TODO broadcast
+  }
   
+  // If destination was found, send an ant
+  Ptr<Socket> socket = this->sockets[iface];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator it
+    = this->socket_addresses.find(socket);
+  
+  Ipv4Address this_node = it->second.GetLocal();
+  
+  ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+  this->UnicastForwardAnt(iface, nb, ant);
+}
+
+void RoutingProtocol::UnicastForwardAnt(uint32_t iface, 
+  Ipv4Address dst, ForwardAntHeader ant) {
+  
+  // Get the socket which runs on iface
+  Ptr<Socket> socket = this->sockets[iface];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator it
+    = this->socket_addresses.find(socket);
+  
+  // Create the packet and set it up correspondingly
+  Ptr<Packet> packet = Create<Packet> ();
+  TypeHeader type_header(AHNTYPE_FW_ANT);
+  
+  SocketIpTtlTag tag;
+  tag.SetTtl(ant.GetTTL());
+  
+  packet->AddPacketTag(tag);
+  packet->AddHeader(ant);
+  packet->AddHeader(type_header);
+  
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    this, socket, packet, dst);
+  
+  NS_LOG_FUNCTION(this << "sending fwant" << ant);
+}
+
+void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
+  Ipv4Address dst, BackwardAntHeader ant) {
+  
+  // Get the socket which runs on iface
+  Ptr<Socket> socket = this->sockets[iface];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator it
+    = this->socket_addresses.find(socket);
+  
+  // Create the packet and set it up correspondingly
+  Ptr<Packet> packet = Create<Packet> ();
+  TypeHeader type_header(AHNTYPE_BW_ANT);
+  
+  SocketIpTtlTag tag;
+  tag.SetTtl(ant.GetMaxHops() - ant.GetHops() + 1);
+  
+  packet->AddPacketTag(tag);
+  packet->AddHeader(ant);
+  packet->AddHeader(type_header);
+  
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    this, socket, packet, dst);
+  
+  NS_LOG_FUNCTION(this << "sending bwant" << ant);
+}
+
+void RoutingProtocol::BroadcastForwardAnt(ForwardAntHeader ant) {
+  
+  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
+    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+    
+    // STUB
+    
+    
+  }
 }
 
 // -------------------------------------------------------
@@ -906,6 +984,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   
   Ipv4Address final_dst = ant.GetDst();
   
+  // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
   
     BackwardAntHeader bwant(ant);
@@ -943,24 +1022,10 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     
   }
   
-  
-  
   ant.Update(this_node);
-  Ptr<Packet> packet2 = Create<Packet>();
-  TypeHeader type_header(AHNTYPE_FW_ANT);
   
-  SocketIpTtlTag tag;
-  tag.SetTtl(ant.GetTTL());
-  
-  packet2->AddPacketTag(tag);
-  packet2->AddHeader(ant);
-  packet2->AddHeader(type_header);
-  
-  
-  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-    this, socket, packet2, next_nb);
-  
+  this->UnicastForwardAnt(next_iface, next_nb, ant);
+
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
   return;
@@ -987,8 +1052,8 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   Ipv4Address nb = ant.Update(T_ind);
   
   Ipv4Address dst = ant.PeekDst();
-  // Check if this Node is the destination and manage behaviour
   
+  // Check if this Node is the destination and manage behaviour
   if (dst == 0) {
     // TODO: Empty out the data cache
     
@@ -999,23 +1064,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   this->rtable.ProcessBackwardAnt(dst, iface, nb, 
     ant.GetT(), ant.GetHops());
   
-  // Now resend the backward ant
-  Ptr<Packet> packet2 = Create<Packet>();
-  TypeHeader type_header(AHNTYPE_BW_ANT);
-  
-  SocketIpTtlTag tag;
-  tag.SetTtl(ant.GetMaxHops() - ant.GetHops() + 1);
-  
-  packet2->AddPacketTag(tag);
-  packet2->AddHeader(ant);
-  packet2->AddHeader(type_header);
-  
-  Ptr<Socket> socket = this->sockets[iface];
-  
-  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-    this, socket, packet2, dst);
-  
+  this->UnicastBackwardAnt(iface, nb, ant);
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
   return;
