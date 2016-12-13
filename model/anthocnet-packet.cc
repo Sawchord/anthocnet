@@ -164,7 +164,10 @@ TypeId AntHeader::GetInstanceTypeId () const {
 uint32_t AntHeader::GetSerializedSize () const {
   //Size: 1 Reserverd 1 TTL/MaxHops 1 Hops
   // 4 Src 4 Src 4 Time
-  return 19 + this->ant_stack.size();
+  
+  // The ant_stack.size if the number of Ip Addresses
+  // The assumption is made, that an Ip Address gets serialized to 4 bytes
+  return 19 + this->ant_stack.size() * 4;
 }
 
 void AntHeader::Serialize (Buffer::Iterator i) const {

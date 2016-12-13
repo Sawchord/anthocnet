@@ -586,7 +586,6 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   
   this->ipv4 = ipv4;
   
-  
   // Initialize all sockets as null pointers
   for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
     this->sockets[i] = 0;
@@ -599,7 +598,10 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   // Set the loopback device
   this->lo = ipv4->GetNetDevice(0);
   
+  // FIXME: This does not work inside this function and must
+  // occur later. Where? Needed?
   // Open socket on the loopback
+  /*
   Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
       UdpSocketFactory::GetTypeId());
   socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
@@ -609,14 +611,15 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   socket->SetIpRecvTtl(true);
   
   this->sockets[0] = socket;
-  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));
+  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));*/
   
   
   // Initiate the protocol and start operating
   Simulator::ScheduleNow (&RoutingProtocol::Start, this);
 }
 
-void RoutingProtocol::PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit) const{
+void RoutingProtocol::PrintRoutingTable 
+  (Ptr<OutputStreamWrapper> stream, Time::Unit unit) const{
   
   // Get the stream, print node id
   // then print time, then simply print rtables output
