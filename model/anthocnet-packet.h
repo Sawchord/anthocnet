@@ -36,7 +36,7 @@ typedef enum MessageType {
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
   AHNTYPE_BW_ANT = 3, //!< Backward Ant
   AHNTYPE_HELLO = 4, //!< Hello Packet
-  AHNTYPE_DATA = 5, //!< Data packet (NEEDED?)
+  AHNTYPE_DATA = 5, //!< Data packet
   AHNTYPE_RREP_ANT = 6, //!< RouteRepair Ant
   AHNTYPE_ERR = 7 //!< Error Ant
 } mtype_t;
@@ -69,7 +69,7 @@ public:
   bool operator== (TypeHeader const & o) const;
   
 private:
-  MessageType type;
+  mtype_t type;
   bool valid;
 };
 

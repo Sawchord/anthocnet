@@ -29,7 +29,7 @@ namespace ahn {
 // GetTypeId function
 NS_OBJECT_ENSURE_REGISTERED (TypeHeader);
 
-TypeHeader::TypeHeader (MessageType t):
+TypeHeader::TypeHeader (mtype_t t):
   type (t), valid(true) {}
 
 TypeHeader::~TypeHeader() {}
@@ -67,10 +67,8 @@ uint32_t TypeHeader::Deserialize (Buffer::Iterator start) {
     case AHNTYPE_DATA:
     case AHNTYPE_RREP_ANT:
     case AHNTYPE_ERR:
-    {
-      type = (MessageType) type;
+      this->type = (MessageType) type;
       break;
-    }
     default:
       valid = false;
   }
@@ -100,7 +98,7 @@ void TypeHeader::Print (std::ostream &os) const {
     }
     case AHNTYPE_HELLO:
     {
-      os << "HELLO_MSG";
+      os << "HELLO_MESSAGE";
       break;
     }
     case AHNTYPE_DATA:
@@ -221,7 +219,7 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
 }
 
 void AntHeader::Print(std::ostream &os) const {
-  os << " TTL/MaxHops: " << std::to_string(this->ttl_or_max_hops)
+  os << "TTL/MaxHops: " << std::to_string(this->ttl_or_max_hops)
   << " Number of Hops: " << std::to_string(this->hops)
   << " Source Address: " << this->src
   << " Destination: " << this->dst

@@ -731,7 +731,7 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   packet->AddHeader(ant);
   packet->AddHeader(type_header);
   
-  NS_LOG_FUNCTION(this << "sending fwant" << ant);
+  NS_LOG_FUNCTION(this << "sending fwant" << *packet);
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
   Simulator::Schedule(jitter, &RoutingProtocol::Send, 
@@ -789,7 +789,12 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     
     packet->AddPacketTag(tag);
     packet->AddHeader(ant);
+    
+    NS_LOG_UNCOND(this << "packet" << *packet);
+    
     packet->AddHeader(type_header);
+    
+    NS_LOG_UNCOND(this << "packet" << *packet);
     
     Ipv4Address destination;
     if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
@@ -798,13 +803,15 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
         destination = iface.GetBroadcast ();
     }
     
+    NS_LOG_FUNCTION(this << "broadcast ant" << *packet << "dst" << dst);
+    
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
       this, socket, packet, destination);
     
   }
   
-  NS_LOG_FUNCTION(this << "broadcast ant with dst" << dst);
+  
 }
 
 // -------------------------------------------------------
@@ -873,7 +880,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 // Callback function to  something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
-  NS_LOG_FUNCTION(this << "packet" << packet << "destination" << destination << "socket" << socket);
+  NS_LOG_FUNCTION(this << "packet" << *packet << "destination" << destination << "socket" << socket);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
 
