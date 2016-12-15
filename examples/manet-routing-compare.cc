@@ -355,7 +355,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
       Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
       ApplicationContainer temp = onoff1.Install (adhocNodes.Get (i + nSinks));
-      temp.Start (Seconds (var->GetValue (100.0,101.0)));
+      temp.Start (Seconds (var->GetValue (20.0,21.0)));
       temp.Stop (Seconds (TotalTime));
     }
 

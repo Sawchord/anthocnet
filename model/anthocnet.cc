@@ -688,10 +688,17 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 
 
 void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
+  
   uint32_t iface;
   Ipv4Address nb;
   
   NS_LOG_FUNCTION(this);
+  
+  // Broadcast if no valid entries
+  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+    this->BroadcastForwardAnt(dst);
+    return;
+  }
   
   // If destination was found, send an ant
   Ptr<Socket> socket = this->sockets[iface];
@@ -699,13 +706,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
     = this->socket_addresses.find(socket);
   
   Ipv4Address this_node = it->second.GetLocal();
-  
   ForwardAntHeader ant (this_node, dst, this->initial_ttl);
-  
-  // Broadcast if no valid entries
-  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
-    this->BroadcastForwardAnt(ant);
-  }
   
   this->UnicastForwardAnt(iface, nb, ant);
 }
@@ -730,11 +731,12 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   packet->AddHeader(ant);
   packet->AddHeader(type_header);
   
+  NS_LOG_FUNCTION(this << "sending fwant" << ant);
+  
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
   Simulator::Schedule(jitter, &RoutingProtocol::Send, 
     this, socket, packet, dst);
   
-  NS_LOG_FUNCTION(this << "sending fwant" << ant);
 }
 
 
@@ -757,22 +759,28 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   packet->AddHeader(ant);
   packet->AddHeader(type_header);
   
+  NS_LOG_FUNCTION(this << "sending bwant" << ant);
+  
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
   Simulator::Schedule(jitter, &RoutingProtocol::Send, 
     this, socket, packet, dst);
   
-  NS_LOG_FUNCTION(this << "sending bwant" << ant);
 }
 
 
-void RoutingProtocol::BroadcastForwardAnt(ForwardAntHeader ant) {
+void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
+  
+  NS_LOG_FUNCTION(this);
   
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
     
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
-    
+      
+    Ipv4Address this_node = iface.GetLocal();  
+  
+    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
     TypeHeader type_header(AHNTYPE_FW_ANT);
     
     Ptr<Packet> packet = Create<Packet> ();
@@ -796,7 +804,7 @@ void RoutingProtocol::BroadcastForwardAnt(ForwardAntHeader ant) {
     
   }
   
-  NS_LOG_FUNCTION(this << "broadcast ant" << ant);
+  NS_LOG_FUNCTION(this << "broadcast ant with dst" << dst);
 }
 
 // -------------------------------------------------------
@@ -1045,7 +1053,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   Ipv4Address next_nb;
   uint32_t next_iface;
   if(!this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random)) {
-    this->BroadcastForwardAnt(ant);
+    this->BroadcastForwardAnt(final_dst);
     return;
     
   }
