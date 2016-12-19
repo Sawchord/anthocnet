@@ -85,6 +85,13 @@ std::vector<Ipv4Address> PacketCache::GetDestinations() {
     return retv;
 }
 
+void PacketCache::RemoveCache(Ipv4Address dst) {
+    
+    std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.find(dst);
+    it->second.clear();
+    
+}
+
 
 // End of namespaces
 }

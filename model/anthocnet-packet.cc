@@ -310,7 +310,7 @@ ForwardAntHeader::ForwardAntHeader() :
 ForwardAntHeader::ForwardAntHeader(
   Ipv4Address src, Ipv4Address dst, uint8_t ttl) :
   AntHeader(src, dst, ttl, 0, 0) {
-    this->ant_stack.push_back(dst);
+    this->ant_stack.push_back(src);
     
   }
 ForwardAntHeader::ForwardAntHeader(uint8_t ttl) :

@@ -17,7 +17,8 @@
  */
 
 #define NS_LOG_APPEND_CONTEXT                                   \
-  if (ipv4) { std::clog << "[node " << ipv4->GetObject<Node> ()->GetId () << "] "; }
+  if (ipv4) { std::clog << "[node " << std::setfill('0') << std::setw(2) \
+    << ipv4->GetObject<Node> ()->GetId () << "] "; }
 
 #include "anthocnet.h"
 
@@ -185,7 +186,7 @@ void RoutingProtocol::DoDispose() {
 // Implementation of Ipv4Protocol inherited functions
 Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, 
   Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
-  NS_LOG_FUNCTION(this << "oif" << oif << "header" << header);
+  //NS_LOG_FUNCTION(this << "oif" << oif << "header" << header);
   
   if (!p) {
     NS_LOG_DEBUG("Empty packet");
@@ -202,12 +203,15 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   
   // Try to find a destination in the rtable right away
   Ipv4Address dst = header.GetDestination();
+  
+  NS_LOG_FUNCTION(this << "oif" << oif << "dst" << dst);
+  
   uint32_t iface;
   Ipv4Address nb;
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
-    // TODO: Check the oif??
+    // FIXME: Use oif or iface here??
     route->SetOutputDevice(oif);
     route->SetGateway(nb);
     route->SetDestination(dst);
@@ -256,6 +260,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
   Ptr<Socket> recv_socket = this->sockets[recv_iface];
   Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
+  
   NS_LOG_FUNCTION(this << "iface_index" << recv_iface << "socket" 
     << recv_socket << "sockaddress" << recv_sockaddress);
   
@@ -272,8 +277,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   //Search for a route, 
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
-    
-    // Create the route and call UnicastForwardCallback
+    // If a route was found:
+    // create the route and call UnicastForwardCallback
     rt->SetSource(origin);
     rt->SetDestination(dst);
     rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
@@ -283,9 +288,9 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
     
   }
-  // If there is no route, cache the data to wait for a route
-  // Also start a forward ant towards the destination
   else {
+    // If there is no route, cache the data to wait for a route
+    // Also start a forward ant towards the destination
     
     CacheEntry ce;
     ce.type = AHNTYPE_DATA;
@@ -305,7 +310,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
 
 // NOTE: This function is strongly relies on code from AODV.
 // Copyright (c) 2009 IITP RAS
-// It may contained changes
+// It may contain changes
 Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr, 
   Ptr<NetDevice> oif) const{
   
@@ -771,7 +776,7 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
 void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
   
   NS_LOG_FUNCTION(this);
-  
+  // FIXME: Ants generated here seem to have malformed antstack
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
     
@@ -838,13 +843,12 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   if (this->socket_addresses.find(socket) != this->socket_addresses.end()) {
   
+    iface = this->FindSocketIndex(socket);
+    dst = this->socket_addresses[socket].GetLocal();
     
     // TODO: Why does the next line not segfault?
     NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
     << "src" << src << "dst" << dst);  
-    
-    iface = this->FindSocketIndex(socket);
-    dst = this->socket_addresses[socket].GetLocal();
     
   }
   else {
@@ -1027,7 +1031,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   
   // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
-  
+    
+    ant.Update(this_node);
     BackwardAntHeader bwant(ant);
     Ipv4Address dst = bwant.PeekDst();
     
@@ -1121,6 +1126,8 @@ void RoutingProtocol::SendCachedData() {
       continue;
     }
     
+    bool dst_found = false;
+    
     for (uint32_t j = 0; j < cv.size(); j++) {
       uint32_t iface;
       Ipv4Address nb;
@@ -1137,8 +1144,16 @@ void RoutingProtocol::SendCachedData() {
         rt->SetGateway(nb);
         
         ce.ucb(rt, ce.packet, ce.header);
+        
+        // If there was a route found, the destination must exist
+        // in rtable. We can safely assume, that all data to that destination
+        // will get routed out here
+        dst_found = true;
       }
-      
+    }
+    // If this destination exists, all the data is routed out by now and can be discarded
+    if (dst_found) {
+        this->data_cache.RemoveCache(dst);
     }
   }
 }
