@@ -603,22 +603,6 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   // Set the loopback device
   this->lo = ipv4->GetNetDevice(0);
   
-  // FIXME: This does not work inside this function and must
-  // occur later. Where? Needed?
-  // Open socket on the loopback
-  /*
-  Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
-      UdpSocketFactory::GetTypeId());
-  socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
-  
-  socket->BindToNetDevice(this->lo);
-  socket->SetAllowBroadcast(true);
-  socket->SetIpRecvTtl(true);
-  
-  this->sockets[0] = socket;
-  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));*/
-  
-  
   // Initiate the protocol and start operating
   Simulator::ScheduleNow (&RoutingProtocol::Start, this);
 }
@@ -651,6 +635,21 @@ void RoutingProtocol::Start() {
   this->rtable_update_timer.SetFunction(
     &RoutingProtocol::RTableTimerExpire, this);
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
+  
+  
+  // Open socket on the loopback
+  
+  Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
+      UdpSocketFactory::GetTypeId());
+  socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
+  
+  socket->BindToNetDevice(this->lo);
+  socket->SetAllowBroadcast(true);
+  socket->SetIpRecvTtl(true);
+  
+  this->sockets[0] = socket;
+  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));
+  
 }
 
 Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (
@@ -784,7 +783,13 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     Ipv4InterfaceAddress iface = it->second;
       
     Ipv4Address this_node = iface.GetLocal();  
-  
+    
+    // skip the loopback interface
+    if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+      NS_LOG_FUNCTION(this << "skip lo");
+      continue;
+    }
+    
     ForwardAntHeader ant (this_node, dst, this->initial_ttl);
     TypeHeader type_header(AHNTYPE_FW_ANT);
     
@@ -795,11 +800,9 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     packet->AddPacketTag(tag);
     packet->AddHeader(ant);
     
-    NS_LOG_UNCOND(this << "packet" << *packet);
-    
     packet->AddHeader(type_header);
     
-    NS_LOG_UNCOND(this << "packet" << *packet);
+    //NS_LOG_UNCOND(this << "packet" << *packet);
     
     Ipv4Address destination;
     if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
