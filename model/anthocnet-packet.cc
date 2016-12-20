@@ -207,7 +207,7 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   // Erase the existing antstack
   this->ant_stack.erase(this->ant_stack.begin(), this->ant_stack.end());
   // Read the antstack
-  for (uint32_t c = 0; c < this->hops; c++) {
+  for (uint32_t c = 0; c <= this->hops; c++) {
     Ipv4Address temp;
     ReadFrom(i, temp);
     this->ant_stack.push_back(temp);
@@ -223,7 +223,7 @@ void AntHeader::Print(std::ostream &os) const {
   << " Number of Hops: " << std::to_string(this->hops)
   << " Source Address: " << this->src
   << " Destination: " << this->dst
-  << " AntStack: ";
+  << " AntStack(" << this->ant_stack.size() << "): ";
   
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {

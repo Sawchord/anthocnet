@@ -417,6 +417,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   double total_pheromone = 0.0;
   uint32_t initialized = 0;
   
+  // TODO: if the neighbors IS the destination, return it imediatly
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
     nb_it != this->nbs.end(); ++nb_it) {
     

@@ -791,6 +791,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     }
     
     ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+    NS_LOG_UNCOND(this << "ant" << ant);
     TypeHeader type_header(AHNTYPE_FW_ANT);
     
     Ptr<Packet> packet = Create<Packet> ();
@@ -802,7 +803,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     
     packet->AddHeader(type_header);
     
-    //NS_LOG_UNCOND(this << "packet" << *packet);
     
     Ipv4Address destination;
     if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
@@ -849,7 +849,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
-    // TODO: Why does the next line not segfault?
     NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
     << "src" << src << "dst" << dst);  
     
