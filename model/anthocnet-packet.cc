@@ -364,7 +364,7 @@ BackwardAntHeader::BackwardAntHeader() :
 {}
 
 BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
-  AntHeader(ia.GetDst(), ia.GetSrc(), ia.GetHops(), 0, 0)
+  AntHeader(ia.GetDst(), ia.GetSrc(), ia.GetHops(), ia.GetHops(), 0)
   {
     for (uint32_t i = 0; i < ia.GetHops(); i++) {
       this->ant_stack.push_back(ia.ant_stack[i]);
@@ -393,18 +393,11 @@ bool BackwardAntHeader::IsValid() {
 
 Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   
-  // Check, if this Ant has reached its destination
-  // In this case,there is only one entry on the stack and the
-  // following code would fail.
-  if (this->ttl_or_max_hops == this->hops) {
-    return this->ant_stack[0];
-  }
-  
   // Retrieve src
-  Ipv4Address ans = this->ant_stack[this->ttl_or_max_hops - this->hops];
+  Ipv4Address ans = this->ant_stack[this->hops];
   
   // Update ant
-  this->hops++;
+  this->hops--;
   this->T += T_ind;
   this->ant_stack.pop_back();
   
@@ -413,15 +406,10 @@ Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
 
 Ipv4Address BackwardAntHeader::PeekDst() {
   
-  // Same reason as in Update
-  if (this->ttl_or_max_hops == this->hops) {
-    return 0;
-  }
-  
   // The top of the stack is the address of this node
   // and it needs to stay that way. Thus, the destination is the 
   // entry right bellow that one.
-  return this->ant_stack[this->ttl_or_max_hops - this->hops - 1];
+  return this->ant_stack[this->hops];
   
 }
 
