@@ -217,7 +217,7 @@ main (int argc, char *argv[])
   std::endl;
   out.close ();
 
-  int nSinks = 10;
+  int nSinks = 2;
   double txp = 7.5;
 
   experiment.Run (nSinks, txp, CSVfileName);
@@ -232,7 +232,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   m_CSVfileName = CSVfileName;
 
   // FIXME: If this value is changed to 5, it segfaults
-  int nWifis = 50;
+  int nWifis = 5;
 
   double TotalTime = 200.0;
   std::string rate ("2048bps");
@@ -278,8 +278,8 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   ObjectFactory pos;
   pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  pos.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=100.0]"));
-  pos.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=500.0]"));
+  pos.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=10.0]"));
+  pos.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=50.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);

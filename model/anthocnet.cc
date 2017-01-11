@@ -185,7 +185,6 @@ void RoutingProtocol::DoDispose() {
 // Implementation of Ipv4Protocol inherited functions
 Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, 
   Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
-  //NS_LOG_FUNCTION(this << "oif" << oif << "header" << header);
   
   if (!p) {
     NS_LOG_DEBUG("Empty packet");
@@ -207,11 +206,13 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   
   uint32_t iface;
   Ipv4Address nb;
+  
+  NS_LOG_FUNCTION(this << "rtable" << this->rtable);
+  
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
-    // FIXME: Use oif or iface here??
-    route->SetOutputDevice(oif);
+    route->SetOutputDevice(this->ipv4->GetNetDevice(iface));
     route->SetGateway(nb);
     route->SetDestination(dst);
     

@@ -217,7 +217,7 @@ public:
   bool SelectRoute(Ipv4Address dst, bool proactive,
     uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
       
-  
+  void Print(std::ostream& os) const;
   
 private:
   
@@ -248,9 +248,9 @@ private:
   Time initial_lifetime_dst;
   
   
-  
-  
 };
+
+std::ostream& operator<< (std::ostream& os, RoutingTable const& t);
 
 }
 }

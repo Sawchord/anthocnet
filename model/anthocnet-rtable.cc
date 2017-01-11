@@ -393,14 +393,19 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
 bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
   
+  // TODO: check, if deterministicly choosing the Neighbor (makes sense to me)
+  // is really the way to go hehe 
   // check, if the destination is a neigbor
   // return Neighbor entry if so
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = 
     this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
-    if (nb_it->first.second == dst) {
+    Ipv4Address tmp = nb_it->first.second;
+    
+    if (tmp == dst) {
       iface = nb_it->first.first;
       nb = nb_it->first.second;
+      return true;
     }
     
   }
@@ -429,7 +434,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   double total_pheromone = 0.0;
   uint32_t initialized = 0;
   
-  // TODO: if the neighbors IS the destination, return it imediatly
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
     nb_it != this->nbs.end(); ++nb_it) {
     
@@ -483,6 +487,22 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   
   // Never come here
   return false;
+}
+
+void RoutingTable::Print(std::ostream& os) const{
+  
+  for (std::map<nb_t, NeighborInfo>::const_iterator nb_it = this->nbs.begin();
+    nb_it != this->nbs.end(); ++nb_it) {
+    
+    os << "\nNB:(" << nb_it->first.first << ":" << nb_it->first.second << "){";
+    // TODO: Write down pheromone table in a sensible way
+    os << "}";
+  }
+}
+
+std::ostream& operator<< (std::ostream& os, RoutingTable const& t) {
+  t.Print(os);
+  return os;
 }
 
 }
