@@ -115,7 +115,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
     MakeDoubleChecker<double>()
   )
-  
   .AddAttribute("THop",
     "The THop heuristic used to calculate initial pheromone values",
     DoubleValue(0.2),
@@ -818,8 +817,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
       this, socket, packet, destination);
     
   }
-  
-  
 }
 
 // -------------------------------------------------------
@@ -849,7 +846,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
-    NS_LOG_FUNCTION(this << "socket" << socket << "source_address" << source_address 
+    NS_LOG_FUNCTION(this << "socket" << socket 
+    << "source_address" << source_address 
     << "src" << src << "dst" << dst);  
     
   }
@@ -857,7 +855,9 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     dst = Ipv4Address("255.255.255.255");
   }
   
-  NS_LOG_FUNCTION("Found interface with ID " << iface << " on destination " << dst);
+  NS_LOG_FUNCTION("Found interface with ID " << iface << " on destination " << dst
+    << "type" << type
+  );
   
   // Now enqueue the received packets
   switch (type.Get()) {
@@ -1014,7 +1014,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   // No need to update the avr_T_mac, since this is the non-priviledged
   // queue.
   
-  // TODO: Cache FW ants and recognize doubled ants.
+  // TODO: Cache FW ants and discard doubled ants.
   
   // Get the ip address of the interface, on which this ant
   // was received
@@ -1034,10 +1034,11 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
     
+    
     ant.Update(this_node);
     BackwardAntHeader bwant(ant);
-    Ipv4Address dst = bwant.PeekDst();
     
+    Ipv4Address dst = bwant.PeekDst();
     
     Ptr<Packet> packet2 = Create<Packet>();
     TypeHeader type_header(AHNTYPE_BW_ANT);
@@ -1067,9 +1068,16 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   Ipv4Address next_nb;
   uint32_t next_iface;
   if(!this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random)) {
-    this->BroadcastForwardAnt(final_dst);
-    return;
     
+    // FIXME: The protocol says, broadcast, but since this leads to massive 
+    // floods, we randomly select for now
+    //this->BroadcastForwardAnt(final_dst);
+    //return;
+    
+    this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random);
+    NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
+    //this->UnicastForwardAnt(next_iface, next_nb, ant);
+    //return;
   }
   
   this->UnicastForwardAnt(next_iface, next_nb, ant);

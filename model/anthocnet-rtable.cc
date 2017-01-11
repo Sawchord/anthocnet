@@ -393,6 +393,18 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
 bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
   
+  // check, if the destination is a neigbor
+  // return Neighbor entry if so
+  for (std::map<nb_t, NeighborInfo>::iterator nb_it = 
+    this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
+    if (nb_it->first.second == dst) {
+      iface = nb_it->first.first;
+      nb = nb_it->first.second;
+    }
+    
+  }
+  
   // Set the power modifier.
   double power;
   if (proactive) {
@@ -455,6 +467,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
       continue;
     }
     
+    // FIXME: I think we need to divide this by something
     selected += pow(this->rtable[dst_index][nb_index].pheromone, power);
     
     if (selected > select) {

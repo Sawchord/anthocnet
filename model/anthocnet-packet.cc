@@ -227,7 +227,7 @@ void AntHeader::Print(std::ostream &os) const {
   
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {
-    os << *it;
+    os << *it << " ";
   }
 }
 
@@ -366,7 +366,7 @@ BackwardAntHeader::BackwardAntHeader() :
 BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
   AntHeader(ia.GetDst(), ia.GetSrc(), ia.GetHops(), ia.GetHops(), 0)
   {
-    for (uint32_t i = 0; i < ia.GetHops(); i++) {
+    for (uint32_t i = 0; i <= ia.GetHops(); i++) {
       this->ant_stack.push_back(ia.ant_stack[i]);
     }
   }
@@ -409,7 +409,7 @@ Ipv4Address BackwardAntHeader::PeekDst() {
   // The top of the stack is the address of this node
   // and it needs to stay that way. Thus, the destination is the 
   // entry right bellow that one.
-  return this->ant_stack[this->hops];
+  return this->ant_stack[this->hops-1];
   
 }
 
