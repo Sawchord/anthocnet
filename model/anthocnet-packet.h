@@ -282,7 +282,7 @@ public:
    */
   Ipv4Address Update (uint64_t T_ind);
   
-  
+  Ipv4Address PeekThis();
   /**
    * \brief
    * \returns The address to which to send this Ant along its path

@@ -1101,15 +1101,27 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   
   // Calculate the T_ind value used to update this ant
   uint64_t T_ind =  (this->vip_queue.GetNEntries() + 1) * this->avr_T_mac.GetMilliSeconds();
-  Ipv4Address nb = ant.Update(T_ind);
   
-  Ipv4Address dst = ant.PeekDst();
+  // Update the Ant
+  Ipv4Address nb = ant.Update(T_ind);
+  Ipv4Address dst = ant.GetDst();
   
   // Check if this Node is the destination and manage behaviour
-  if (dst == 0) {
-    this->SendCachedData();
-  }
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  Ipv4InterfaceAddress tmp_if = l3->GetAddress (iface, 0);
   
+  // NOTE: Not properly tested
+  if (ant.GetHops() == 0) {
+    if (ant.PeekThis() == tmp_if.GetLocal()) {
+      NS_LOG_FUNCTION(this << "bwant reached its origin.");
+      // Now the RoutingTable needs an update
+      this->rtable.ProcessBackwardAnt(dst, iface, nb, 
+        ant.GetT(), ant.GetHops());
+      this->SendCachedData();
+    }
+    NS_LOG_WARN("Received BWant with hops == 0, but this != dst");
+    return;
+  }
   
   // Now the RoutingTable needs an update
   this->rtable.ProcessBackwardAnt(dst, iface, nb, 

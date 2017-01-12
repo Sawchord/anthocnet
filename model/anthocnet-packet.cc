@@ -404,6 +404,10 @@ Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   return ans;
 }
 
+Ipv4Address BackwardAntHeader::PeekThis() {
+    return this->ant_stack[this->hops];
+}
+
 Ipv4Address BackwardAntHeader::PeekDst() {
   
   // The top of the stack is the address of this node

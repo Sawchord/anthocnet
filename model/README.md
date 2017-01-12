@@ -1,6 +1,5 @@
 This is the model directory of this module.
 The actual protocols logic is implemented here.
-
 Description of the files:
 anthocnet-packet.h
 anthocnet-packet.cc
