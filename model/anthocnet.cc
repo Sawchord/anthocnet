@@ -223,7 +223,9 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   this->StartForwardAnt(dst);
   
   sockerr = Socket::ERROR_NOTERROR;
+  NS_LOG_FUNCTION(this << "loopback with header" << header);
   return this->LoopbackRoute(header, oif);
+  //return 
 }
 
 
@@ -1030,13 +1032,13 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     return;
   }
   
+  ant.Update(this_node);
+  
   Ipv4Address final_dst = ant.GetDst();
   
   // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
     
-    
-    ant.Update(this_node);
     BackwardAntHeader bwant(ant);
     
     Ipv4Address dst = bwant.PeekDst();
@@ -1063,7 +1065,6 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     return;
   }
   
-  ant.Update(this_node);
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
   Ipv4Address next_nb;
@@ -1102,8 +1103,10 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Calculate the T_ind value used to update this ant
   uint64_t T_ind =  (this->vip_queue.GetNEntries() + 1) * this->avr_T_mac.GetMilliSeconds();
   
+  
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);
+  
   Ipv4Address dst = ant.GetDst();
   
   // Check if this Node is the destination and manage behaviour
@@ -1117,9 +1120,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
       // Now the RoutingTable needs an update
       this->rtable.ProcessBackwardAnt(dst, iface, nb, 
         ant.GetT(), ant.GetHops());
+      // FIXME: This segfaults
       this->SendCachedData();
     }
-    NS_LOG_WARN("Received BWant with hops == 0, but this != dst");
+    NS_LOG_WARN("Received BWant with hops == 0, but this != dst "
+      << ant.PeekThis() << " and " << tmp_if.GetLocal()
+    );
     return;
   }
   
@@ -1127,7 +1133,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   this->rtable.ProcessBackwardAnt(dst, iface, nb, 
     ant.GetT(), ant.GetHops());
   
-  this->UnicastBackwardAnt(iface, nb, ant);
+  this->UnicastBackwardAnt(iface, dst, ant);
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
   return;
