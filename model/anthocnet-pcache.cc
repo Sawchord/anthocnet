@@ -76,7 +76,7 @@ std::vector<CacheEntry> PacketCache::GetCache(Ipv4Address dst, Time now) {
 std::vector<Ipv4Address> PacketCache::GetDestinations() {
     std::vector<Ipv4Address> retv;
     
-    for (std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it;
+    for (std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.begin();
       it != this->cache.end(); ++it) {
       
       retv.push_back(it->first);

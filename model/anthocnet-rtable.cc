@@ -372,7 +372,7 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
   
   if (this->n_nb == 0) return false;
   
-  uint32_t select = vr->GetInteger(0, this->n_nb);
+  uint32_t select = vr->GetInteger(0, this->n_nb-1);
   
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.begin();
   

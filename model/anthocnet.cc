@@ -223,7 +223,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   this->StartForwardAnt(dst);
   
   sockerr = Socket::ERROR_NOTERROR;
-  NS_LOG_FUNCTION(this << "loopback with header" << header);
+  NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
   return this->LoopbackRoute(header, oif);
   //return 
 }
@@ -776,7 +776,6 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
 
 void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
   
-  NS_LOG_FUNCTION(this);
   // FIXME: Ants generated here seem to have malformed antstack
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
