@@ -212,7 +212,11 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
+    Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+    Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
+    
     route->SetOutputDevice(this->ipv4->GetNetDevice(iface));
+    route->SetSource(this_node);
     route->SetGateway(nb);
     route->SetDestination(dst);
     
@@ -1110,7 +1114,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   
   // Check if this Node is the destination and manage behaviour
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
-  Ipv4InterfaceAddress tmp_if = l3->GetAddress (iface, 0);
+  Ipv4InterfaceAddress tmp_if = l3->GetAddress(iface, 0);
   
   // NOTE: Not properly tested
   if (ant.GetHops() == 0) {

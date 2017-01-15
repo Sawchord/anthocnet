@@ -231,7 +231,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   m_txp = txp;
   m_CSVfileName = CSVfileName;
 
-  // FIXME: If this value is changed to 5, it segfaults
   int nWifis = 5;
 
   double TotalTime = 200.0;
