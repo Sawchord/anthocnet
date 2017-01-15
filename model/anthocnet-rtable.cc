@@ -31,6 +31,7 @@ RoutingTableEntry::RoutingTableEntry() {
 }
 
 RoutingTableEntry::~RoutingTableEntry() {
+  
 }
 
 
@@ -66,6 +67,7 @@ RoutingTable::RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double
 {}
   
 RoutingTable::~RoutingTable() {
+  
 }
 
 

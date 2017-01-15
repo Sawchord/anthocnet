@@ -207,7 +207,10 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   uint32_t iface;
   Ipv4Address nb;
   
-  NS_LOG_FUNCTION(this << "rtable" << this->rtable);
+  // FIXME: This line causes a full copy (and destruction) of rtable
+  // Commenting the line out doubles simulatoion speed
+  // TODO: Do i need to register rtable in the ns3 Object system
+  //NS_LOG_FUNCTION(this << "rtable" << this->rtable);
   
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
