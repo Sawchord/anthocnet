@@ -356,14 +356,7 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   //PcapHelperForIpv4 pcap4;
   //pcap4.EnablePcapIpv4((tr_name + ".pcap"), adhocNodes);
   
-  PcapHelper pcapHelper;
-  Ptr<PcapFileWrapper> pcap_file = pcapHelper.CreateFile ((tr_name + ".pcap"), std::ios::out, PcapHelper::DLT_IEEE802_11_RADIO);
-  
-  for (int32_t i = 0; i < nWifis; i++) {
-    adhocDevices.Get (i)->TraceConnectWithoutContext
-      ("PhyTxBegin", MakeBoundCallback (&RxDrop, pcap_file));
-  }
-  
+  wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
   
   // Set the Gnuplot output
   // Set GnuplotHelper to plot packet byte count
@@ -402,7 +395,7 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
   flowmon = flowmonHelper.InstallAll ();
-
+  
 
   NS_LOG_INFO ("Run Simulation.");
 
@@ -410,9 +403,8 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
 
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
-
-  flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
-
   Simulator::Destroy ();
+  
+  flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
 }
 
