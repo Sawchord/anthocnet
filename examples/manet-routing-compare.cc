@@ -15,8 +15,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Justin Rohrer <rohrej@ittc.ku.edu>
- *
+ * Author: Leon Tan
+ * Author of original manet-routing-compare: Justin Rohrer <rohrej@ittc.ku.edu>
+ *  
+ * 
  * James P.G. Sterbenz <jpgs@ittc.ku.edu>, director
  * ResiliNets Research Group  http://wiki.ittc.ku.edu/resilinets
  * Information and Telecommunication Technology Center (ITTC)
@@ -46,10 +48,6 @@
  * the transmit power (as power increases, the impact of mobility
  * decreases and the effective density increases).
  *
- * By default, OLSR is used, but specifying a value of 2 for the protocol
- * will cause AODV to be used, and specifying a value of 3 will cause
- * DSDV to be used.
- *
  * By default, there are 10 source/sink data pairs sending UDP data
  * at an application rate of 2.048 Kb/s each.    This is typically done
  * at a rate of 4 64-byte packets per second.  Application data is
@@ -73,13 +71,13 @@
 #include "ns3/mobility-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/flow-monitor-helper.h"
+#include "ns3/stats-module.h"
+//#include "ns3/pcap-writer.h"
+
 
 #include "ns3/aodv-module.h"
-//#include "ns3/olsr-module.h"
-//#include "ns3/dsdv-module.h"
-//#include "ns3/dsr-module.h"
 #include "ns3/anthocnet-module.h"
-
+#include "ns3/trace-helper.h"
 #include "ns3/applications-module.h"
 
 using namespace ns3;
@@ -91,8 +89,6 @@ class RoutingExperiment
 public:
   RoutingExperiment ();
   void Run (int nSinks, double txp, std::string CSVfileName);
-  //static void SetMACParam (ns3::NetDeviceContainer & devices,
-  //                                 int slotDistance);
   std::string CommandSetup (int argc, char **argv);
 
 private:
@@ -154,9 +150,7 @@ RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
     }
 }
 
-void
-RoutingExperiment::CheckThroughput ()
-{
+void RoutingExperiment::CheckThroughput () {
   double kbs = (bytesTotal * 8.0) / 1000;
   bytesTotal = 0;
 
@@ -200,9 +194,7 @@ RoutingExperiment::CommandSetup (int argc, char **argv)
   return m_CSVfileName;
 }
 
-int
-main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
   RoutingExperiment experiment;
   std::string CSVfileName = experiment.CommandSetup (argc,argv);
 
@@ -223,9 +215,15 @@ main (int argc, char *argv[])
   experiment.Run (nSinks, txp, CSVfileName);
 }
 
-void
-RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
+
+static void
+RxDrop (Ptr<PcapFileWrapper> file, Ptr<const Packet> p)
 {
+  NS_LOG_UNCOND ("RxDrop at " << Simulator::Now ().GetSeconds ());
+  file->Write (Simulator::Now (), p);
+}
+
+void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   Packet::EnablePrinting ();
   m_nSinks = nSinks;
   m_txp = txp;
@@ -298,10 +296,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   AodvHelper aodv;
   AntHocNetHelper ahn;
-  //OlsrHelper olsr;
-  //DsdvHelper dsdv;
-  //DsrHelper dsr;
-  //DsrMainHelper dsrMain;
   
   
   Ipv4ListRoutingHelper list;
@@ -357,28 +351,50 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
       temp.Start (Seconds (var->GetValue (20.0,21.0)));
       temp.Stop (Seconds (TotalTime));
     }
+  
+  // TODO: Generate pcap file of plotted packets
+  //PcapHelperForIpv4 pcap4;
+  //pcap4.EnablePcapIpv4((tr_name + ".pcap"), adhocNodes);
+  
+  PcapHelper pcapHelper;
+  Ptr<PcapFileWrapper> pcap_file = pcapHelper.CreateFile ((tr_name + ".pcap"), std::ios::out, PcapHelper::DLT_IEEE802_11_RADIO);
+  
+  for (int32_t i = 0; i < nWifis; i++) {
+    adhocDevices.Get (i)->TraceConnectWithoutContext
+      ("PhyTxBegin", MakeBoundCallback (&RxDrop, pcap_file));
+  }
+  
+  
+  // Set the Gnuplot output
+  // Set GnuplotHelper to plot packet byte count
+  std::string packetProbe = "ns3::Ipv4PacketProbe";
+  std::string packetPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  
+  GnuplotHelper packetPlotHelper;
+  packetPlotHelper.ConfigurePlot((tr_name + "_bytecount"),
+    "Packet Byte Count vs. Time",
+    "Time (Seconds)",
+    "Packet Byte Count",
+    "eps");
 
-  std::stringstream ss;
-  ss << nWifis;
-  std::string nodes = ss.str ();
-
-  std::stringstream ss2;
-  ss2 << nodeSpeed;
-  std::string sNodeSpeed = ss2.str ();
-
-  std::stringstream ss3;
-  ss3 << nodePause;
-  std::string sNodePause = ss3.str ();
-
-  std::stringstream ss4;
-  ss4 << rate;
-  std::string sRate = ss4.str ();
-
-  //NS_LOG_INFO ("Configure Tracing.");
-  //tr_name = tr_name + "_" + m_protocolName +"_" + nodes + "nodes_" + sNodeSpeed + "speed_" + sNodePause + "pause_" + sRate + "rate";
-
+  packetPlotHelper.PlotProbe(packetProbe,
+    packetPath,
+    "OutputBytes",
+    "Packet Byte Count",
+    GnuplotAggregator::KEY_BELOW);
+  
+  // TODO: What are those?
+  /*FileHelper bytefileHelper;
+  bytefileHelper.ConfigureFile(tr_name, FileAggregator::FORMATTED);
+  
+  bytefileHelper.Set2dFormat ("Time (Seconds) = %.3e\tPacket Byte Count = %.0f");
+  bytefileHelper.WriteProbe (packetProbe, packetPath, "OutputBytes");*/
+  
+  // I don't know, what these are good for. 
+  // But free output is free
+  // TODO: Read up what these output files mean
   AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ( (tr_name + ".tr").c_str());
+  Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ((tr_name + ".tr").c_str());
   wifiPhy.EnableAsciiAll (osw);
   AsciiTraceHelper ascii1;
   MobilityHelper::EnableAsciiAll (ascii1.CreateFileStream (tr_name + ".mob"));
