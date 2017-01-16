@@ -47,13 +47,13 @@ DestinationInfo::~DestinationInfo() {
 
 
 // --------------------------------------------------------
-NeighborInfo::NeighborInfo(Time expire) :
+NeighborInfo::NeighborInfo(uint32_t index, Time expire) :
+  index(index),
   expires_in(expire)
   {}
 
 NeighborInfo::~NeighborInfo() {
 }
-
 
 
 
@@ -84,7 +84,6 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
     return false;
   }
   
-  
   nb_t new_nb = nb_t(iface_index, address);
   
   // Check if NeighborInfo already exists
@@ -93,9 +92,17 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
     return false;
   }
   
-  // Insert Neighbor into std::map
-  this->nbs.insert(std::make_pair(new_nb,  
-    NeighborInfo(expire)));
+  bool usemap[MAX_NEIGHBORS] = {false};
+  for (std::map<nb_t, NeighborInfo>::iterator 
+    it = this->nbs.begin(); it != this->nbs.end(); ++it) {
+     usemap[it->second.index] = true;
+  }
+  for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
+    if (!usemap[i]) {
+      this->nbs.insert(std::make_pair(new_nb, NeighborInfo(i, expire)));
+      break;
+    }
+  }
   
   // Increase number of neigbors
   this->n_nb++;
@@ -118,11 +125,10 @@ void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   }
   
   // First, reset the row in the array
-  uint32_t delete_index = it->first.first;
+  uint32_t delete_index = it->second.index;
   for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     this->rtable[delete_index][i] = RoutingTableEntry();
   }
-  
   
   // Then remove the entry from the std::map of neighbors
   this->nbs.erase(it);
@@ -153,20 +159,14 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
     return false;
   }
   
-  // TODO: this is vastly inefficient and 
-  // should be replaced in some sensible way
   bool usemap[MAX_DESTINATIONS] = {false};
-  
   for (std::map<Ipv4Address, DestinationInfo>::iterator 
     it = this->dsts.begin(); it != this->dsts.end(); ++it) {
      usemap[it->second.index] = true;
   }
-  
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     if (!usemap[i]) {
-      
       this->dsts.insert(std::make_pair(address, DestinationInfo(i, expire)));
-      
       break;
     }
   }
@@ -230,7 +230,7 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
 
 void RoutingTable::PurgeInterface(uint32_t interface) {
   
-  // Since you cannot delete a entries of a map while 
+  // Since you cannot delete entries of a map while 
   // iterating over it, use mark and sweep
   std::list<nb_t> mark;
   
@@ -242,7 +242,6 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
       mark.push_back(it->first);
     }
   }
-  
   
   // Sweep deletables
   for(std::list<nb_t>::iterator it = mark.begin(); it != mark.end(); ++it) {
@@ -439,7 +438,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
     nb_it != this->nbs.end(); ++nb_it) {
     
-    uint32_t nb_index = nb_it->first.first;
+    uint32_t nb_index = nb_it->second.index;
     
     // Skip the unititialized entries
     if (this->rtable[dst_index][nb_index].pheromone == NAN) {
@@ -466,7 +465,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = this->nbs.begin();
     nb_it != this->nbs.end(); ++nb_it) {
     
-    uint32_t nb_index = nb_it->first.first;
+    uint32_t nb_index = nb_it->second.index;
     NeighborInfo nbi = nb_it->second;
     
     if (this->rtable[dst_index][nb_index].pheromone == NAN) {
@@ -497,7 +496,14 @@ void RoutingTable::Print(std::ostream& os) const{
     nb_it != this->nbs.end(); ++nb_it) {
     
     os << "\nNB:(" << nb_it->first.first << ":" << nb_it->first.second << "){";
-    // TODO: Write down pheromone table in a sensible way
+    
+    for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.begin();
+    dst_it != this->dsts.end(); ++dst_it) {
+      
+      os << "DST:(" << dst_it->first << ")";
+      
+    }
+    
     os << "}";
   }
 }

@@ -210,7 +210,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   // FIXME: This line causes a full copy (and destruction) of rtable
   // Commenting the line out doubles simulatoion speed
   // TODO: Do i need to register rtable in the ns3 Object system
-  //NS_LOG_FUNCTION(this << "rtable" << this->rtable);
+  NS_LOG_FUNCTION(this << "rtable" << this->rtable);
   
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -255,11 +255,10 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address dst = header.GetDestination();
   Ipv4Address origin = header.GetSource();
   
-  NS_LOG_FUNCTION(this << "origin" << origin << "dst" << dst);
   
   // Fail if Multicast 
   if (dst.IsMulticast()) {
-    NS_LOG_LOGIC("AntHocNet no support multicast");
+    NS_LOG_LOGIC("AntHocNet does not support multicast");
     // TODO Error callback
     return false;
   }
@@ -270,12 +269,18 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ptr<Socket> recv_socket = this->sockets[recv_iface];
   Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
   
+  // Check if this Node is the destination and manage behaviour
+  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  //Ipv4InterfaceAddress tmp_if = l3->GetAddress(iface, 0);
+  
+  
+  NS_LOG_FUNCTION(this << "origin" << origin << "dst" << dst << "local" << recv_sockaddress.GetLocal());
   NS_LOG_FUNCTION(this << "iface_index" << recv_iface << "socket" 
     << recv_socket << "sockaddress" << recv_sockaddress);
   
   // Check if this is the node and local deliver
   if (recv_sockaddress.GetLocal() == dst) {
-    NS_LOG_LOGIC("Local delivery");
+    NS_LOG_FUNCTION(this << "Local delivery");
     lcb(p, header, recv_iface);
     return true;
   }
@@ -293,6 +298,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
     rt->SetGateway(nb);
     
+    NS_LOG_FUNCTION(this << "route to " << rt);
     ucb(rt, p, header);
     return true;
     
@@ -309,11 +315,15 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     ce.ucb = ucb;
     ce.ecb = ecb;
     
+    NS_LOG_FUNCTION(this << "cached data, send FWAnt");
     this->data_cache.CachePacket(dst, ce);
-    this->StartForwardAnt(dst);
     
+    // TODO: Only start FWAnt, if origin not 127.0.0.1
+    this->StartForwardAnt(dst);
+    return true;
   }
   
+  NS_LOG_FUNCTION(this << "packet dropped");
   return false;
 }
 

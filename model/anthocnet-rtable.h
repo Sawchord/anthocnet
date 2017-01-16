@@ -88,9 +88,12 @@ class NeighborInfo {
 public:
   
   // ctor
-  NeighborInfo (Time expire);
+  NeighborInfo (uint32_t index, Time expire);
   //dtor
   ~NeighborInfo();
+  
+  // The index into the rtable array
+  uint32_t index;
   
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
   Time expires_in;

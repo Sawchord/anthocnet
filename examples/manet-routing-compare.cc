@@ -216,12 +216,12 @@ int main (int argc, char *argv[]) {
 }
 
 
-static void
+/*static void
 RxDrop (Ptr<PcapFileWrapper> file, Ptr<const Packet> p)
 {
   NS_LOG_UNCOND ("RxDrop at " << Simulator::Now ().GetSeconds ());
   file->Write (Simulator::Now (), p);
-}
+}*/
 
 void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   Packet::EnablePrinting ();
