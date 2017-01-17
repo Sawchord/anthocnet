@@ -18,7 +18,7 @@
 
 #define NS_LOG_APPEND_CONTEXT                                   \
   if (ipv4) { std::clog << "[node " << std::setfill('0') << std::setw(2) \
-    << ipv4->GetObject<Node> ()->GetId () << "] "; }
+    << ipv4->GetObject<Node> ()->GetId () +1 << "] "; }
 
 #include "anthocnet.h"
 
@@ -210,7 +210,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   // FIXME: This line causes a full copy (and destruction) of rtable
   // Commenting the line out doubles simulatoion speed
   // TODO: Do i need to register rtable in the ns3 Object system
-  NS_LOG_FUNCTION(this << "rtable" << this->rtable);
+  //NS_LOG_FUNCTION(this << "rtable" << this->rtable);
   
   if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -809,7 +809,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     }
     
     ForwardAntHeader ant (this_node, dst, this->initial_ttl);
-    NS_LOG_UNCOND(this << "ant" << ant);
+    NS_LOG_FUNCTION(this << "ant" << ant);
     TypeHeader type_header(AHNTYPE_FW_ANT);
     
     Ptr<Packet> packet = Create<Packet> ();
@@ -1124,6 +1124,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   Ipv4Address nb = ant.Update(T_ind);
   
   Ipv4Address dst = ant.GetDst();
+  Ipv4Address src = ant.GetSrc();
   
   // Check if this Node is the destination and manage behaviour
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -1134,20 +1135,21 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
     if (ant.PeekThis() == tmp_if.GetLocal()) {
       NS_LOG_FUNCTION(this << "bwant reached its origin.");
       // Now the RoutingTable needs an update
-      this->rtable.ProcessBackwardAnt(dst, iface, nb, 
-        ant.GetT(), ant.GetHops());
-      // FIXME: This segfaults
+      this->rtable.ProcessBackwardAnt(src, iface, nb, 
+        ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) );
       this->SendCachedData();
+      return;
     }
-    NS_LOG_WARN("Received BWant with hops == 0, but this != dst "
-      << ant.PeekThis() << " and " << tmp_if.GetLocal()
-    );
-    return;
+    else {
+      NS_LOG_WARN("Received BWant with hops == 0, but this != dst "
+      << ant.PeekThis() << " and " << tmp_if.GetLocal() );
+      return;
+    }
   }
   
   // Now the RoutingTable needs an update
-  this->rtable.ProcessBackwardAnt(dst, iface, nb, 
-    ant.GetT(), ant.GetHops());
+  this->rtable.ProcessBackwardAnt(src, iface, nb, 
+    ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) );
   
   this->UnicastBackwardAnt(iface, dst, ant);
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);

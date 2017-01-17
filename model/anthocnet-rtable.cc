@@ -17,6 +17,8 @@
  */
 
 #include "anthocnet-rtable.h"
+#include "ns3/ipv4.h"
+#include "ns3/log.h"
 
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingTable");
@@ -89,6 +91,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   // Check if NeighborInfo already exists
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(new_nb);
   if (it != this->nbs.end()) {
+    NS_LOG_FUNCTION(this << "nb already exist");
     return false;
   }
   
@@ -100,6 +103,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     if (!usemap[i]) {
       this->nbs.insert(std::make_pair(new_nb, NeighborInfo(i, expire)));
+      NS_LOG_FUNCTION(this << "index" << i);
       break;
     }
   }
@@ -111,8 +115,10 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
 
 void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   
+  NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
+    
   if (iface_index >= MAX_NEIGHBORS) {
-    NS_LOG_ERROR("iface index to large index: " << iface_index);
+    NS_LOG_FUNCTION("iface index to large index: " << iface_index);
     return;
   }
   
@@ -121,11 +127,13 @@ void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   // Check, if Neighbor exists
   std::map<nb_t, NeighborInfo>::iterator it = this->nbs.find(rem_nb);
   if (it == this->nbs.end()) {
+    NS_LOG_FUNCTION(this << "nb does not exist");
     return;
   }
   
   // First, reset the row in the array
   uint32_t delete_index = it->second.index;
+  NS_LOG_FUNCTION(this << "index" << delete_index);
   for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     this->rtable[delete_index][i] = RoutingTableEntry();
   }
@@ -156,6 +164,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   // Check if destination already exists
   std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it != this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst already exist");
     return false;
   }
   
@@ -167,6 +176,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     if (!usemap[i]) {
       this->dsts.insert(std::make_pair(address, DestinationInfo(i, expire)));
+      NS_LOG_FUNCTION(this << "index" << i);
       break;
     }
   }
@@ -178,14 +188,19 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
 
 
 void RoutingTable::RemoveDestination(Ipv4Address address) {
+  
+  NS_LOG_FUNCTION(this << "address" << address);
+  
   // Check, if the destination exists
   std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
   if (it == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst does not exist");
     return;
   }
   
   // Reset the collumn in the array
   uint32_t delete_index = it->second.index;
+  NS_LOG_FUNCTION(this << "index" << delete_index);
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) {
     this->rtable[i][delete_index] = RoutingTableEntry();
   }
@@ -230,6 +245,7 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
 
 void RoutingTable::PurgeInterface(uint32_t interface) {
   
+  NS_LOG_FUNCTION(this << "interface" << interface);
   // Since you cannot delete entries of a map while 
   // iterating over it, use mark and sweep
   std::list<nb_t> mark;
@@ -247,9 +263,9 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
   for(std::list<nb_t>::iterator it = mark.begin(); it != mark.end(); ++it) {
     
     std::map<nb_t, NeighborInfo>::iterator it1 = this->nbs.find(*it);
-    
     this->RemoveNeighbor(it1->first.first, it1->first.second);
-    }
+    
+  }
 }
 
 void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
@@ -283,6 +299,7 @@ void RoutingTable::Update(Time interval) {
     
     if (dt <= Seconds(0)) {
       nb_mark.push_back(it->first);
+      NS_LOG_FUNCTION(this << "nb expired" << it->first.second);
     } else {
       it->second.expires_in = dt;
     }
@@ -305,6 +322,7 @@ void RoutingTable::Update(Time interval) {
     
     if (dt <= Seconds(0)) {
       dst_mark.push_back(it->first);
+      NS_LOG_FUNCTION(this << "dst expired" << it->first);
     } else {
       it->second.expires_in = dt;
     }
@@ -324,6 +342,9 @@ void RoutingTable::Update(Time interval) {
 void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   Ipv4Address nb, uint64_t T_sd, uint32_t hops) {
     
+  
+  NS_LOG_FUNCTION(this << "dst" << dst << "iface" 
+    << iface << "nb" << nb << "T_sd" << T_sd << "hops" << hops);
   // First search the destination and add it if it did not exist.
    // Check if destination already exists
   std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
@@ -345,23 +366,25 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   nb_it->second.expires_in = this->initial_lifetime_nb;
   dst_it->second.expires_in = this->initial_lifetime_dst;
   
-  NS_ASSERT(nb_it->first.first  == iface);
   
   // Get the indexes of dst and nb into the pheromone table
-  uint32_t nb_index = nb_it->first.first;
+  uint32_t nb_index = nb_it->second.index;
   uint32_t dst_index = dst_it->second.index;
   
   double T_id = 1.0 / ((T_sd + hops * this->T_hop) / 2);
   
   // Update the routing table
   RoutingTableEntry ra = this->rtable[dst_index][nb_index];
-  if (ra.pheromone == NAN) {
+  if (ra.pheromone == NAN || ra.pheromone != ra.pheromone) {
     ra.pheromone = T_id;
   }
   else {
     ra.pheromone = this->gamma_pheromone*ra.pheromone +
       (1.0 - this->gamma_pheromone) * T_id;
   }
+  
+  NS_LOG_FUNCTION(this << "updated pheromone" << ra.pheromone 
+    << "for" << nb_it->first.second << dst_it->first);
   
   this->rtable[dst_index][nb_index] = ra;
   return;
@@ -382,6 +405,9 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
     if (i == select) {
       iface = it->first.first;
       nb = it->first.second;
+      
+      NS_LOG_FUNCTION(this << "iface" << iface << "nb" << nb);
+      
       return true;
     }
     ++it;
@@ -394,8 +420,10 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
 bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
   
+  NS_LOG_FUNCTION(this << "dst" << dst);
+  
   // TODO: check, if deterministicly choosing the Neighbor (makes sense to me)
-  // is really the way to go hehe 
+  // is really the way to go here 
   // check, if the destination is a neigbor
   // return Neighbor entry if so
   for (std::map<nb_t, NeighborInfo>::iterator nb_it = 
@@ -406,6 +434,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     if (tmp == dst) {
       iface = nb_it->first.first;
       nb = nb_it->first.second;
+      
+      NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb << "iface" << iface);
       return true;
     }
     
@@ -424,7 +454,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   
   // Fail, if there are no entries to that destination at all
   if (dst_it == this->dsts.end()) {
-    
+    NS_LOG_FUNCTION(this << "no dsts");
     return false;
   }
   
@@ -441,7 +471,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     uint32_t nb_index = nb_it->second.index;
     
     // Skip the unititialized entries
-    if (this->rtable[dst_index][nb_index].pheromone == NAN) {
+    if (this->rtable[dst_index][nb_index].pheromone == NAN ||
+      this->rtable[dst_index][nb_index].pheromone != 
+      this->rtable[dst_index][nb_index].pheromone) {
       continue;
     }
     initialized++;
@@ -451,11 +483,15 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
   
   // Fail, if there are no initialized entries (same as no entires at all)
   if (initialized == 0) {
+    NS_LOG_FUNCTION(this << "no nbs");
     return false;
   }
   
   
   double select = vr->GetValue(0.0, 1.0);
+  
+  NS_LOG_FUNCTION(this << "total_pheromone" << total_pheromone << "select" << select);
+  
   double selected = 0.0;
   
   // To select with right probability, a random uniform variable between 
@@ -472,8 +508,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
       continue;
     }
     
-    // FIXME: I think we need to divide this by something
-    selected += pow(this->rtable[dst_index][nb_index].pheromone, power);
+    selected += (pow(this->rtable[dst_index][nb_index].pheromone, power) / total_pheromone);
+    
+    NS_LOG_FUNCTION(this << "selected" << selected);
     
     if (selected > select) {
       iface = nb_it->first.first;
@@ -482,11 +519,13 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
       // Using this destination means it is relevant, update timeout
       dst_it->second.expires_in = this->initial_lifetime_dst;
       
+      NS_LOG_FUNCTION(this << "dst" << dst << "routed nb" << nb << "iface" << iface);
       return true;
     }
   }
   
   // Never come here
+  NS_LOG_FUNCTION(this << "never come here");
   return false;
 }
 
