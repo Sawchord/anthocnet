@@ -19,7 +19,6 @@
 #define ANTHOCNET_H
 
 #include "anthocnet-rtable.h"
-#include "anthocnet-rqueue.h"
 #include "anthocnet-packet.h"
 #include "anthocnet-pcache.h"
 
@@ -187,11 +186,6 @@ private:
   
   // The routing table
   RoutingTable rtable;
-  
-  // The normal packet queue
-  IncomePacketQueue packet_queue;
-  // The very important packet queue
-  IncomePacketQueue vip_queue;
   
   // The Cache for the data that has no route yet
   PacketCache data_cache;

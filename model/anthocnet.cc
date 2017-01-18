@@ -46,8 +46,6 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
-  rqueue_max_len(64),
-  queue_expire(MilliSeconds(1000)),
   dcache_expire(MilliSeconds(5000)),
   fwacache_expire(MilliSeconds(1000)),
   nb_expire(MilliSeconds(5000)),
@@ -57,8 +55,6 @@ RoutingProtocol::RoutingProtocol ():
   gamma_pheromone(0.7),
   avr_T_mac(Seconds(0)),
   rtable(RoutingTable(nb_expire, dst_expire, T_hop, gamma_pheromone)),
-  packet_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
-  vip_queue(IncomePacketQueue(rqueue_max_len, queue_expire)),
   data_cache(dcache_expire),
   fwant_cache(fwacache_expire)
   {
@@ -103,12 +99,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeUintegerAccessor(&RoutingProtocol::initial_ttl),
     MakeUintegerChecker<uint8_t>()
   )
-  .AddAttribute("PacketQueueLength",
-    "The length of the packet queues.",
-    UintegerValue(64),
-    MakeUintegerAccessor(&RoutingProtocol::rqueue_max_len),
-    MakeUintegerChecker<uint32_t>()
-  )
   .AddAttribute("AlphaTMac",
     "The alpha value of the running average of T_mac.",
     DoubleValue(0.7),
@@ -126,12 +116,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     DoubleValue(0.7),
     MakeDoubleAccessor(&RoutingProtocol::gamma_pheromone),
     MakeDoubleChecker<double>()
-  )
-  .AddAttribute ("PacketQueueExpire",
-    "After this Time, a packet in the packet queue is considered outdated and dropped",
-    TimeValue (MilliSeconds(1000)),
-    MakeTimeAccessor(&RoutingProtocol::queue_expire),
-    MakeTimeChecker()
   )
   .AddAttribute ("DataCacheExpire",
     "Time datapackets waits for a route to be found. Packets are dropped if expires",
@@ -881,13 +865,17 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO:
-      this->vip_queue.Enqueue(AHNTYPE_HELLO, iface, packet);
+      //this->vip_queue.Enqueue(AHNTYPE_HELLO, iface, packet);
+      this->HandleHelloAnt(packet, iface);
       break;
     case AHNTYPE_FW_ANT:
-      this->packet_queue.Enqueue(AHNTYPE_FW_ANT, iface, packet);
+      //this->packet_queue.Enqueue(AHNTYPE_FW_ANT, iface, packet);
+      this->HandleForwardAnt(packet, iface, MilliSeconds(10));
       break;
     case AHNTYPE_BW_ANT:
-      this->vip_queue.Enqueue(AHNTYPE_BW_ANT, iface, packet);
+      //this->vip_queue.Enqueue(AHNTYPE_BW_ANT, iface, packet);
+      // TODO: Make HandleBackwardAnt work correcly
+      this->HandleBackwardAnt(packet, iface, MilliSeconds(10));
       break;
     
     default:
@@ -896,9 +884,9 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   }
   
   // TODO: Get better simulation of T_mac
-  Time jitter = MilliSeconds (this->uniform_random->GetInteger (1, 10));
+  //Time jitter = MilliSeconds (this->uniform_random->GetInteger (1, 10));
   // Schedule the handling of the queue
-  Simulator::Schedule(jitter, &RoutingProtocol::HandleQueue, this);
+  //Simulator::Schedule(jitter, &RoutingProtocol::HandleQueue, this);
   return;
 }
 
@@ -959,49 +947,6 @@ void RoutingProtocol::RTableTimerExpire() {
   this->rtable.Update(this->rtable_update_interval);
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
 }
-
-
-void RoutingProtocol::HandleQueue() {
-  
-  uint32_t iface;
-  mtype_t type;
-  Ptr<Packet> packet;
-  Time new_T_mac;
-  
-  if (this->vip_queue.Dequeue(type, iface, packet, new_T_mac)) {
-    NS_LOG_FUNCTION(this << "handle vip queue" << "type" << type << "iface" << iface
-      << "packet" << packet << "new_T_mac" << new_T_mac);
-    
-    switch (type) {
-      
-      case AHNTYPE_HELLO:
-        this->HandleHelloAnt(packet, iface);
-        break;
-      case AHNTYPE_BW_ANT:
-        this->HandleBackwardAnt(packet, iface, new_T_mac);
-        break;
-      default:
-        NS_LOG_WARN("type " << type << "should not be in vip queue"); 
-    }
-  } 
-  else if (this->packet_queue.Dequeue(type, iface, packet, new_T_mac)) {
-    NS_LOG_FUNCTION(this << "handle normie queue" << "type" << type << "iface" << iface
-      << "packet" << packet << "new_T_mac" << new_T_mac);
-    
-    
-    switch (type) {
-      case AHNTYPE_FW_ANT:
-        this->HandleForwardAnt(packet, iface, new_T_mac);
-        break;
-      default:
-        NS_LOG_WARN("type " << type << "should not be in normie queue"); 
-    }
-  }
-  else {
-    NS_LOG_FUNCTION(this << "nothing to do");
-  }
-}
-
 
 // -------------------------------------------------------
 // Handlers of the different Ants
@@ -1117,7 +1062,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;
   
   // Calculate the T_ind value used to update this ant
-  uint64_t T_ind =  (this->vip_queue.GetNEntries() + 1) * this->avr_T_mac.GetMilliSeconds();
+  uint64_t T_ind =  (1) * this->avr_T_mac.GetMilliSeconds();
   
   
   // Update the Ant

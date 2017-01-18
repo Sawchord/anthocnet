@@ -2,7 +2,7 @@
 
 def build(bld):
     obj = bld.create_ns3_program('anthocnet-compare', ['core','wifi', 'stats', 'anthocnet', 'aodv', 'applications', 'flow-monitor'])
-    obj.source = ['manet-routing-compare.cc']
+    obj.source = ['anthocnet-routing-compare.cc']
     
     obj = bld.create_ns3_program('anthocnet-example', ['core', 'anthocnet'])
     obj.source = ['anthocnet-example.cc']

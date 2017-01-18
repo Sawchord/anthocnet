@@ -234,7 +234,7 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   double TotalTime = 200.0;
   std::string rate ("2048bps");
   std::string phyMode ("DsssRate11Mbps");
-  std::string tr_name ("manet-routing-compare");
+  std::string tr_name ("anthocnet-routing-compare");
   int nodeSpeed = 20; //in m/s
   int nodePause = 0; //in s
   m_protocolName = "protocol";
