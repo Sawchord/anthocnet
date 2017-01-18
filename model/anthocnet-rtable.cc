@@ -375,7 +375,7 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   
   // Update the routing table
   RoutingTableEntry ra = this->rtable[dst_index][nb_index];
-  if (ra.pheromone == NAN || ra.pheromone != ra.pheromone) {
+  if (ra.pheromone != ra.pheromone) {
     ra.pheromone = T_id;
   }
   else {
@@ -471,8 +471,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     uint32_t nb_index = nb_it->second.index;
     
     // Skip the unititialized entries
-    if (this->rtable[dst_index][nb_index].pheromone == NAN ||
-      this->rtable[dst_index][nb_index].pheromone != 
+    if (this->rtable[dst_index][nb_index].pheromone != 
       this->rtable[dst_index][nb_index].pheromone) {
       continue;
     }
@@ -504,7 +503,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, bool proactive,
     uint32_t nb_index = nb_it->second.index;
     NeighborInfo nbi = nb_it->second;
     
-    if (this->rtable[dst_index][nb_index].pheromone == NAN) {
+    if (this->rtable[dst_index][nb_index].pheromone != 
+        this->rtable[dst_index][nb_index].pheromone) {
       continue;
     }
     

@@ -209,7 +209,7 @@ int main (int argc, char *argv[]) {
   std::endl;
   out.close ();
 
-  int nSinks = 2;
+  int nSinks = 3;
   double txp = 7.5;
 
   experiment.Run (nSinks, txp, CSVfileName);
@@ -229,7 +229,7 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   m_txp = txp;
   m_CSVfileName = CSVfileName;
 
-  int nWifis = 5;
+  int nWifis = 10;
 
   double TotalTime = 200.0;
   std::string rate ("2048bps");
