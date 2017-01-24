@@ -58,29 +58,18 @@ public:
   // The pheromone value of a connection
   double pheromone;
   
+  // The average hop count
+  double avr_hops;
+  
+  // The virtual pheromone value aquired trough the dissimination part
+  double virtual_pheromone;
+  
   // Additional information is collected about active sending and receiving
   // Increases, whenever a packet is send trought this connection
   double send_pheromone;
   
   // Increases, whenever a packet is received throught this connection
   double recv_pheromone;
-  
-};
-
-class DestinationInfo {
-public:
-  
-  //ctor
-  DestinationInfo(uint32_t index, Time expire);
-  //dtor
-  ~DestinationInfo();
-  
-  // The index into the rtable array
-  uint32_t index;
-  
-  // After a certain amount of time without usage
-  // the node consideres the destination useless and deletes it
-  Time expires_in;
   
 };
 
@@ -99,6 +88,30 @@ public:
   Time expires_in;
   
 };
+
+
+class DestinationInfo {
+public:
+  
+  //ctor
+  DestinationInfo(uint32_t index, Time expire);
+  //dtor
+  ~DestinationInfo();
+  
+  // The index into the rtable array
+  uint32_t index;
+  
+  // After a certain amount of time without usage
+  // the node consideres the destination useless and deletes it
+  Time expires_in;
+  
+  // A map of all interfaces on this node, trough that the 
+  // Destination can be reached. If this map is not empty, it means the 
+  // destination is a neigbor
+  std::map<uint32_t, NeighborInfo> nbs;
+  
+};
+
 
 
 class RoutingTable {
@@ -217,7 +230,7 @@ public:
    * \return true, if a route was selcted, false, if no route could be 
    *         selected, since there where no enrties for dst.
    */
-  bool SelectRoute(Ipv4Address dst, bool proactive,
+  bool SelectRoute(Ipv4Address dst, double power,
     uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
       
   void Print(std::ostream& os) const;
@@ -240,9 +253,11 @@ private:
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
-  map<nb_t, NeighborInfo> nbs;
+  //map<nb_t, NeighborInfo> nbs;
   
   RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
+  bool dst_usemap[MAX_DESTINATIONS];
+  bool nb_usemap[MAX_NEIGHBORS];
   
   // The neighbors and destinations get deleted after a while
   // Neighbors, if there are no HelloAnts incoming for a long time

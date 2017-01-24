@@ -194,9 +194,9 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   // FIXME: This line causes a full copy (and destruction) of rtable
   // Commenting the line out doubles simulatoion speed
   // TODO: Do i need to register rtable in the ns3 Object system
-  //NS_LOG_FUNCTION(this << "rtable" << this->rtable);
+  // NS_LOG_FUNCTION(this << "rtable" << this->rtable);
   
-  if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+  if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
     Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -273,7 +273,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address nb;
   
   //Search for a route, 
-  if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+  if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
     // If a route was found:
     // create the route and call UnicastForwardCallback
@@ -702,7 +702,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   NS_LOG_FUNCTION(this);
   
   // Broadcast if no valid entries
-  if (!this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+  if (!this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     this->BroadcastForwardAnt(dst);
     return;
   }
@@ -1030,16 +1030,18 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   
   Ipv4Address next_nb;
   uint32_t next_iface;
-  if(!this->rtable.SelectRoute(final_dst, false, next_iface, next_nb, this->uniform_random)) {
+  if(!this->rtable.SelectRoute(final_dst, 2.0, next_iface, next_nb, this->uniform_random)) {
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
     // floods, we randomly select for now
     //this->BroadcastForwardAnt(final_dst);
     //return;
     
-    this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random);
+    if (!this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random)) {
+      NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
+      return;
+    }
     NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
-    //this->UnicastForwardAnt(next_iface, next_nb, ant);
     //return;
   }
   
@@ -1126,7 +1128,7 @@ void RoutingProtocol::SendCachedData() {
       
       CacheEntry ce = cv[j];
       
-      if (this->rtable.SelectRoute(dst, false, iface, nb, this->uniform_random)) {
+      if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
         Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
         
         // Create the route and call UnicastForwardCallback
