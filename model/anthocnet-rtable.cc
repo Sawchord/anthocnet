@@ -389,32 +389,31 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   double T_id = 1.0 / ((T_sd + hops * this->T_hop) / 2);
   
   // Update the routing table
-  RoutingTableEntry ra = this->rtable[dst_index][nb_index];
+  RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
   
   // Check if hop count value is NAN
-  if (ra.avr_hops != ra.avr_hops) {
-    ra.avr_hops = hops;
+  if (ra->avr_hops != ra->avr_hops) {
+    ra->avr_hops = hops;
   }
   else {
     // TODO: change gamma_pheromone to alpha_pheromone
-    ra.avr_hops = this->gamma_pheromone*ra.avr_hops +
+    ra->avr_hops = this->gamma_pheromone*ra->avr_hops +
       (1.0 - this->gamma_pheromone) * hops;
   }
   
   // Check if pheromone value is NAN
-  if (ra.pheromone != ra.pheromone) {
-    ra.pheromone = T_id;
+  if (ra->pheromone != ra->pheromone) {
+    ra->pheromone = T_id;
   }
   else {
-    ra.pheromone = this->gamma_pheromone*ra.pheromone +
+    ra->pheromone = this->gamma_pheromone*ra->pheromone +
       (1.0 - this->gamma_pheromone) * T_id;
   }
   
-  NS_LOG_FUNCTION(this << "updated pheromone" << ra.pheromone 
-    << "average hops" << ra.avr_hops
+  NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
+    << "average hops" << ra->avr_hops
     << "for" << dst_it->first << nb_it->first);
   
-  this->rtable[dst_index][nb_index] = ra;
   return;
 }
 

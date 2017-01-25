@@ -261,6 +261,8 @@ operator<< (std::ostream & os, AntHeader const & h) {
 
 bool AntHeader::IsValid() {
   
+  NS_ASSERT(this->src != this->dst);
+  
   return true;
 }
 
@@ -344,6 +346,8 @@ bool ForwardAntHeader::Update(Ipv4Address this_node) {
   
   this->ant_stack.push_back(this_node);
   
+  this->CleanAntStack();
+  
   return true;
 }
 
@@ -356,6 +360,30 @@ uint8_t ForwardAntHeader::GetTTL() {
   return this->ttl_or_max_hops;
 }
 
+
+void ForwardAntHeader::CleanAntStack() {
+  
+  // NOTE: We can only find a loop which
+  // closes at the last address.
+  // Since every node should call this function,
+  // no other loops should be possible
+  Ipv4Address now = this->ant_stack[this->hops];
+  
+  uint32_t i;
+  for (i = 0; i < this->hops; i++) {
+    
+    if (now == this->ant_stack[i]) {
+      this->ant_stack.erase(this->ant_stack.begin() + i + 1, 
+                            this->ant_stack.end());
+      
+      this->hops = this->hops - (this->hops + i);
+      
+      break;
+    }
+  }
+  
+  NS_ASSERT(this->hops < 20);
+}
 
 // ---------------------------------------------------
 // Backward ant stuff

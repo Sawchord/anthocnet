@@ -993,7 +993,9 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     return;
   }
   
+  NS_LOG_FUNCTION(this << "Before update" << ant);
   ant.Update(this_node);
+  NS_LOG_FUNCTION(this << "After update" << ant);
   
   Ipv4Address final_dst = ant.GetDst();
   
@@ -1070,7 +1072,8 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);
   
-  Ipv4Address dst = ant.GetDst();
+  // FIXME: I need peekdistright?
+  Ipv4Address dst = ant.PeekDst();
   Ipv4Address src = ant.GetSrc();
   
   // Check if this Node is the destination and manage behaviour

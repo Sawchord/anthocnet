@@ -247,6 +247,13 @@ public:
    */
   uint8_t GetTTL();
   
+private:
+  /**
+   * \brief Checks the AntStack for cyclic routes and removes them, such that
+   *        the backward ants go the direct way
+   */
+  void CleanAntStack();
+  
 };
   
 
