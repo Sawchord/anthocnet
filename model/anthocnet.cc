@@ -408,21 +408,6 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
     
-    // Need to add a broadcast socket
-    socket = Socket::CreateSocket(GetObject<Node>(),
-      UdpSocketFactory::GetTypeId());
-    NS_ASSERT(socket != 0);
-    
-    socket->SetRecvCallback(MakeCallback(
-      &RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
-    socket->SetAllowBroadcast(true);
-    socket->SetIpRecvTtl(true);
-    socket->BindToNetDevice (l3->GetNetDevice (interface));
-    this->bcast_addresses.insert(std::make_pair(socket, iface));
-    
-    //NS_LOG_FUNCTION (this << "interface" << interface << " local address" << 
-    //  this->ipv4->GetAddress (interface, 0).GetLocal ());
     
     NS_LOG_FUNCTION(this << "interface" << interface 
       << " address" << this->ipv4->GetAddress (interface, 0) 
@@ -503,19 +488,6 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
     
-    // Need to add a broadcast socket
-    socket = Socket::CreateSocket(GetObject<Node>(),
-      UdpSocketFactory::GetTypeId());
-    NS_ASSERT(socket != 0);
-    
-    socket->SetRecvCallback(MakeCallback(
-      &RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
-    socket->SetAllowBroadcast(true);
-    socket->SetIpRecvTtl(true);
-    socket->BindToNetDevice (l3->GetNetDevice (interface));
-    this->bcast_addresses.insert(std::make_pair(socket, iface));
-    
     
     NS_LOG_FUNCTION(this << "interface" << interface 
       << " address" << address << "broadcast" << iface.GetBroadcast() << "socket" << socket);
@@ -565,19 +537,6 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddr
     
     this->sockets[interface] = socket;
     this->socket_addresses.insert(std::make_pair(socket, iface));
-    
-    // Need to add a broadcast socket
-    socket = Socket::CreateSocket(GetObject<Node>(),
-      UdpSocketFactory::GetTypeId());
-    NS_ASSERT(socket != 0);
-    
-    socket->SetRecvCallback(MakeCallback(
-      &RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetBroadcast(), ANTHOCNET_PORT));
-    socket->BindToNetDevice (l3->GetNetDevice (interface));
-    socket->SetAllowBroadcast(true);
-    socket->SetIpRecvTtl(true);
-    this->bcast_addresses.insert(std::make_pair(socket, iface));
     
     NS_LOG_FUNCTION(this << "interface " << interface 
       << " address " << address << "reopened socket");
