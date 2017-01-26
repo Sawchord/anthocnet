@@ -118,7 +118,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double gamma);
+  RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double alpha, double gamma);
   //dtor 
   ~RoutingTable();
     
@@ -249,6 +249,8 @@ private:
   uint32_t n_nb;
   
   double T_hop;
+  
+  double alpha_pheromone;
   double gamma_pheromone;
   
   map<Ipv4Address, DestinationInfo> dsts;

@@ -170,6 +170,9 @@ private:
   // The T_hop heuristic
   double T_hop;
   
+  // The hop counts alpha value
+  double alpha_pheromone;
+  
   // The pheromones gamma value
   double gamma_pheromone;
   

@@ -59,10 +59,12 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double gamma) :
+RoutingTable::RoutingTable(Time nb_expire, Time dst_expire,
+                           double T_hop, double alpha, double gamma) :
   n_dst(0),
   n_nb(0),
   T_hop(T_hop),
+  alpha_pheromone(alpha),
   gamma_pheromone(gamma),
   initial_lifetime_nb(nb_expire),
   initial_lifetime_dst(dst_expire)
@@ -397,8 +399,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   }
   else {
     // TODO: change gamma_pheromone to alpha_pheromone
-    ra->avr_hops = this->gamma_pheromone*ra->avr_hops +
-      (1.0 - this->gamma_pheromone) * hops;
+    ra->avr_hops = this->alpha_pheromone*ra->avr_hops +
+      (1.0 - this->alpha_pheromone) * hops;
   }
   
   // Check if pheromone value is NAN

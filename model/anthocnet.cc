@@ -52,9 +52,10 @@ RoutingProtocol::RoutingProtocol ():
   dst_expire(Seconds(30)),
   alpha_T_mac(0.7),
   T_hop(0.2),
+  alpha_pheromone(0.7),
   gamma_pheromone(0.7),
   avr_T_mac(Seconds(0)),
-  rtable(RoutingTable(nb_expire, dst_expire, T_hop, gamma_pheromone)),
+  rtable(RoutingTable(nb_expire, dst_expire, T_hop, alpha_pheromone, gamma_pheromone)),
   data_cache(dcache_expire),
   fwant_cache(fwacache_expire)
   {
@@ -109,6 +110,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     "The THop heuristic used to calculate initial pheromone values",
     DoubleValue(0.2),
     MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("AlphaPheromone",
+    "The hop count uses a running average with a decline defined by alpha",
+    DoubleValue(0.7),
+    MakeDoubleAccessor(&RoutingProtocol::alpha_pheromone),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("GammaPheromone",
