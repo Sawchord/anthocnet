@@ -204,8 +204,9 @@ public:
    * \param nb The neighbor which send the ant to this node.
    * \param T_sd The time value of the and
    * \param hops The hop count of this ant
+   * \returns true, if processing was successfull, fail otherwise
    */
-  void ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
+  bool ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     Ipv4Address nb, uint64_t T_sd, uint32_t hops);
   
   /**

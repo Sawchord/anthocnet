@@ -1086,23 +1086,24 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
     if (ant.PeekThis() == tmp_if.GetLocal()) {
       NS_LOG_FUNCTION(this << "bwant reached its origin.");
       // Now the RoutingTable needs an update
-      this->rtable.ProcessBackwardAnt(src, iface, nb, 
-        ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) );
-      this->SendCachedData();
+      if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
+        ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) )) {
+        this->SendCachedData();
+      }
       return;
     }
     else {
       NS_LOG_WARN("Received BWant with hops == 0, but this != dst "
-      << ant.PeekThis() << " and " << tmp_if.GetLocal() );
+      << ant.PeekThis() << " and " << tmp_if.GetLocal() << "-> Dropped" );
       return;
     }
   }
   
   // Now the RoutingTable needs an update
-  this->rtable.ProcessBackwardAnt(src, iface, nb, 
-    ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) );
-  
-  this->UnicastBackwardAnt(iface, dst, ant);
+  if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
+    ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) )) {
+    this->UnicastBackwardAnt(iface, dst, ant);
+  }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
   return;

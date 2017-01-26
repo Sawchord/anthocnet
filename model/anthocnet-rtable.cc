@@ -349,7 +349,7 @@ void RoutingTable::Update(Time interval) {
   }
 }
 
-void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
+bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   Ipv4Address nb, uint64_t T_sd, uint32_t hops) {
     
   
@@ -367,13 +367,13 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   std::map<Ipv4Address, DestinationInfo>::iterator nb_it = this->dsts.find(nb);
   if (nb_it == this->dsts.end()) {
     NS_LOG_FUNCTION(this << "nb not in reach -> Ant dropped");
-    return;
+    return false;
   }
   
   std::map<uint32_t, NeighborInfo>::iterator nbif_it = nb_it->second.nbs.find(iface);
   if (nbif_it == nb_it->second.nbs.end()) {
     NS_LOG_FUNCTION(this << "interface not found -> Ant dropped");
-    return;
+    return false;
   }
   
   // Since both, the Neighbor and the Destination are found active,
@@ -414,7 +414,7 @@ void RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     << "average hops" << ra->avr_hops
     << "for" << dst_it->first << nb_it->first);
   
-  return;
+  return true;
 }
 
 
