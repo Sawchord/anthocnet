@@ -262,6 +262,7 @@ operator<< (std::ostream & os, AntHeader const & h) {
 bool AntHeader::IsValid() {
   
   NS_ASSERT(this->src != this->dst);
+  NS_ASSERT( ((size_t) this->hops + 1) == this->ant_stack.size() );
   
   return true;
 }
@@ -337,6 +338,8 @@ bool ForwardAntHeader::IsValid() {
 
 bool ForwardAntHeader::Update(Ipv4Address this_node) {
   
+  this->IsValid();
+    
   if (this->ttl_or_max_hops == 0) {
     return false;
   }
@@ -347,6 +350,8 @@ bool ForwardAntHeader::Update(Ipv4Address this_node) {
   this->ant_stack.push_back(this_node);
   
   this->CleanAntStack();
+  
+  this->IsValid();
   
   return true;
 }
@@ -376,13 +381,13 @@ void ForwardAntHeader::CleanAntStack() {
       this->ant_stack.erase(this->ant_stack.begin() + i + 1, 
                             this->ant_stack.end());
       
-      this->hops = this->hops - (this->hops + i);
+      this->hops = this->ant_stack.size()-1;
       
       break;
     }
   }
   
-  NS_ASSERT(this->hops < 20);
+  //NS_ASSERT(this->hops < 20);
 }
 
 // ---------------------------------------------------
@@ -421,6 +426,8 @@ bool BackwardAntHeader::IsValid() {
 
 Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   
+  this->IsValid();
+  
   // Retrieve src
   Ipv4Address ans = this->ant_stack[this->hops];
   
@@ -428,6 +435,8 @@ Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   this->hops--;
   this->T += T_ind;
   this->ant_stack.pop_back();
+  
+  this->IsValid();
   
   return ans;
 }

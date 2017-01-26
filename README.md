@@ -16,3 +16,11 @@ The module comes with a hacked version of manet-routing-compare
 To activate the logging output of the main anthocnet.cc file use
 export 'NS_LOG=AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AodvRoutingProtocol=level_all|prefix_func|prefix_time'
 
+or
+export 'NS_LOG=AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AntHocNetRoutingTable=level_all|prefix_func|prefix_time:AodvRoutingProtocol=level_all|prefix_func|prefix_time'
+
+To activate insight:
+./waf --run anthocnet-compare --command-template="insight %s"
+
+To activate callgrind:
+./waf --run anthocnet-compare --command-template="valgrind --tool=callgrind %s"

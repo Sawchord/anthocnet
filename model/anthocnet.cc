@@ -849,6 +849,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
+    this->rtable.UpdateNeighbor(iface, src);
+    
     NS_LOG_FUNCTION(this << "socket" << socket 
     << "source_address" << source_address 
     << "src" << src << "dst" << dst);  
@@ -958,9 +960,8 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   HelloAntHeader ant;
   packet->RemoveHeader(ant);
   
-  Ipv4Address src = ant.GetSrc();
+  // TODO: Do i still need this Function
   
-  this->rtable.UpdateNeighbor(iface, src);
   return;
 
 }
