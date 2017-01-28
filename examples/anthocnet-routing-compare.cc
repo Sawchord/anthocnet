@@ -91,11 +91,16 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
+// All the important output handlers can be global
+std::ofstream out;
+
+
+
 class RoutingExperiment
 {
 public:
   RoutingExperiment ();
-  void Run (int nSinks, double txp, std::string CSVfileName);
+  void Run (int nSinks, double txp);
   std::string CommandSetup (int argc, char **argv);
 
 private:
@@ -107,7 +112,6 @@ private:
   uint32_t bytesTotal;
   uint32_t packetsReceived;
 
-  std::string m_CSVfileName;
   int m_nSinks;
   std::string m_protocolName;
   double m_txp;
@@ -119,7 +123,6 @@ RoutingExperiment::RoutingExperiment ()
   : port (9),
     bytesTotal (0),
     packetsReceived (0),
-    m_CSVfileName ("manet-routing.output.csv"),
     m_traceMobility (false),
     m_protocol (2) // ANTHOCNET
 {
@@ -161,8 +164,6 @@ void RoutingExperiment::CheckThroughput () {
   double kbs = (bytesTotal * 8.0) / 1000;
   bytesTotal = 0;
 
-  std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
-
   out << (Simulator::Now ()).GetSeconds () << ","
       << kbs << ","
       << packetsReceived << ","
@@ -171,7 +172,6 @@ void RoutingExperiment::CheckThroughput () {
       << m_txp << ""
       << std::endl;
 
-  out.close ();
   packetsReceived = 0;
   Simulator::Schedule (Seconds (1.0), &RoutingExperiment::CheckThroughput, this);
 }
@@ -192,13 +192,13 @@ std::string
 RoutingExperiment::CommandSetup (int argc, char **argv)
 {
   CommandLine cmd;
-  cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
+  //cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
   cmd.AddValue ("traceMobility", "Enable mobility tracing", m_traceMobility);
   
   //cmd.AddValue ("protocol", "1=OLSR;2=AODV;3=DSDV;4=DSR", m_protocol);
   cmd.AddValue ("protocol", "1=AODV;2=ANTHOCNET", m_protocol);
   cmd.Parse (argc, argv);
-  return m_CSVfileName;
+  return "blob";
 }
 
 int main (int argc, char *argv[]) {
@@ -231,25 +231,35 @@ int main (int argc, char *argv[]) {
   
   std::cout << dir_string << std::endl;
   
-  std::string CSVfileName = experiment.CommandSetup (argc,argv);
+  //std::string CSVfileName = experiment.CommandSetup (argc,argv);
   
   
-  // TODO: move this down to Experiment::Run
   //blank out the last output file and write the column headers
-  std::ofstream out (CSVfileName.c_str ());
-  out << "SimulationSecond," <<
-  "ReceiveRate," <<
-  "PacketsReceived," <<
-  "NumberOfSinks," <<
-  "RoutingProtocol," <<
-  "TransmissionPower" <<
-  std::endl;
-  out.close ();
+  
 
-  int nSinks = 3;
+  int nSinks = 20;
   double txp = 7.5;
 
-  experiment.Run (nSinks, txp, CSVfileName);
+  experiment.Run (nSinks, txp);
+  
+  
+  
+  // Calculate the time
+  timeval stop;
+  gettimeofday(&stop, NULL);
+  
+  int secs(stop.tv_sec - start.tv_sec);
+  int usecs(stop.tv_usec - start.tv_usec);
+
+  if(usecs < 0)
+  {
+      --secs;
+      usecs += 1000000;
+  }
+  
+  int total_time = static_cast<int>(secs * 1000 + usecs / 1000.0 + 0.5);
+  std::cout << "Time: " << total_time << " milliseconds" << std::endl;
+  
 }
 
 
@@ -260,13 +270,12 @@ RxDrop (Ptr<PcapFileWrapper> file, Ptr<const Packet> p)
   file->Write (Simulator::Now (), p);
 }*/
 
-void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
+void RoutingExperiment::Run (int nSinks, double txp) {
   Packet::EnablePrinting ();
   m_nSinks = nSinks;
   m_txp = txp;
-  m_CSVfileName = CSVfileName;
 
-  int nWifis = 10;
+  int nWifis = 50;
 
   double TotalTime = 200.0;
   std::string rate ("2048bps");
@@ -276,6 +285,17 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   int nodePause = 0; //in s
   m_protocolName = "protocol";
 
+  
+  out = std::ofstream(tr_name + ".csv");
+  out << "SimulationSecond," <<
+    "ReceiveRate," <<
+    "PacketsReceived," <<
+    "NumberOfSinks," <<
+    "RoutingProtocol," <<
+    "TransmissionPower" <<
+  std::endl;
+  
+  
   Config::SetDefault  ("ns3::OnOffApplication::PacketSize",StringValue ("64"));
   Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
 
