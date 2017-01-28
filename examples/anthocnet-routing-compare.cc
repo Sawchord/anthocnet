@@ -65,6 +65,13 @@
 
 #include <fstream>
 #include <iostream>
+#include <cstdlib>
+#include <sys/time.h>
+#include <ctime>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -196,8 +203,38 @@ RoutingExperiment::CommandSetup (int argc, char **argv)
 
 int main (int argc, char *argv[]) {
   RoutingExperiment experiment;
+  
+  timeval start;
+  gettimeofday(&start, NULL);
+  
+  time_t tim = time(0);
+  struct tm* now = localtime(&tim);
+  
+  // Every experiments output is stored in its own folder
+  // such that experiments can be compared later to see, how changes in the code effect
+  // the simulation
+  std::string dir_string("anthocnet_compare_" + std::to_string(now->tm_year + 1900) + "-"
+    + std::to_string(now->tm_mon + 1) + "-" + std::to_string(now->tm_mday) + "-"
+    + std::to_string(now->tm_hour) + "-" + std::to_string(now->tm_min) + "-"
+    + std::to_string(now->tm_sec)
+  );
+  
+  if (mkdir(dir_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
+    std::cerr << "Could no create directory to store the results. Aborting" << std::endl;
+    return -1;
+  }
+  
+  if (chdir(dir_string.c_str()) == -1) {
+    std::cerr << "Could not cd into the directory to store results. Aborting" << std::endl;
+    return -1;
+  }
+  
+  std::cout << dir_string << std::endl;
+  
   std::string CSVfileName = experiment.CommandSetup (argc,argv);
-
+  
+  
+  // TODO: move this down to Experiment::Run
   //blank out the last output file and write the column headers
   std::ofstream out (CSVfileName.c_str ());
   out << "SimulationSecond," <<
@@ -278,7 +315,7 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   pos.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=300.0]"));
   pos.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1500.0]"));
 
-  Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
+  Ptr<PositionAllocator> taPositionAlloc = pos.Create()->GetObject<PositionAllocator> ();
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);
 
   std::stringstream ssSpeed;
@@ -286,9 +323,9 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
   std::stringstream ssPause;
   ssPause << "ns3::ConstantRandomVariable[Constant=" << nodePause << "]";
   mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                  "Speed", StringValue (ssSpeed.str ()),
-                                  "Pause", StringValue (ssPause.str ()),
-                                  "PositionAllocator", PointerValue (taPositionAlloc));
+                                  "Speed", StringValue (ssSpeed.str()),
+                                  "Pause", StringValue (ssPause.str()),
+                                  "PositionAllocator", PointerValue(taPositionAlloc));
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (adhocNodes);
   streamIndex += mobilityAdhoc.AssignStreams (adhocNodes, streamIndex);
@@ -311,13 +348,6 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
       list.Add (ahn, 100);
       m_protocolName = "ANTHOCNET";
       break;
-    /*case 3:
-      list.Add (dsdv, 100);
-      m_protocolName = "DSDV";
-      break;
-    case 4:
-      m_protocolName = "DSR";
-      break;*/
     default:
       NS_FATAL_ERROR ("No such protocol:" << m_protocol);
     }
@@ -346,8 +376,8 @@ void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName) {
       AddressValue remoteAddress (InetSocketAddress (adhocInterfaces.GetAddress (i), port));
       onoff1.SetAttribute ("Remote", remoteAddress);
 
-      Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
-      ApplicationContainer temp = onoff1.Install (adhocNodes.Get (i + nSinks));
+      Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
+      ApplicationContainer temp = onoff1.Install (adhocNodes.Get(i + nSinks));
       temp.Start (Seconds (var->GetValue (20.0,21.0)));
       temp.Stop (Seconds (TotalTime));
     }
