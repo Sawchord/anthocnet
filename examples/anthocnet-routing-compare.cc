@@ -72,6 +72,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "ns3/object.h"
+#include "ns3/traced-value.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -106,6 +108,10 @@ public:
 private:
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
   void ReceivePacket (Ptr<Socket> socket);
+  
+  void OnOffTxTracer(Ptr<Packet const> packet);
+  void SinkRxTracer(Ptr<Packet const> packet, const Address& address);
+  
   void CheckThroughput ();
 
   uint32_t port;
@@ -147,9 +153,7 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
   return oss.str ();
 }
 
-void
-RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
-{
+void RoutingExperiment::ReceivePacket (Ptr<Socket> socket) {
   Ptr<Packet> packet;
   Address senderAddress;
   while ((packet = socket->RecvFrom (senderAddress)))
@@ -158,6 +162,22 @@ RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
       packetsReceived += 1;
       NS_LOG_UNCOND (PrintReceivedPacket (socket, packet, senderAddress));
     }
+}
+
+void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
+  
+  std::ostringstream oss;
+  oss << Simulator::Now ().GetSeconds () << "s Send Packet: " << *packet;
+  NS_LOG_UNCOND(oss.str());
+  
+}
+
+void RoutingExperiment::SinkRxTracer(Ptr<Packet const> packet, const Address& address) {
+  
+  std::ostringstream oss;
+  oss << Simulator::Now ().GetSeconds () << "s Recv Packet: " << *packet << " Address: " << address;
+  NS_LOG_UNCOND(oss.str());
+  
 }
 
 void RoutingExperiment::CheckThroughput () {
@@ -188,8 +208,7 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
   return sink;
 }
 
-std::string
-RoutingExperiment::CommandSetup (int argc, char **argv)
+std::string RoutingExperiment::CommandSetup (int argc, char **argv)
 {
   CommandLine cmd;
   //cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
@@ -230,19 +249,11 @@ int main (int argc, char *argv[]) {
   }
   
   std::cout << dir_string << std::endl;
-  
-  //std::string CSVfileName = experiment.CommandSetup (argc,argv);
-  
-  
-  //blank out the last output file and write the column headers
-  
 
   int nSinks = 20;
   double txp = 7.5;
 
   experiment.Run (nSinks, txp);
-  
-  
   
   // Calculate the time
   timeval stop;
@@ -262,13 +273,6 @@ int main (int argc, char *argv[]) {
   
 }
 
-
-/*static void
-RxDrop (Ptr<PcapFileWrapper> file, Ptr<const Packet> p)
-{
-  NS_LOG_UNCOND ("RxDrop at " << Simulator::Now ().GetSeconds ());
-  file->Write (Simulator::Now (), p);
-}*/
 
 void RoutingExperiment::Run (int nSinks, double txp) {
   Packet::EnablePrinting ();
@@ -385,27 +389,47 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   Ipv4InterfaceContainer adhocInterfaces;
   adhocInterfaces = addressAdhoc.Assign (adhocDevices);
 
-  OnOffHelper onoff1 ("ns3::UdpSocketFactory",Address ());
+  OnOffHelper onoff1 ("ns3::UdpSocketFactory", Address());
   onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
   onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
-
-  for (int i = 0; i < nSinks; i++)
-    {
-      Ptr<Socket> sink = SetupPacketReceive (adhocInterfaces.GetAddress (i), adhocNodes.Get (i));
-
-      AddressValue remoteAddress (InetSocketAddress (adhocInterfaces.GetAddress (i), port));
-      onoff1.SetAttribute ("Remote", remoteAddress);
-
-      Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
-      ApplicationContainer temp = onoff1.Install (adhocNodes.Get(i + nSinks));
-      temp.Start (Seconds (var->GetValue (20.0,21.0)));
-      temp.Stop (Seconds (TotalTime));
-    }
   
-  // TODO: Generate pcap file of plotted packets
-  //PcapHelperForIpv4 pcap4;
-  //pcap4.EnablePcapIpv4((tr_name + ".pcap"), adhocNodes);
+  PacketSinkHelper sink1 ("ns3::UdpSocketFactory", Address());
   
+  // Start the Sinks
+  for (int i = 0; i < nSinks; i++) {
+    
+    // TODO: Set the Local address on sink1
+    
+    AddressValue localAddress (InetSocketAddress(adhocInterfaces.GetAddress (i), port));
+    sink1.SetAttribute("Local", localAddress);
+    
+    ApplicationContainer temp = sink1.Install(adhocNodes.Get(i));
+    temp.Start(Seconds(20.0));
+    temp.Stop(Seconds(TotalTime));
+  }
+  
+  // Start the OnnOff Applications
+  for (int i = nSinks; i < nWifis; i++) {
+    
+    // Get the addresses of the Nodes to send to
+    AddressValue remoteAddress (InetSocketAddress(adhocInterfaces.GetAddress (i % nSinks), port));
+    onoff1.SetAttribute ("Remote", remoteAddress);
+    
+    // Start the OnOffApplication at a random time between the set papams
+    Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
+    ApplicationContainer temp = onoff1.Install(adhocNodes.Get(i));
+    // TODO: Make starttime settable
+    temp.Start (Seconds (var->GetValue (20.0,21.0)));
+    temp.Stop (Seconds (TotalTime));
+  }
+  
+  // Enable Rx and Tx tracers to measure the packets, that are sent
+  std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
+  std::string SinkTracePath = "/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx" ;
+  Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
+  Config::ConnectWithoutContext (SinkTracePath, MakeCallback(&RoutingExperiment::SinkRxTracer, this));
+  
+  // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
   wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
   
   // Set the Gnuplot output
