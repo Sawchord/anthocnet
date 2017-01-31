@@ -73,6 +73,7 @@
 #include <unistd.h>
 
 #include "ns3/object.h"
+#include "ns3/ipv4-l3-protocol.h"
 #include "ns3/traced-value.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -109,8 +110,15 @@ private:
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
   void ReceivePacket (Ptr<Socket> socket);
   
+  // The tracer callbacks for the applications
   void OnOffTxTracer(Ptr<Packet const> packet);
   void SinkRxTracer(Ptr<Packet const> packet, const Address& address);
+  
+  // The tracer callbacks for the Ip layer
+  void IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
+  void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
+  void IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface);
+  
   
   void CheckThroughput ();
 
@@ -123,6 +131,14 @@ private:
   double m_txp;
   bool m_traceMobility;
   uint32_t m_protocol;
+  
+  uint32_t m_app_start;
+  
+  bool m_generate_pcap;
+  bool m_generate_asciitrace;
+  bool m_generate_flowmon;
+  
+  
 };
 
 RoutingExperiment::RoutingExperiment ()
@@ -130,9 +146,35 @@ RoutingExperiment::RoutingExperiment ()
     bytesTotal (0),
     packetsReceived (0),
     m_traceMobility (false),
-    m_protocol (2) // ANTHOCNET
+    m_protocol (2), // ANTHOCNET
+    m_app_start(20),
+    
+    m_generate_pcap(false),
+    m_generate_asciitrace(false),
+    m_generate_flowmon(false)
+    
+    {}
+
+
+
+std::string RoutingExperiment::CommandSetup (int argc, char **argv)
 {
+  CommandLine cmd;
+  //cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
+  cmd.AddValue("traceMobility", "Enable mobility tracing", m_traceMobility);
+  cmd.AddValue("appStart", "Start the OnnOff Application after that many seconds", m_app_start);
+  
+  cmd.AddValue("protocol", "1=AODV;2=ANTHOCNET", m_protocol);
+  
+  
+  cmd.AddValue("generatePcap", "Specify, whether Pcap output should be generated", m_generate_pcap);
+  cmd.AddValue("generateAsciitrace", "Specify, whether Asciitrace output should be generated", m_generate_asciitrace);
+  cmd.AddValue("generateFlowmon", "Specify, whether Flow monitor output should be generated", m_generate_flowmon);
+  
+  cmd.Parse(argc, argv);
+  return "blob";
 }
+
 
 static inline std::string
 PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddress)
@@ -164,6 +206,7 @@ void RoutingExperiment::ReceivePacket (Ptr<Socket> socket) {
     }
 }
 
+// Tracers 
 void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
   
   std::ostringstream oss;
@@ -176,6 +219,31 @@ void RoutingExperiment::SinkRxTracer(Ptr<Packet const> packet, const Address& ad
   
   std::ostringstream oss;
   oss << Simulator::Now ().GetSeconds () << "s Recv Packet: " << *packet << " Address: " << address;
+  NS_LOG_UNCOND(oss.str());
+  
+}
+
+
+void RoutingExperiment::IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface) {
+  
+  std::ostringstream oss;
+  oss << Simulator::Now ().GetSeconds () << "s IP Layer send " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+  NS_LOG_UNCOND(oss.str());
+  
+}
+
+void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface) {
+  
+  std::ostringstream oss;
+  oss << Simulator::Now ().GetSeconds () << "s IP Layer recv " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+  NS_LOG_UNCOND(oss.str());
+  
+}
+
+void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface) {
+  
+  std::ostringstream oss;
+  oss << Simulator::Now ().GetSeconds () << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
   NS_LOG_UNCOND(oss.str());
   
 }
@@ -206,18 +274,6 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
   sink->SetRecvCallback (MakeCallback (&RoutingExperiment::ReceivePacket, this));
 
   return sink;
-}
-
-std::string RoutingExperiment::CommandSetup (int argc, char **argv)
-{
-  CommandLine cmd;
-  //cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
-  cmd.AddValue ("traceMobility", "Enable mobility tracing", m_traceMobility);
-  
-  //cmd.AddValue ("protocol", "1=OLSR;2=AODV;3=DSDV;4=DSR", m_protocol);
-  cmd.AddValue ("protocol", "1=AODV;2=ANTHOCNET", m_protocol);
-  cmd.Parse (argc, argv);
-  return "blob";
 }
 
 int main (int argc, char *argv[]) {
@@ -419,19 +475,31 @@ void RoutingExperiment::Run (int nSinks, double txp) {
     Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
     ApplicationContainer temp = onoff1.Install(adhocNodes.Get(i));
     // TODO: Make starttime settable
-    temp.Start (Seconds (var->GetValue (20.0,21.0)));
+    temp.Start (Seconds (var->GetValue (m_app_start, m_app_start + 1)));
     temp.Stop (Seconds (TotalTime));
   }
   
   // Enable Rx and Tx tracers to measure the packets, that are sent
   std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
-  std::string SinkTracePath = "/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx" ;
   Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
+  
+  std::string SinkTracePath = "/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx";
   Config::ConnectWithoutContext (SinkTracePath, MakeCallback(&RoutingExperiment::SinkRxTracer, this));
   
-  // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
-  wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
+  // Enable Tracers on the IP level
+  std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  //Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
   
+  std::string IpRxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Rx";
+  //Config::ConnectWithoutContext (IpRxPath, MakeCallback(&RoutingExperiment::IpRxTracer, this));
+  
+  std::string IpDropPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Drop";
+  Config::ConnectWithoutContext (IpDropPath, MakeCallback(&RoutingExperiment::IpDropTracer, this));
+  
+  if (m_generate_pcap) {
+    // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
+    wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
+  }
   // Set the Gnuplot output
   // Set GnuplotHelper to plot packet byte count
   std::string packetProbe = "ns3::Ipv4PacketProbe";
@@ -457,19 +525,21 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   bytefileHelper.Set2dFormat ("Time (Seconds) = %.3e\tPacket Byte Count = %.0f");
   bytefileHelper.WriteProbe (packetProbe, packetPath, "OutputBytes");*/
   
-  // I don't know, what these are good for. 
-  // But free output is free
-  // TODO: Read up what these output files mean
-  AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ((tr_name + ".tr").c_str());
-  wifiPhy.EnableAsciiAll (osw);
-  AsciiTraceHelper ascii1;
-  MobilityHelper::EnableAsciiAll (ascii1.CreateFileStream (tr_name + ".mob"));
+  if (m_generate_asciitrace) {
+    // Read up what these output files mean, because I do not know
+    AsciiTraceHelper ascii;
+    Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ((tr_name + ".tr").c_str());
+    wifiPhy.EnableAsciiAll (osw);
+    AsciiTraceHelper ascii1;
+    MobilityHelper::EnableAsciiAll (ascii1.CreateFileStream (tr_name + ".mob")); 
+  }
 
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
-  flowmon = flowmonHelper.InstallAll ();
-  
+  if (m_generate_flowmon) {
+    
+    flowmon = flowmonHelper.InstallAll ();
+  }
 
   NS_LOG_INFO ("Run Simulation.");
 
@@ -479,6 +549,8 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   Simulator::Run ();
   Simulator::Destroy ();
   
-  flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
+  if (m_generate_flowmon) {
+    flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
+  }
 }
 

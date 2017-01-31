@@ -238,8 +238,10 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
     NS_LOG_LOGIC("No active interfaces");
-    // TODO Error callback
-    return false;
+    
+    Socket::SocketErrno sockerr = Socket::ERROR_NOROUTETOHOST;
+    ecb(p, header, sockerr);
+    return true;
   }
   
   // Get dst and origin
@@ -250,8 +252,10 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // Fail if Multicast 
   if (dst.IsMulticast()) {
     NS_LOG_LOGIC("AntHocNet does not support multicast");
-    // TODO Error callback
-    return false;
+    
+    Socket::SocketErrno sockerr = Socket::ERROR_NOROUTETOHOST;
+    ecb(p, header, sockerr);
+    return true;
   }
   
   // Get the socket and InterfaceAdress of the reciving net device
