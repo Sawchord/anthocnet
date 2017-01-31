@@ -41,7 +41,8 @@ RoutingTableEntry::~RoutingTableEntry() {}
 // ------------------------------------------------------
 DestinationInfo::DestinationInfo(uint32_t index, Time expire) :
   index(index),
-  expires_in(expire)
+  expires_in(expire),
+  no_broadcast_time(Seconds(0))
   {}
 
 DestinationInfo::~DestinationInfo() {
@@ -232,6 +233,31 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
   return;
 }
 
+bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
+  
+  std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.find(address);
+  if (dst_it == this->dsts.end()) {
+    return false;
+  }
+  
+  if (dst_it->second.no_broadcast_time > Seconds(0)) {
+    return false;
+  }
+  
+  return true;
+}
+
+void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
+  
+  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(address);
+  if (dst_it == this->dsts.end()) {
+    return;
+  }
+  
+  dst_it->second.no_broadcast_time = duration;
+  
+  return;
+}
 
 // TODO: Remove this function, since it does not function
 void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
@@ -312,14 +338,22 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
 
 void RoutingTable::Update(Time interval) {
   
-  // FIXME: shady code all over again. Needs proper testing
   // Iterate over the destinations
   for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); /* no increment */) {
     
-    // Calculate the time that ticket since the last occurence of update
-    Time dst_dt = dst_it->second.expires_in - interval;
+    // Updatethe no_broadcast timers
+    Time bc_dt = dst_it->second.no_broadcast_time - interval;
+    if (bc_dt <= Seconds(0)) {
+      dst_it->second.no_broadcast_time = Seconds(0);
+    }
+    else {
+      dst_it->second.no_broadcast_time = bc_dt;
+    }
   
+    // Calculate the time that ticked since the last occurence of update
+    Time dst_dt = dst_it->second.expires_in - interval;
+    
     // Remove outdated destinations
     if (dst_dt <= Seconds(0)) {
       this->RemoveDestination((dst_it++)->first);

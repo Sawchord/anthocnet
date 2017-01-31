@@ -105,6 +105,9 @@ public:
   // the node consideres the destination useless and deletes it
   Time expires_in;
   
+  // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
+  Time no_broadcast_time;
+  
   // A map of all interfaces on this node, trough that the 
   // Destination can be reached. If this map is not empty, it means the 
   // destination is a neigbor
@@ -137,13 +140,10 @@ public:
   
   /**
    * \brief Removes a neighbor from the routing table
-   * \param iface_index The interface index of
-   *        the neighbor to be removed
+   * \param iface_index The interface index of the neighbor to be removed
    * \param address The address of the neighbor to be removed
    */
   void RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
-  
-  
   
   
   /**
@@ -154,6 +154,19 @@ public:
   bool AddDestination(Ipv4Address address);
   bool AddDestination(Ipv4Address address, Time expire);
   
+  /**
+   * @brief Checks, if it is allowed to broadcast to that destination.
+   * @arg address The address to check.
+   * @returns True, if it is allowed to broadcast, false otherwise.
+   */
+  bool IsBroadcastAllowed(Ipv4Address address);
+  
+  /**
+   * @brief Disables broadcast to a destination for a certain amount of time.
+   * @arg address The address to disallow the broadcast to
+   * @arg duration The time, until broadcast is allowed again
+   */
+  void NoBroadcast(Ipv4Address address, Time duration);
   
   /**
    * \brief Removes a destination from the routing table

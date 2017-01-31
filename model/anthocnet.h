@@ -164,6 +164,9 @@ private:
   // Time until a destination expires
   Time dst_expire;
   
+  // Drawback time after a broadcast
+  Time no_broadcast;
+  
   // The alpha value of the runinng average calculation
   double alpha_T_mac;
   

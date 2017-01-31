@@ -103,12 +103,12 @@ class RoutingExperiment
 {
 public:
   RoutingExperiment ();
-  void Run (int nSinks, double txp);
+  void Run (double txp);
   std::string CommandSetup (int argc, char **argv);
 
 private:
-  Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
-  void ReceivePacket (Ptr<Socket> socket);
+  //Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
+  //void ReceivePacket (Ptr<Socket> socket);
   
   // The tracer callbacks for the applications
   void OnOffTxTracer(Ptr<Packet const> packet);
@@ -120,19 +120,23 @@ private:
   void IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface);
   
   
+  uint32_t m_nWifis;
+  uint32_t m_nSinks;
+  
   void CheckThroughput ();
 
   uint32_t port;
   uint32_t bytesTotal;
   uint32_t packetsReceived;
 
-  int m_nSinks;
   std::string m_protocolName;
   double m_txp;
   bool m_traceMobility;
   uint32_t m_protocol;
   
   uint32_t m_app_start;
+  
+  bool m_output_iptxrx;
   
   bool m_generate_pcap;
   bool m_generate_asciitrace;
@@ -141,20 +145,25 @@ private:
   
 };
 
-RoutingExperiment::RoutingExperiment ()
-  : port (9),
+RoutingExperiment::RoutingExperiment () : 
+    m_nWifis(10),
+    m_nSinks(3),
+    
+    port (9),
     bytesTotal (0),
     packetsReceived (0),
+    
     m_traceMobility (false),
     m_protocol (2), // ANTHOCNET
     m_app_start(20),
     
+    
+    m_output_iptxrx(false),
     m_generate_pcap(false),
     m_generate_asciitrace(false),
     m_generate_flowmon(false)
     
     {}
-
 
 
 std::string RoutingExperiment::CommandSetup (int argc, char **argv)
@@ -164,8 +173,12 @@ std::string RoutingExperiment::CommandSetup (int argc, char **argv)
   cmd.AddValue("traceMobility", "Enable mobility tracing", m_traceMobility);
   cmd.AddValue("appStart", "Start the OnnOff Application after that many seconds", m_app_start);
   
-  cmd.AddValue("protocol", "1=AODV;2=ANTHOCNET", m_protocol);
+  cmd.AddValue("protocol", "1=AODV; 2=ANTHOCNET", m_protocol);
   
+  cmd.AddValue("nWifis", "The total number of nodes in this simulation", m_nWifis);
+  cmd.AddValue("nSinks", "The total number of sinks (receivers) in this simulation", m_nSinks);
+  
+  cmd.AddValue("outputIpTxRx", "Specify, whether events on the Ip tracer should be printed", m_output_iptxrx);
   
   cmd.AddValue("generatePcap", "Specify, whether Pcap output should be generated", m_generate_pcap);
   cmd.AddValue("generateAsciitrace", "Specify, whether Asciitrace output should be generated", m_generate_asciitrace);
@@ -176,7 +189,7 @@ std::string RoutingExperiment::CommandSetup (int argc, char **argv)
 }
 
 
-static inline std::string
+/*static inline std::string
 PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddress)
 {
   std::ostringstream oss;
@@ -193,50 +206,47 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
       oss << " received one packet!";
     }
   return oss.str ();
-}
-
-void RoutingExperiment::ReceivePacket (Ptr<Socket> socket) {
-  Ptr<Packet> packet;
-  Address senderAddress;
-  while ((packet = socket->RecvFrom (senderAddress)))
-    {
-      bytesTotal += packet->GetSize ();
-      packetsReceived += 1;
-      NS_LOG_UNCOND (PrintReceivedPacket (socket, packet, senderAddress));
-    }
-}
+}*/
 
 // Tracers 
 void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
   
   std::ostringstream oss;
-  oss << Simulator::Now ().GetSeconds () << "s Send Packet: " << *packet;
+  oss << Simulator::Now().GetSeconds () << "s Send Packet: " << *packet;
   NS_LOG_UNCOND(oss.str());
   
 }
 
 void RoutingExperiment::SinkRxTracer(Ptr<Packet const> packet, const Address& address) {
   
-  std::ostringstream oss;
-  oss << Simulator::Now ().GetSeconds () << "s Recv Packet: " << *packet << " Address: " << address;
-  NS_LOG_UNCOND(oss.str());
+  
+  if (InetSocketAddress::IsMatchingType (address)) {
+    InetSocketAddress addr = InetSocketAddress::ConvertFrom (address);
+    std::ostringstream oss;
+    oss << Simulator::Now ().GetSeconds () << "s Recv Packet: " << *packet << " Address: " << addr.GetIpv4();
+    NS_LOG_UNCOND(oss.str());
+  }
   
 }
 
 
 void RoutingExperiment::IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface) {
   
-  std::ostringstream oss;
-  oss << Simulator::Now ().GetSeconds () << "s IP Layer send " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
-  NS_LOG_UNCOND(oss.str());
+  if (m_output_iptxrx) {
+    std::ostringstream oss;
+    oss << Simulator::Now ().GetSeconds () << "s IP Layer send " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+    NS_LOG_UNCOND(oss.str());
+  }
   
 }
 
 void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface) {
   
-  std::ostringstream oss;
-  oss << Simulator::Now ().GetSeconds () << "s IP Layer recv " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
-  NS_LOG_UNCOND(oss.str());
+  if (m_output_iptxrx) {
+    std::ostringstream oss;
+    oss << Simulator::Now ().GetSeconds () << "s IP Layer recv " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+    NS_LOG_UNCOND(oss.str());
+  }
   
 }
 
@@ -264,7 +274,7 @@ void RoutingExperiment::CheckThroughput () {
   Simulator::Schedule (Seconds (1.0), &RoutingExperiment::CheckThroughput, this);
 }
 
-Ptr<Socket>
+/*Ptr<Socket>
 RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
 {
   TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
@@ -274,7 +284,7 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
   sink->SetRecvCallback (MakeCallback (&RoutingExperiment::ReceivePacket, this));
 
   return sink;
-}
+}*/
 
 int main (int argc, char *argv[]) {
   RoutingExperiment experiment;
@@ -284,6 +294,8 @@ int main (int argc, char *argv[]) {
   
   time_t tim = time(0);
   struct tm* now = localtime(&tim);
+  
+  experiment.CommandSetup(argc, argv);
   
   // Every experiments output is stored in its own folder
   // such that experiments can be compared later to see, how changes in the code effect
@@ -305,11 +317,9 @@ int main (int argc, char *argv[]) {
   }
   
   std::cout << dir_string << std::endl;
-
-  int nSinks = 20;
   double txp = 7.5;
 
-  experiment.Run (nSinks, txp);
+  experiment.Run (txp);
   
   // Calculate the time
   timeval stop;
@@ -329,13 +339,9 @@ int main (int argc, char *argv[]) {
   
 }
 
-
-void RoutingExperiment::Run (int nSinks, double txp) {
+void RoutingExperiment::Run (double txp) {
   Packet::EnablePrinting ();
-  m_nSinks = nSinks;
   m_txp = txp;
-
-  int nWifis = 50;
 
   double TotalTime = 200.0;
   std::string rate ("2048bps");
@@ -363,7 +369,7 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
 
   NodeContainer adhocNodes;
-  adhocNodes.Create (nWifis);
+  adhocNodes.Create (m_nWifis);
 
   // setting up wifi phy and channel using helpers
   WifiHelper wifi;
@@ -381,7 +387,7 @@ void RoutingExperiment::Run (int nSinks, double txp) {
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));
 
-  wifiPhy.Set ("TxPowerStart",DoubleValue (txp));
+  wifiPhy.Set ("TxPowerStart", DoubleValue (txp));
   wifiPhy.Set ("TxPowerEnd", DoubleValue (txp));
 
   wifiMac.SetType ("ns3::AdhocWifiMac");
@@ -452,7 +458,7 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   PacketSinkHelper sink1 ("ns3::UdpSocketFactory", Address());
   
   // Start the Sinks
-  for (int i = 0; i < nSinks; i++) {
+  for (uint32_t i = 0; i < m_nSinks; i++) {
     
     // TODO: Set the Local address on sink1
     
@@ -465,16 +471,16 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   }
   
   // Start the OnnOff Applications
-  for (int i = nSinks; i < nWifis; i++) {
+  for (uint32_t i = m_nSinks; i < m_nWifis; i++) {
     
     // Get the addresses of the Nodes to send to
-    AddressValue remoteAddress (InetSocketAddress(adhocInterfaces.GetAddress (i % nSinks), port));
+    AddressValue remoteAddress (InetSocketAddress(adhocInterfaces.GetAddress (i % m_nSinks), port));
     onoff1.SetAttribute ("Remote", remoteAddress);
     
     // Start the OnOffApplication at a random time between the set papams
     Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
     ApplicationContainer temp = onoff1.Install(adhocNodes.Get(i));
-    // TODO: Make starttime settable
+    
     temp.Start (Seconds (var->GetValue (m_app_start, m_app_start + 1)));
     temp.Stop (Seconds (TotalTime));
   }
@@ -488,10 +494,10 @@ void RoutingExperiment::Run (int nSinks, double txp) {
   
   // Enable Tracers on the IP level
   std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
-  //Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
+  Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
   
   std::string IpRxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Rx";
-  //Config::ConnectWithoutContext (IpRxPath, MakeCallback(&RoutingExperiment::IpRxTracer, this));
+  Config::ConnectWithoutContext (IpRxPath, MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
   std::string IpDropPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Drop";
   Config::ConnectWithoutContext (IpDropPath, MakeCallback(&RoutingExperiment::IpDropTracer, this));
@@ -517,14 +523,7 @@ void RoutingExperiment::Run (int nSinks, double txp) {
     "OutputBytes",
     "Packet Byte Count",
     GnuplotAggregator::KEY_BELOW);
-  
-  // TODO: What are those?
-  /*FileHelper bytefileHelper;
-  bytefileHelper.ConfigureFile(tr_name, FileAggregator::FORMATTED);
-  
-  bytefileHelper.Set2dFormat ("Time (Seconds) = %.3e\tPacket Byte Count = %.0f");
-  bytefileHelper.WriteProbe (packetProbe, packetPath, "OutputBytes");*/
-  
+ 
   if (m_generate_asciitrace) {
     // Read up what these output files mean, because I do not know
     AsciiTraceHelper ascii;

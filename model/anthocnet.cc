@@ -50,6 +50,7 @@ RoutingProtocol::RoutingProtocol ():
   fwacache_expire(MilliSeconds(1000)),
   nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
+  no_broadcast(Seconds(1)),
   alpha_T_mac(0.7),
   T_hop(0.2),
   alpha_pheromone(0.7),
@@ -86,6 +87,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     "Time without HelloAnt, after which a neighbor is considered offline.",
     TimeValue (Seconds(5)),
     MakeTimeAccessor(&RoutingProtocol::nb_expire),
+    MakeTimeChecker()
+  )
+  .AddAttribute ("NoBroadcast",
+    "Time after a broadcast, after which one can not broadcast to that same destination again.",
+    TimeValue (Seconds(1)),
+    MakeTimeAccessor(&RoutingProtocol::no_broadcast),
     MakeTimeChecker()
   )
   .AddAttribute ("DestinationExpire",
@@ -747,7 +754,13 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
 
 void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
   
-  // FIXME: Ants generated here seem to have malformed antstack
+  if (!this->rtable.IsBroadcastAllowed(dst)) {
+    NS_LOG_FUNCTION(this << "broadcast not allowed");
+    return;
+  }
+  
+  this->rtable.NoBroadcast(dst, this->no_broadcast);
+  
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
     it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
     
