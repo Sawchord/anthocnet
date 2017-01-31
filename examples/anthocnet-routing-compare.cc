@@ -15,7 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Leon Tan
+ * Author: Leon Tan adapted from manet-routing-compare
  * Author of original manet-routing-compare: Justin Rohrer <rohrej@ittc.ku.edu>
  *  
  * 
@@ -29,38 +29,6 @@
  * under grant CNS-0626918 (Postmodern Internet Architecture),
  * NSF grant CNS-1050226 (Multilayer Network Resilience Analysis and Experimentation on GENI),
  * US Department of Defense (DoD), and ITTC at The University of Kansas.
- */
-
-/*
- * This example program allows one to run ns-3 DSDV, AODV, or OLSR under
- * a typical random waypoint mobility model.
- *
- * By default, the simulation runs for 200 simulated seconds, of which
- * the first 50 are used for start-up time.  The number of nodes is 50.
- * Nodes move according to RandomWaypointMobilityModel with a speed of
- * 20 m/s and no pause time within a 300x1500 m region.  The WiFi is
- * in ad hoc mode with a 2 Mb/s rate (802.11b) and a Friis loss model.
- * The transmit power is set to 7.5 dBm.
- *
- * It is possible to change the mobility and density of the network by
- * directly modifying the speed and the number of nodes.  It is also
- * possible to change the characteristics of the network by changing
- * the transmit power (as power increases, the impact of mobility
- * decreases and the effective density increases).
- *
- * By default, there are 10 source/sink data pairs sending UDP data
- * at an application rate of 2.048 Kb/s each.    This is typically done
- * at a rate of 4 64-byte packets per second.  Application data is
- * started at a random time between 50 and 51 seconds and continues
- * to the end of the simulation.
- *
- * The program outputs a few items:
- * - packet receptions are notified to stdout such as:
- *   <timestamp> <node-id> received one packet from <src-address>
- * - each second, the data reception statistics are tabulated and output
- *   to a comma-separated value (csv) file
- * - some tracing and flow monitor configuration that used to work is
- *   left commented inline in the program
  */
 
 #include <fstream>
@@ -107,9 +75,6 @@ public:
   std::string CommandSetup (int argc, char **argv);
 
 private:
-  //Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
-  //void ReceivePacket (Ptr<Socket> socket);
-  
   // The tracer callbacks for the applications
   void OnOffTxTracer(Ptr<Packet const> packet);
   void SinkRxTracer(Ptr<Packet const> packet, const Address& address);
@@ -119,16 +84,21 @@ private:
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface);
   
-  
   uint32_t m_nWifis;
   uint32_t m_nSinks;
   
-  void CheckThroughput ();
-
+  void Evaluate();
+  
+  // Plots
+  Gnuplot* plot_droprate_simple;
+  Gnuplot2dDataset* dataset_droprate_simple;
+  
   uint32_t port;
   uint32_t bytesTotal;
-  uint32_t packetsReceived;
-
+  
+  uint32_t packets_received;
+  uint32_t packets_sent;
+  
   std::string m_protocolName;
   double m_txp;
   bool m_traceMobility;
@@ -149,9 +119,11 @@ RoutingExperiment::RoutingExperiment () :
     m_nWifis(10),
     m_nSinks(3),
     
-    port (9),
-    bytesTotal (0),
-    packetsReceived (0),
+    port(9),
+    bytesTotal(0),
+    
+    packets_received(0),
+    packets_sent(0),
     
     m_traceMobility (false),
     m_protocol (2), // ANTHOCNET
@@ -211,6 +183,8 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
 // Tracers 
 void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
   
+  packets_sent++;
+  
   std::ostringstream oss;
   oss << Simulator::Now().GetSeconds () << "s Send Packet: " << *packet;
   NS_LOG_UNCOND(oss.str());
@@ -219,22 +193,22 @@ void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
 
 void RoutingExperiment::SinkRxTracer(Ptr<Packet const> packet, const Address& address) {
   
+  packets_received++;
   
   if (InetSocketAddress::IsMatchingType (address)) {
     InetSocketAddress addr = InetSocketAddress::ConvertFrom (address);
     std::ostringstream oss;
-    oss << Simulator::Now ().GetSeconds () << "s Recv Packet: " << *packet << " Address: " << addr.GetIpv4();
+    oss << Simulator::Now().GetSeconds() << "s Recv Packet: " << *packet << " Address: " << addr.GetIpv4();
     NS_LOG_UNCOND(oss.str());
   }
   
 }
 
-
 void RoutingExperiment::IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface) {
   
   if (m_output_iptxrx) {
     std::ostringstream oss;
-    oss << Simulator::Now ().GetSeconds () << "s IP Layer send " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+    oss << Simulator::Now().GetSeconds() << "s IP Layer send " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
     NS_LOG_UNCOND(oss.str());
   }
   
@@ -244,7 +218,7 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uin
   
   if (m_output_iptxrx) {
     std::ostringstream oss;
-    oss << Simulator::Now ().GetSeconds () << "s IP Layer recv " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
+    oss << Simulator::Now().GetSeconds() << "s IP Layer recv " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface;
     NS_LOG_UNCOND(oss.str());
   }
   
@@ -253,16 +227,16 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uin
 void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface) {
   
   std::ostringstream oss;
-  oss << Simulator::Now ().GetSeconds () << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
+  oss << Simulator::Now().GetSeconds() << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
   NS_LOG_UNCOND(oss.str());
   
 }
 
-void RoutingExperiment::CheckThroughput () {
-  double kbs = (bytesTotal * 8.0) / 1000;
-  bytesTotal = 0;
+void RoutingExperiment::Evaluate () {
+  //double kbs = (bytesTotal * 8.0) / 1000;
+  //bytesTotal = 0;
 
-  out << (Simulator::Now ()).GetSeconds () << ","
+  /*out << (Simulator::Now ()).GetSeconds () << ","
       << kbs << ","
       << packetsReceived << ","
       << m_nSinks << ","
@@ -270,8 +244,20 @@ void RoutingExperiment::CheckThroughput () {
       << m_txp << ""
       << std::endl;
 
-  packetsReceived = 0;
-  Simulator::Schedule (Seconds (1.0), &RoutingExperiment::CheckThroughput, this);
+  */
+  
+  
+  double drop_rate = 1.0 - ((double) packets_received / packets_sent);
+  
+  // Do not record data, if 
+  if (!(packets_sent == 0 || packets_received == 0)) {
+    this->dataset_droprate_simple->Add(Simulator::Now().GetSeconds(), drop_rate);
+  }
+    
+  packets_received = 0;
+  packets_sent = 0;
+  
+  Simulator::Schedule (Seconds (1.0), &RoutingExperiment::Evaluate, this);
 }
 
 /*Ptr<Socket>
@@ -350,17 +336,6 @@ void RoutingExperiment::Run (double txp) {
   int nodeSpeed = 20; //in m/s
   int nodePause = 0; //in s
   m_protocolName = "protocol";
-
-  
-  out = std::ofstream(tr_name + ".csv");
-  out << "SimulationSecond," <<
-    "ReceiveRate," <<
-    "PacketsReceived," <<
-    "NumberOfSinks," <<
-    "RoutingProtocol," <<
-    "TransmissionPower" <<
-  std::endl;
-  
   
   Config::SetDefault  ("ns3::OnOffApplication::PacketSize",StringValue ("64"));
   Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
@@ -419,7 +394,6 @@ void RoutingExperiment::Run (double txp) {
 
   AodvHelper aodv;
   AntHocNetHelper ahn;
-  
   
   Ipv4ListRoutingHelper list;
   InternetStackHelper internet;
@@ -485,6 +459,17 @@ void RoutingExperiment::Run (double txp) {
     temp.Stop (Seconds (TotalTime));
   }
   
+  // Prepare Plots
+  
+  // Prepare the simple droprate plot
+  this->plot_droprate_simple = new Gnuplot(tr_name + "_droprate_simple.eps");
+  this->plot_droprate_simple->SetTitle("Droprate simple of " + m_protocolName);
+  this->plot_droprate_simple->SetTerminal("eps");
+  this->plot_droprate_simple->SetLegend("Time [s]", "Droprate");
+  this->dataset_droprate_simple = new Gnuplot2dDataset();
+  this->dataset_droprate_simple->SetTitle("Droprate");
+  this->dataset_droprate_simple->SetStyle(Gnuplot2dDataset::LINES);
+  
   // Enable Rx and Tx tracers to measure the packets, that are sent
   std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
   Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
@@ -506,10 +491,12 @@ void RoutingExperiment::Run (double txp) {
     // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
     wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
   }
+  
+  /*
   // Set the Gnuplot output
   // Set GnuplotHelper to plot packet byte count
   std::string packetProbe = "ns3::Ipv4PacketProbe";
-  std::string packetPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  std::string packetPath = "/NodeList/[STAR]/$ns3::Ipv4L3Protocol/Tx";
   
   GnuplotHelper packetPlotHelper;
   packetPlotHelper.ConfigurePlot((tr_name + "_bytecount"),
@@ -522,7 +509,7 @@ void RoutingExperiment::Run (double txp) {
     packetPath,
     "OutputBytes",
     "Packet Byte Count",
-    GnuplotAggregator::KEY_BELOW);
+    GnuplotAggregator::KEY_BELOW);*/
  
   if (m_generate_asciitrace) {
     // Read up what these output files mean, because I do not know
@@ -541,12 +528,23 @@ void RoutingExperiment::Run (double txp) {
   }
 
   NS_LOG_INFO ("Run Simulation.");
-
-  CheckThroughput ();
+  
+  // Trigger the first evaluate loop
+  Evaluate();
 
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
   Simulator::Destroy ();
+  
+  // Output the plotfiles
+  
+  // Output the simple droprate plot
+  this->plot_droprate_simple->AddDataset(*this->dataset_droprate_simple);
+  std::ofstream file_droprate_simple(tr_name + "_droprate_simple.plt");
+  this->plot_droprate_simple->GenerateOutput(file_droprate_simple);
+  file_droprate_simple.close();
+  // Quick and dirty way to get the eps generated
+  popen( ("gnuplot -c " + (tr_name + "_droprate_simple.plt")).c_str(), "r");
   
   if (m_generate_flowmon) {
     flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
