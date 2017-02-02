@@ -155,10 +155,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakePointerAccessor (&RoutingProtocol::uniform_random),
     MakePointerChecker<UniformRandomVariable> ())
   // TODO: Add other attributes
-  .AddTraceSource("AntDrop", "An Ant is dropped.",
+  .AddTraceSource("AntDrop", "An ant is dropped.",
     MakeTraceSourceAccessor(&RoutingProtocol::ant_drop),
-    "ns3::ahn::RoutingProtocol::DropReasonCallback"
-   )
+    "ns3::ahn::RoutingProtocol::DropReasonCallback")
+  .AddTraceSource("DataDrop", "A data packet is dropped.",
+    MakeTraceSourceAccessor(&RoutingProtocol::data_drop),
+    "ns3::ahn::RoutingProtocol::DropReasonCallback")
   ;
   return tid;
 }
@@ -209,10 +211,6 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   uint32_t iface;
   Ipv4Address nb;
   
-  // FIXME: This line causes a full copy (and destruction) of rtable
-  // Commenting the line out doubles simulatoion speed
-  // TODO: Do i need to register rtable in the ns3 Object system
-  // NS_LOG_FUNCTION(this << "rtable" << this->rtable);
   
   if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -243,12 +241,18 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
   LocalDeliverCallback lcb, ErrorCallback ecb) {
   
+  // TODO: Find out how to get ip address from idev
+  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
+  Ipv4Address this_node = Ipv4Address("0.0.0.0");
   
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
-    NS_LOG_LOGIC("No active interfaces");
+    NS_LOG_LOGIC("No active interfaces -> Data dropped");
+    
+    this->data_drop(p, "No active interfaces", this_node);
     
     Socket::SocketErrno sockerr = Socket::ERROR_NOROUTETOHOST;
     ecb(p, header, sockerr);
@@ -263,6 +267,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // Fail if Multicast 
   if (dst.IsMulticast()) {
     NS_LOG_LOGIC("AntHocNet does not support multicast");
+    
+    this->data_drop(p, "Was mutilcast message, which is not supported", this_node);
     
     Socket::SocketErrno sockerr = Socket::ERROR_NOROUTETOHOST;
     ecb(p, header, sockerr);
@@ -329,6 +335,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
   }
   
+  this->data_drop(p, "Unknow reason", this_node);
   NS_LOG_FUNCTION(this << "packet dropped");
   return false;
 }

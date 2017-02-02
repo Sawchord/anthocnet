@@ -234,6 +234,8 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uin
 
 void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface) {
   
+  data_dropped++;
+  
   std::ostringstream oss;
   oss << Simulator::Now().GetSeconds() << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
   NS_LOG_UNCOND(oss.str());
@@ -288,7 +290,8 @@ void RoutingExperiment::Evaluate () {
     }
     
   }
-    
+  
+  data_dropped = 0;
   packets_received = 0;
   packets_sent = 0;
   
@@ -433,7 +436,7 @@ void RoutingExperiment::Run (double txp) {
   if (m_protocol == 2) {
     // Open the drop tracers
     ant_drop_output = std::ofstream(tr_name + "_ant_drops.tr");
-    data_drop_output = std::ofstream(tr_name + "_data_drop_tr");
+    data_drop_output = std::ofstream(tr_name + "_data_drops.tr");
   }
   
   Ipv4ListRoutingHelper list;
