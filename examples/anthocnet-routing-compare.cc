@@ -63,8 +63,9 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
 // All the important output handlers can be global
-std::ofstream out;
-
+//std::ofstream out;
+std::ofstream ant_drop_output;
+std::ofstream data_drop_output;
 
 
 class RoutingExperiment
@@ -84,6 +85,10 @@ private:
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface);
   
+  void AntDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address);
+  void DataDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address);
+  
+  
   uint32_t m_nWifis;
   uint32_t m_nSinks;
   
@@ -92,10 +97,12 @@ private:
   // Plots
   Gnuplot* plot_droprate_simple;
   Gnuplot2dDataset* dataset_droprate_simple;
+  Gnuplot2dDataset* dataset_droprate_counted;
   
   uint32_t port;
   uint32_t bytesTotal;
   
+  uint32_t data_dropped;
   uint32_t packets_received;
   uint32_t packets_sent;
   
@@ -122,6 +129,7 @@ RoutingExperiment::RoutingExperiment () :
     port(9),
     bytesTotal(0),
     
+    data_dropped(0),
     packets_received(0),
     packets_sent(0),
     
@@ -232,6 +240,26 @@ void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const>
   
 }
 
+void RoutingExperiment::AntDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address) {
+  
+  ant_drop_output << Simulator::Now().GetSeconds() << "Ant dropped at address: " << address << std::endl;
+  ant_drop_output << "\t Reason: " << reason << std::endl;
+  ant_drop_output << "\t Packet: " << packet << std::endl;
+  
+}
+
+
+void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address) {
+  
+  data_dropped++;
+  
+  
+  data_drop_output << Simulator::Now().GetSeconds() << "Data dropped at address: " << address << std::endl;
+  data_drop_output << "\t Reason: " << reason << std::endl;
+  data_drop_output << "\t Packet: " << packet << std::endl;
+  
+}
+
 void RoutingExperiment::Evaluate () {
   //double kbs = (bytesTotal * 8.0) / 1000;
   //bytesTotal = 0;
@@ -247,11 +275,18 @@ void RoutingExperiment::Evaluate () {
   */
   
   
-  double drop_rate = 1.0 - ((double) packets_received / packets_sent);
+  double drop_rate_simple = 1.0 - ((double) packets_received / packets_sent);
+  double drop_rate_counted = (double )data_dropped / packets_sent;
+  
   
   // Do not record data, if 
   if (!(packets_sent == 0 || packets_received == 0)) {
-    this->dataset_droprate_simple->Add(Simulator::Now().GetSeconds(), drop_rate);
+    this->dataset_droprate_simple->Add(Simulator::Now().GetSeconds(), drop_rate_simple);
+    
+    if (m_protocol == 2) {
+      this->dataset_droprate_counted->Add(Simulator::Now().GetSeconds(), drop_rate_counted);
+    }
+    
   }
     
   packets_received = 0;
@@ -337,14 +372,14 @@ void RoutingExperiment::Run (double txp) {
   int nodePause = 0; //in s
   m_protocolName = "protocol";
   
-  Config::SetDefault  ("ns3::OnOffApplication::PacketSize",StringValue ("64"));
-  Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
+  Config::SetDefault("ns3::OnOffApplication::PacketSize",StringValue ("64"));
+  Config::SetDefault("ns3::OnOffApplication::DataRate",  StringValue (rate));
 
   //Set Non-unicastMode rate to unicast mode
-  Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
+  Config::SetDefault("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
 
   NodeContainer adhocNodes;
-  adhocNodes.Create (m_nWifis);
+  adhocNodes.Create(m_nWifis);
 
   // setting up wifi phy and channel using helpers
   WifiHelper wifi;
@@ -394,6 +429,12 @@ void RoutingExperiment::Run (double txp) {
 
   AodvHelper aodv;
   AntHocNetHelper ahn;
+  
+  if (m_protocol == 2) {
+    // Open the drop tracers
+    ant_drop_output = std::ofstream(tr_name + "_ant_drops.tr");
+    data_drop_output = std::ofstream(tr_name + "_data_drop_tr");
+  }
   
   Ipv4ListRoutingHelper list;
   InternetStackHelper internet;
@@ -466,9 +507,14 @@ void RoutingExperiment::Run (double txp) {
   this->plot_droprate_simple->SetTitle("Droprate simple of " + m_protocolName);
   this->plot_droprate_simple->SetTerminal("eps");
   this->plot_droprate_simple->SetLegend("Time [s]", "Droprate");
+  
   this->dataset_droprate_simple = new Gnuplot2dDataset();
-  this->dataset_droprate_simple->SetTitle("Droprate");
+  this->dataset_droprate_simple->SetTitle("Droprate simple");
   this->dataset_droprate_simple->SetStyle(Gnuplot2dDataset::LINES);
+  
+  this->dataset_droprate_counted = new Gnuplot2dDataset();
+  this->dataset_droprate_counted->SetTitle("Droprate counted");
+  this->dataset_droprate_counted->SetStyle(Gnuplot2dDataset::LINES);
   
   // Enable Rx and Tx tracers to measure the packets, that are sent
   std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
@@ -486,6 +532,15 @@ void RoutingExperiment::Run (double txp) {
   
   std::string IpDropPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Drop";
   Config::ConnectWithoutContext (IpDropPath, MakeCallback(&RoutingExperiment::IpDropTracer, this));
+  
+  if (m_protocol == 2) {
+    std::string AntDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/AntDrop";
+    Config::ConnectWithoutContext (AntDropPath, MakeCallback(&RoutingExperiment::AntDropTracer, this));
+    
+    std::string DataDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/DataDrop";
+    Config::ConnectWithoutContext (DataDropPath, MakeCallback(&RoutingExperiment::DataDropTracer, this));
+  }
+  
   
   if (m_generate_pcap) {
     // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
@@ -540,6 +595,8 @@ void RoutingExperiment::Run (double txp) {
   
   // Output the simple droprate plot
   this->plot_droprate_simple->AddDataset(*this->dataset_droprate_simple);
+  this->plot_droprate_simple->AddDataset(*this->dataset_droprate_counted);
+  
   std::ofstream file_droprate_simple(tr_name + "_droprate_simple.plt");
   this->plot_droprate_simple->GenerateOutput(file_droprate_simple);
   file_droprate_simple.close();

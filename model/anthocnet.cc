@@ -155,6 +155,10 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakePointerAccessor (&RoutingProtocol::uniform_random),
     MakePointerChecker<UniformRandomVariable> ())
   // TODO: Add other attributes
+  .AddTraceSource("AntDrop", "An Ant is dropped.",
+    MakeTraceSourceAccessor(&RoutingProtocol::ant_drop),
+    "ns3::ahn::RoutingProtocol::DropReasonCallback"
+   )
   ;
   return tid;
 }
@@ -1020,14 +1024,14 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
     // floods, we randomly select for now
-    //this->BroadcastForwardAnt(final_dst);
-    //return;
+    this->BroadcastForwardAnt(final_dst);
+    return;
     
-    if (!this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random)) {
-      NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
-      return;
-    }
-    NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
+    //if (!this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random)) {
+    //  NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
+    //  return;
+    //}
+    //NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
     //return;
   }
   

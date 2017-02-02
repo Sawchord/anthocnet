@@ -30,6 +30,7 @@
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
+#include "ns3/traced-callback.h"
 
 // TODO: Make these settable by GetTypeId()
 //       instead of hardcoding them
@@ -39,8 +40,12 @@
 namespace ns3 {
 namespace ahn {
 
+typedef void (* DropReasonCallback) (Ptr<Packet const>, std::string Reason, Ipv4Address address);
+  
 class RoutingProtocol : public Ipv4RoutingProtocol {
 public:
+  
+  
   //ctor
   RoutingProtocol();
   //dtor
@@ -98,6 +103,8 @@ private:
   
   void StartForwardAnt(Ipv4Address dst);
   
+  TracedCallback<Ptr<Packet const>, std::string, Ipv4Address> ant_drop;
+  TracedCallback<Ptr<Packet const>, std::string, Ipv4Address> data_drop;
   
   void UnicastForwardAnt(uint32_t iface, Ipv4Address dst, ForwardAntHeader ant);
   void UnicastBackwardAnt(uint32_t iface, Ipv4Address dst, BackwardAntHeader ant);
