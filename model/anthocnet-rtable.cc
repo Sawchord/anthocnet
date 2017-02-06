@@ -597,36 +597,32 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
 
 // FIXME: This function causes program to crash
 void RoutingTable::Print(std::ostream& os) const{
-  /*
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.begin();
-    dst_it != this->dsts.end(); ++dst_it) {
-    
-    os << "\nDST:(" << dst_it->first << ":" << dst_it->second.expires_in << "){";
-    
-    for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it->second.nbs.begin();
-    nb_it != dst_it->second.nbs.end(); ++nb_it) {
-      
-      os << "NB:(" << nb_it->first << ":" << nb_it->second.expires_in << ")";
-      
-      
-      
-    }
-    
-    os << "}";
-  }*/
   
   for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it1 = this->dsts.begin();
     dst_it1 != this->dsts.end(); ++dst_it1) {
     
     // Output the destination info 
-    os << "\nDST:[" << dst_it1->first << " : " << dst_it1->second.index << "]";
+    //os << " DST:[" << dst_it1->first << " : " << dst_it1->second.index ;
+    os << " DST:[" << dst_it1->first;
     
-    //uint32_t dst_index = dst_it1->second.index;
     
+    if (dst_it1->second.nbs.size() != 0) {
+      
+      os << "NB:( ";
+      
+      for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it1->second.nbs.begin();
+      nb_it != dst_it1->second.nbs.end(); ++nb_it) {
+      
+        //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
+        os << nb_it->first << " ";
+      }
+      os << ")";
+    }
+    os << "]";
   }
   
   // Iterate over all neigbors
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
+  /*for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
     dst_it2 != this->dsts.end(); ++dst_it2) {
     
     for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it2->second.nbs.begin();
@@ -635,7 +631,7 @@ void RoutingTable::Print(std::ostream& os) const{
        os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
         
       }
-  }
+  }*/
   
   // TODO: Output the pheromones
   

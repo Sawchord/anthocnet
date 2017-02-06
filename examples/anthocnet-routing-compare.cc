@@ -446,7 +446,8 @@ void RoutingExperiment::Run (double txp) {
     }
 
   NS_LOG_INFO ("assigning ip address");
-
+  
+  
   Ipv4AddressHelper addressAdhoc;
   addressAdhoc.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer adhocInterfaces;
@@ -527,10 +528,11 @@ void RoutingExperiment::Run (double txp) {
     Config::ConnectWithoutContext (DataDropPath, MakeCallback(&RoutingExperiment::DataDropTracer, this));
   }
   
-  
   if (m_generate_pcap) {
     // Enable PCAP on physical level, to allow in detail offline debugging of the protocol
-    wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
+    //wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
+    internet.EnablePcapIpv4((tr_name + ".pcap"), adhocNodes);
+    
   }
   
   
@@ -546,14 +548,15 @@ void RoutingExperiment::Run (double txp) {
   
   // Start the net animator
   AnimationInterface anim (tr_name + "_animation.xml");
+  anim.EnablePacketMetadata ();
   anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), Seconds(TotalTime));
   
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
-  //if (m_generate_flowmon) {
+  if (m_generate_flowmon) {
     
     flowmon = flowmonHelper.InstallAll ();
-  //}
+  }
 
   NS_LOG_INFO ("Run Simulation.");
   
@@ -576,8 +579,8 @@ void RoutingExperiment::Run (double txp) {
   // Quick and dirty way to get the eps generated
   popen( ("gnuplot -c " + (tr_name + "_droprate_simple.plt")).c_str(), "r");
   
-  //if (m_generate_flowmon) {
+  if (m_generate_flowmon) {
     flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
-  //}
+  }
 }
 
