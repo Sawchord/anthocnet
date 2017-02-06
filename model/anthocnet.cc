@@ -1107,36 +1107,44 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
 void RoutingProtocol::SendCachedData() {
   
   NS_LOG_FUNCTION(this);
-  
+  Ipv4Address this_node = Ipv4Address("0.0.0.0");
   // Iterate over all cached destinations
   std::vector <Ipv4Address> dsts = this->data_cache.GetDestinations();
   for (uint32_t i = 0; i < dsts.size(); i++) {
     
+    
     Ipv4Address dst = dsts[i];
-    std::vector<CacheEntry> cv = this->data_cache.GetCache(dst);
-    
-    if (cv.empty()) {
-      continue;
-    }
-    
     bool dst_found = false;
     
-    for (uint32_t j = 0; j < cv.size(); j++) {
+    while (this->data_cache.HasEntries(dst)) {
+      //std::vector<CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
+      std::pair<bool, CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
+      
+      // check, if cache entry is expired
+      if (cv.first == false) {
+        NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
+        this->data_drop(cv.second.packet, "Cached and expired", this_node);
+        continue;
+      }
+      
+      
       uint32_t iface;
       Ipv4Address nb;
       
-      CacheEntry ce = cv[j];
       
       if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
         Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
         
         // Create the route and call UnicastForwardCallback
-        rt->SetSource(ce.header.GetSource());
+        rt->SetSource(cv.second.header.GetSource());
         rt->SetDestination(dst);
         rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
         rt->SetGateway(nb);
         
-        ce.ucb(rt, ce.packet, ce.header);
+        
+        // FIXME: Code ever reaches here?
+        NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "send");
+        cv.second.ucb(rt, cv.second.packet, cv.second.header);
         
         // If there was a route found, the destination must exist
         // in rtable. We can safely assume, that all data to that destination
@@ -1144,6 +1152,8 @@ void RoutingProtocol::SendCachedData() {
         dst_found = true;
       }
     }
+    
+    
     // If this destination exists, all the data is routed out by now and can be discarded
     if (dst_found) {
         this->data_cache.RemoveCache(dst);

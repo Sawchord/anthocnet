@@ -265,21 +265,13 @@ void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, std::string rea
 }
 
 void RoutingExperiment::Evaluate () {
-  //double kbs = (bytesTotal * 8.0) / 1000;
-  //bytesTotal = 0;
-
-  /*out << (Simulator::Now ()).GetSeconds () << ","
-      << kbs << ","
-      << packetsReceived << ","
-      << m_nSinks << ","
-      << m_protocolName << ","
-      << m_txp << ""
-      << std::endl;
-
-  */
-  
   
   double drop_rate_simple = 1.0 - ((double) packets_received / packets_sent);
+  
+  if (drop_rate_simple < 0) {
+    drop_rate_simple = 0;
+  }
+  
   double drop_rate_counted = (double )data_dropped / packets_sent;
   
   
@@ -299,18 +291,6 @@ void RoutingExperiment::Evaluate () {
   
   Simulator::Schedule (Seconds (1.0), &RoutingExperiment::Evaluate, this);
 }
-
-/*Ptr<Socket>
-RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
-{
-  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
-  Ptr<Socket> sink = Socket::CreateSocket (node, tid);
-  InetSocketAddress local = InetSocketAddress (addr, port);
-  sink->Bind (local);
-  sink->SetRecvCallback (MakeCallback (&RoutingExperiment::ReceivePacket, this));
-
-  return sink;
-}*/
 
 int main (int argc, char *argv[]) {
   RoutingExperiment experiment;
@@ -553,25 +533,7 @@ void RoutingExperiment::Run (double txp) {
     wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
   }
   
-  /*
-  // Set the Gnuplot output
-  // Set GnuplotHelper to plot packet byte count
-  std::string packetProbe = "ns3::Ipv4PacketProbe";
-  std::string packetPath = "/NodeList/[STAR]/$ns3::Ipv4L3Protocol/Tx";
   
-  GnuplotHelper packetPlotHelper;
-  packetPlotHelper.ConfigurePlot((tr_name + "_bytecount"),
-    "Packet Byte Count vs. Time",
-    "Time (Seconds)",
-    "Packet Byte Count",
-    "eps");
-
-  packetPlotHelper.PlotProbe(packetProbe,
-    packetPath,
-    "OutputBytes",
-    "Packet Byte Count",
-    GnuplotAggregator::KEY_BELOW);*/
- 
   if (m_generate_asciitrace) {
     // Read up what these output files mean, because I do not know
     AsciiTraceHelper ascii;
@@ -588,10 +550,10 @@ void RoutingExperiment::Run (double txp) {
   
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
-  if (m_generate_flowmon) {
+  //if (m_generate_flowmon) {
     
     flowmon = flowmonHelper.InstallAll ();
-  }
+  //}
 
   NS_LOG_INFO ("Run Simulation.");
   
@@ -614,8 +576,8 @@ void RoutingExperiment::Run (double txp) {
   // Quick and dirty way to get the eps generated
   popen( ("gnuplot -c " + (tr_name + "_droprate_simple.plt")).c_str(), "r");
   
-  if (m_generate_flowmon) {
+  //if (m_generate_flowmon) {
     flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
-  }
+  //}
 }
 

@@ -32,10 +32,10 @@ void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce, Time expire) {
   ce.received_in = Simulator::Now();
   ce.expire_in = expire;
   
-  std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.find(dst);
+  std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
   
   if (it == this->cache.end()) {
-    std::vector<CacheEntry> v;
+    std::list<CacheEntry> v;
     v.push_back(ce);
     this->cache.insert(std::make_pair(dst, v));
   }
@@ -48,35 +48,50 @@ void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce) {
   this->CachePacket(dst, ce, this->initial_expire);
 }
 
-std::vector<CacheEntry> PacketCache::GetCache(Ipv4Address dst, Time now) {
+
+bool PacketCache::HasEntries(Ipv4Address dst) {
   
-  std::vector<CacheEntry> retv;
-  
-  std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.find(dst);
-  
+  std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
   if (it == this->cache.end()) {
-    // Return empty vector
-    std::vector<CacheEntry> v;
-    return v;
+    // Destination does not exist
+    return false;
   }
   
-  for (uint32_t i = 0; i < it->second.size(); i++) {
-    
-    Time T = now - it->second[i].received_in;
-    
-    // Only include not expired packets.
-    if (T < it->second[i].expire_in) {
-      retv.push_back(it->second[i]);
-    }
+  if (it->second.size() == 0) {
+      return false;
   }
-  return retv;
+  return true;
+}
+
+std::pair<bool, CacheEntry> PacketCache::GetCacheEntry(Ipv4Address dst, Time now) {
+  
+  
+  std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
+  
+  if (it == this->cache.end()) {  
+    return std::make_pair(false, CacheEntry());
+  }
+  
+  
+  CacheEntry ce = it->second.front();
+  it->second.pop_front();
+  
+  Time T = now - ce.received_in;
+  
+  // Only include not expired packets.
+  if (T < ce.expire_in) {
+    return std::make_pair(false, ce);
+  }
+  else {
+    return std::make_pair(true, ce);
+  }
 }
 
 
 std::vector<Ipv4Address> PacketCache::GetDestinations() {
     std::vector<Ipv4Address> retv;
     
-    for (std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.begin();
+    for (std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.begin();
       it != this->cache.end(); ++it) {
       
       retv.push_back(it->first);
@@ -87,7 +102,7 @@ std::vector<Ipv4Address> PacketCache::GetDestinations() {
 
 void PacketCache::RemoveCache(Ipv4Address dst) {
     
-    std::map<Ipv4Address, std::vector<CacheEntry> >::iterator it = this->cache.find(dst);
+    std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
     it->second.clear();
     
 }

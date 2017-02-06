@@ -59,8 +59,8 @@ public:
 void CachePacket(Ipv4Address dst, CacheEntry ce, Time expire);
 void CachePacket(Ipv4Address dst, CacheEntry ce);
 
-  
-std::vector<CacheEntry> GetCache(Ipv4Address dst, Time now = Simulator::Now());
+bool HasEntries(Ipv4Address dst);
+std::pair<bool, CacheEntry> GetCacheEntry(Ipv4Address dst, Time now = Simulator::Now());
 
 std::vector<Ipv4Address> GetDestinations();
 
@@ -70,7 +70,7 @@ private:
   
   // Standard expire time if no other specified
   Time initial_expire;
-  std::map<Ipv4Address, std::vector<CacheEntry> > cache;
+  std::map<Ipv4Address, std::list<CacheEntry> > cache;
   
 };
 

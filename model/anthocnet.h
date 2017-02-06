@@ -39,8 +39,6 @@
 
 namespace ns3 {
 namespace ahn {
-
-typedef void (* DropReasonCallback) (Ptr<Packet const>, std::string Reason, Ipv4Address address);
   
 class RoutingProtocol : public Ipv4RoutingProtocol {
 public:
