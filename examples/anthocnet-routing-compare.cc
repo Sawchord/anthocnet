@@ -58,6 +58,8 @@
 #include "ns3/trace-helper.h"
 #include "ns3/applications-module.h"
 
+#include "ns3/netanim-module.h"
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
@@ -391,7 +393,8 @@ void RoutingExperiment::Run (double txp) {
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  //wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   // Add a mac and disable rate control
@@ -577,7 +580,12 @@ void RoutingExperiment::Run (double txp) {
     AsciiTraceHelper ascii1;
     MobilityHelper::EnableAsciiAll (ascii1.CreateFileStream (tr_name + ".mob")); 
   }
-
+  
+  
+  // Start the net animator
+  AnimationInterface anim (tr_name + "_animation.xml");
+  anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), Seconds(TotalTime));
+  
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;
   if (m_generate_flowmon) {

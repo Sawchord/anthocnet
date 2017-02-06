@@ -259,37 +259,6 @@ void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
   return;
 }
 
-// TODO: Remove this function, since it does not function
-void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
-  /*
-  *stream->GetStream() << "AntHocNet routing table \n\t";
-  
-  // Print the first line (all destination)
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator
-    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
-    *stream->GetStream() << it->first;
-  }
-  
-  for (std::map<nb_t, NeighborInfo>::const_iterator 
-    it = this->nbs.begin(); it != this->nbs.end(); ++it) {
-    
-    *stream->GetStream() << it->first.first << ":" << it->first.second;
-    
-    uint32_t nb_index = it->first.first;
-    
-    for (std::map<Ipv4Address, DestinationInfo>::const_iterator 
-      it1 = this->dsts.begin(); it1 != this->dsts.end(); ++it1) {
-      
-      uint32_t dst_index = it1->second.index;
-      
-      *stream->GetStream() << this->rtable[dst_index][nb_index]
-      .pheromone;
-      
-    }
-    *stream->GetStream () << "\n";
-  }*/
-}
-
 void RoutingTable::PurgeInterface(uint32_t interface) {
   
   NS_LOG_FUNCTION(this << "interface" << interface);
@@ -592,10 +561,43 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   return false;
 }
 
+void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
+  /*
+  *stream->GetStream() << "AntHocNet routing table \n\t";
+  
+  // Print the first line (all destination)
+  for (std::map<Ipv4Address, DestinationInfo>::const_iterator
+    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
+    *stream->GetStream() << it->first;
+  }
+  
+  for (std::map<nb_t, NeighborInfo>::const_iterator 
+    it = this->nbs.begin(); it != this->nbs.end(); ++it) {
+    
+    *stream->GetStream() << it->first.first << ":" << it->first.second;
+    
+    uint32_t nb_index = it->first.first;
+    
+    for (std::map<Ipv4Address, DestinationInfo>::const_iterator 
+      it1 = this->dsts.begin(); it1 != this->dsts.end(); ++it1) {
+      
+      uint32_t dst_index = it1->second.index;
+      
+      *stream->GetStream() << this->rtable[dst_index][nb_index]
+      .pheromone;
+      
+    }
+    *stream->GetStream () << "\n";
+  }*/
+  
+  this->Print(*stream->GetStream());
+  
+}
+
 
 // FIXME: This function causes program to crash
 void RoutingTable::Print(std::ostream& os) const{
-  
+  /*
   for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); ++dst_it) {
     
@@ -606,12 +608,37 @@ void RoutingTable::Print(std::ostream& os) const{
       
       os << "NB:(" << nb_it->first << ":" << nb_it->second.expires_in << ")";
       
-      // TODO: Output the pheromones
+      
       
     }
     
     os << "}";
+  }*/
+  
+  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it1 = this->dsts.begin();
+    dst_it1 != this->dsts.end(); ++dst_it1) {
+    
+    // Output the destination info 
+    os << "\nDST:[" << dst_it1->first << " : " << dst_it1->second.index << "]";
+    
+    //uint32_t dst_index = dst_it1->second.index;
+    
   }
+  
+  // Iterate over all neigbors
+  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
+    dst_it2 != this->dsts.end(); ++dst_it2) {
+    
+    for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it2->second.nbs.begin();
+      nb_it != dst_it2->second.nbs.end(); ++nb_it) {
+      
+       os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
+        
+      }
+  }
+  
+  // TODO: Output the pheromones
+  
 }
 
 std::ostream& operator<< (std::ostream& os, RoutingTable const& t) {
