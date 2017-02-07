@@ -87,6 +87,9 @@ private:
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpDropTracer(const Ipv4Header& header, Ptr<Packet const> packet, Ipv4L3Protocol::DropReason reason, Ptr<Ipv4> ipv4, uint32_t interface);
   
+  void PhyTxDropTracer(Ptr<Packet const> packet);
+  void PhyRxDropTracer(Ptr<Packet const> packet);
+  
   void AntDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address);
   void DataDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address);
   
@@ -238,9 +241,15 @@ void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const>
   
   data_dropped++;
   
-  std::ostringstream oss;
-  oss << Simulator::Now().GetSeconds() << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
-  NS_LOG_UNCOND(oss.str());
+  //std::ostringstream oss;
+  //oss << Simulator::Now().GetSeconds() << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
+  //NS_LOG_UNCOND(oss.str());
+  
+  data_drop_output << Simulator::Now().GetSeconds() << "IPLayer dropped at interface: " << interface << std::endl;
+  data_drop_output << "\t Reason: " << reason << std::endl;
+  data_drop_output << "\t Header: " << header << std::endl;
+  data_drop_output << "\t Packet: " << packet << std::endl;
+  
   
 }
 
@@ -262,6 +271,21 @@ void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, std::string rea
   data_drop_output << "\t Reason: " << reason << std::endl;
   data_drop_output << "\t Packet: " << packet << std::endl;
   
+}
+
+void RoutingExperiment::PhyTxDropTracer(Ptr<Packet const> packet) {
+  
+  data_dropped++;
+  data_drop_output << Simulator::Now().GetSeconds() << "PHYLayer Tx drop" << std::endl;
+  data_drop_output << "\t Packet: " << packet << std::endl;
+    
+}
+
+void RoutingExperiment::PhyRxDropTracer(Ptr<Packet const> packet) {
+    
+  data_dropped++;
+  data_drop_output << Simulator::Now().GetSeconds() << "PHYLayer Rx drop" << std::endl;
+  data_drop_output << "\t Packet: " << packet << std::endl;  
 }
 
 void RoutingExperiment::Evaluate () {
@@ -511,14 +535,20 @@ void RoutingExperiment::Run (double txp) {
   Config::ConnectWithoutContext (SinkTracePath, MakeCallback(&RoutingExperiment::SinkRxTracer, this));
   
   // Enable Tracers on the IP level
-  std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
-  Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
+  //std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  //Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
   
-  std::string IpRxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Rx";
-  Config::ConnectWithoutContext (IpRxPath, MakeCallback(&RoutingExperiment::IpRxTracer, this));
+  //std::string IpRxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Rx";
+  //Config::ConnectWithoutContext (IpRxPath, MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
   std::string IpDropPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Drop";
   Config::ConnectWithoutContext (IpDropPath, MakeCallback(&RoutingExperiment::IpDropTracer, this));
+  
+  std::string PhyTxDropPath = "/NodeList/*/DevinceList/*/$ns3::WifiNetDevice/Phy/TxDrop";
+  Config::ConnectWithoutContext (PhyTxDropPath, MakeCallback(&RoutingExperiment::PhyTxDropTracer, this));
+  
+  std::string PhyRxDropPath = "/NodeList/*/DevinceList/*/$ns3::WifiNetDevice/Phy/RxDrop";
+  Config::ConnectWithoutContext (PhyRxDropPath, MakeCallback(&RoutingExperiment::PhyRxDropTracer, this));
   
   if (m_protocol == 2) {
     std::string AntDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/AntDrop";
