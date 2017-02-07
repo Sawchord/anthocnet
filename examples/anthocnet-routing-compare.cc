@@ -97,6 +97,8 @@ private:
   uint32_t m_nWifis;
   uint32_t m_nSinks;
   
+  std::vector<ApplicationContainer*> apps;
+  
   void Evaluate();
   
   // Plots
@@ -114,7 +116,9 @@ private:
   std::string m_protocolName;
   double m_txp;
   bool m_traceMobility;
+  
   uint32_t m_protocol;
+  uint32_t m_experiment;
   
   uint32_t m_app_start;
   
@@ -140,6 +144,7 @@ RoutingExperiment::RoutingExperiment () :
     
     m_traceMobility (false),
     m_protocol (2), // ANTHOCNET
+    m_experiment (2), // UDPEcho
     m_app_start(20),
     
     
@@ -159,9 +164,10 @@ std::string RoutingExperiment::CommandSetup (int argc, char **argv)
   cmd.AddValue("appStart", "Start the OnnOff Application after that many seconds", m_app_start);
   
   cmd.AddValue("protocol", "1=AODV; 2=ANTHOCNET", m_protocol);
+  cmd.AddValue("Experiment", "1=OnOff<--->Sink; 2=UDPEchoClient<--->UDPEchoServer", m_experiment);
   
   cmd.AddValue("nWifis", "The total number of nodes in this simulation", m_nWifis);
-  cmd.AddValue("nSinks", "The total number of sinks (receivers) in this simulation", m_nSinks);
+  cmd.AddValue("nSinks", "The total number of sinks/servers in this simulation", m_nSinks);
   
   cmd.AddValue("outputIpTxRx", "Specify, whether events on the Ip tracer should be printed", m_output_iptxrx);
   
@@ -173,25 +179,6 @@ std::string RoutingExperiment::CommandSetup (int argc, char **argv)
   return "blob";
 }
 
-
-/*static inline std::string
-PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddress)
-{
-  std::ostringstream oss;
-
-  oss << Simulator::Now ().GetSeconds () << " " << socket->GetNode ()->GetId ();
-
-  if (InetSocketAddress::IsMatchingType (senderAddress))
-    {
-      InetSocketAddress addr = InetSocketAddress::ConvertFrom (senderAddress);
-      oss << " received one packet from " << addr.GetIpv4 ();
-    }
-  else
-    {
-      oss << " received one packet!";
-    }
-  return oss.str ();
-}*/
 
 // Tracers 
 void RoutingExperiment::OnOffTxTracer(Ptr<Packet const> packet) {
@@ -313,6 +300,23 @@ void RoutingExperiment::Evaluate () {
   packets_received = 0;
   packets_sent = 0;
   
+  // Change the fill data
+  if (m_experiment == 2) {
+    for (uint32_t i = m_nSinks; i < m_nWifis; i++) { 
+      
+      Ptr<Application> appclient = apps[i]->Get(0);
+      UdpEchoClient* client = dynamic_cast<UdpEchoClient*>(PeekPointer(appclient));
+      
+      std::stringstream css;
+      css << "Source: " << i << " Destination: " << (i % m_nSinks) << " Time: " << Simulator::Now();
+      
+      client->SetFill(css.str());
+      
+    }
+    
+  }
+  
+  
   Simulator::Schedule (Seconds (1.0), &RoutingExperiment::Evaluate, this);
 }
 
@@ -379,7 +383,7 @@ void RoutingExperiment::Run (double txp) {
   std::string tr_name ("anthocnet-routing-compare");
   int nodeSpeed = 20; //in m/s
   int nodePause = 0; //in s
-  m_protocolName = "protocol";
+  m_protocolName = "Protocol";
   
   Config::SetDefault("ns3::OnOffApplication::PacketSize",StringValue ("64"));
   Config::SetDefault("ns3::OnOffApplication::DataRate",  StringValue (rate));
@@ -476,14 +480,18 @@ void RoutingExperiment::Run (double txp) {
   addressAdhoc.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer adhocInterfaces;
   adhocInterfaces = addressAdhoc.Assign (adhocDevices);
-
+  
+  // For the first experiment
   OnOffHelper onoff1 ("ns3::UdpSocketFactory", Address());
   onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
   onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
   
   PacketSinkHelper sink1 ("ns3::UdpSocketFactory", Address());
   
-  // Start the Sinks
+  // For the second experiment
+  UdpEchoServerHelper echoserver1(9);
+  
+  // Start the Receiver application
   for (uint32_t i = 0; i < m_nSinks; i++) {
     
     // TODO: Set the Local address on sink1
@@ -491,24 +499,60 @@ void RoutingExperiment::Run (double txp) {
     AddressValue localAddress (InetSocketAddress(adhocInterfaces.GetAddress (i), port));
     sink1.SetAttribute("Local", localAddress);
     
-    ApplicationContainer temp = sink1.Install(adhocNodes.Get(i));
-    temp.Start(Seconds(20.0));
-    temp.Stop(Seconds(TotalTime));
+    ApplicationContainer* temp = new ApplicationContainer();
+    apps.push_back(temp);
+    
+    //ApplicationContainer* temp = apps[0]*;
+    if (m_experiment == 1) {
+      *temp = sink1.Install(adhocNodes.Get(i));
+    }
+    else if (m_experiment == 2) {
+      *temp = echoserver1.Install(adhocNodes.Get(i));
+    }
+    else {
+      NS_LOG_UNCOND("Unknown experiment.");
+      exit(-1);
+    }
+    
+    temp->Start(Seconds(20.0));
+    temp->Stop(Seconds(TotalTime));
+    
+    
+    
   }
   
-  // Start the OnnOff Applications
+  // Start the Sender Applications
   for (uint32_t i = m_nSinks; i < m_nWifis; i++) {
+    
+    ApplicationContainer* temp = new ApplicationContainer();
+    apps.push_back(temp);
     
     // Get the addresses of the Nodes to send to
     AddressValue remoteAddress (InetSocketAddress(adhocInterfaces.GetAddress (i % m_nSinks), port));
-    onoff1.SetAttribute ("Remote", remoteAddress);
     
-    // Start the OnOffApplication at a random time between the set papams
+    if (m_experiment == 1) {
+      onoff1.SetAttribute ("Remote", remoteAddress);
+      // Start the OnOffApplication at a random time between the set papams
+      *temp = onoff1.Install(adhocNodes.Get(i));
+    }
+    else if (m_experiment == 2) {
+      
+      UdpEchoClientHelper client(adhocInterfaces.GetAddress (i % m_nSinks), 9);
+      // TODO: Set attributes denpending on the input values
+      client.SetAttribute ("MaxPackets", UintegerValue (1000));
+      client.SetAttribute ("Interval", TimeValue (Seconds(1)));
+      //client.SetAttribute ("PacketSize", UintegerValue (packetSize));
+      *temp = client.Install(adhocNodes.Get(i));
+      
+    }
+    else {
+      NS_LOG_UNCOND("Unknown experiment.");
+      exit(-1);
+    }
+    
     Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable>();
-    ApplicationContainer temp = onoff1.Install(adhocNodes.Get(i));
-    
-    temp.Start (Seconds (var->GetValue (m_app_start, m_app_start + 1)));
-    temp.Stop (Seconds (TotalTime));
+    temp->Start (Seconds (var->GetValue (m_app_start, m_app_start + 1)));
+    temp->Stop (Seconds (TotalTime));
   }
   
   // Prepare Plots
@@ -527,13 +571,21 @@ void RoutingExperiment::Run (double txp) {
   this->dataset_droprate_counted->SetTitle("Droprate counted");
   this->dataset_droprate_counted->SetStyle(Gnuplot2dDataset::LINES);
   
-  // Enable Rx and Tx tracers to measure the packets, that are sent
-  std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
-  Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
-  
-  std::string SinkTracePath = "/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx";
-  Config::ConnectWithoutContext (SinkTracePath, MakeCallback(&RoutingExperiment::SinkRxTracer, this));
-  
+  if (m_experiment == 1) {
+    // Enable Rx and Tx tracers to measure the packets, that are sent
+    std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::OnOffApplication/Tx";
+    Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
+    
+    std::string SinkTracePath = "/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx";
+    Config::ConnectWithoutContext (SinkTracePath, MakeCallback(&RoutingExperiment::SinkRxTracer, this));
+  }
+  else if (m_experiment ==2 ) {
+    
+    std::string OnOffTracePath = "/NodeList/*/ApplicationList/*/$ns3::UdpEchoClient/Tx";
+    Config::ConnectWithoutContext (OnOffTracePath, MakeCallback(&RoutingExperiment::OnOffTxTracer, this));
+    
+  }
+    
   // Enable Tracers on the IP level
   //std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
   //Config::ConnectWithoutContext (IpTxPath, MakeCallback(&RoutingExperiment::IpTxTracer, this));
