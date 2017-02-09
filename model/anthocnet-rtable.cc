@@ -401,7 +401,6 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     ra->avr_hops = hops;
   }
   else {
-    // TODO: change gamma_pheromone to alpha_pheromone
     ra->avr_hops = this->alpha_pheromone*ra->avr_hops +
       (1.0 - this->alpha_pheromone) * hops;
   }
@@ -562,36 +561,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
 }
 
 void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
-  /*
-  *stream->GetStream() << "AntHocNet routing table \n\t";
-  
-  // Print the first line (all destination)
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator
-    it = this->dsts.begin(); it != this->dsts.end(); ++it) {
-    *stream->GetStream() << it->first;
-  }
-  
-  for (std::map<nb_t, NeighborInfo>::const_iterator 
-    it = this->nbs.begin(); it != this->nbs.end(); ++it) {
-    
-    *stream->GetStream() << it->first.first << ":" << it->first.second;
-    
-    uint32_t nb_index = it->first.first;
-    
-    for (std::map<Ipv4Address, DestinationInfo>::const_iterator 
-      it1 = this->dsts.begin(); it1 != this->dsts.end(); ++it1) {
-      
-      uint32_t dst_index = it1->second.index;
-      
-      *stream->GetStream() << this->rtable[dst_index][nb_index]
-      .pheromone;
-      
-    }
-    *stream->GetStream () << "\n";
-  }*/
-  
   this->Print(*stream->GetStream());
-  
 }
 
 
@@ -621,19 +591,31 @@ void RoutingTable::Print(std::ostream& os) const{
     os << "]";
   }
   
-  // Iterate over all neigbors
-  /*for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
-    dst_it2 != this->dsts.end(); ++dst_it2) {
-    
-    for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it2->second.nbs.begin();
-      nb_it != dst_it2->second.nbs.end(); ++nb_it) {
-      
-       os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
-        
-      }
-  }*/
+  os << std::endl;
   
-  // TODO: Output the pheromones
+  // Print the pheromone table
+  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it1 = this->dsts.begin();
+    dst_it1 != this->dsts.end(); ++dst_it1) {
+    
+    os << dst_it1->first << ":";
+    
+    // Iterate over all neigbors
+    for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
+      dst_it2 != this->dsts.end(); ++dst_it2) {
+      
+      for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it2->second.nbs.begin();
+        nb_it != dst_it2->second.nbs.end(); ++nb_it) {
+        
+        //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
+        os << "(" << dst_it2->first << ":" << nb_it->first << "):";
+        os << this->rtable[dst_it1->second.index][nb_it->second.index].pheromone << "|\t";  
+        
+        }
+    }
+    
+    os << std::endl;
+    
+  }
   
 }
 
