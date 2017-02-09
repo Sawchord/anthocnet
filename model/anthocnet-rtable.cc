@@ -235,12 +235,15 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
 
 bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   
+  // Check if destination exists
   std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
-    return false;
+    this->AddDestination(address);
+    dst_it = this->dsts.find(address);
   }
   
   if (dst_it->second.no_broadcast_time > Seconds(0)) {
+    NS_LOG_FUNCTION(this << "no bcast for " << address << " for " << dst_it->second.no_broadcast_time);
     return false;
   }
   
@@ -251,7 +254,8 @@ void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
   
   std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
-    return;
+    this->AddDestination(address);
+    dst_it = this->dsts.find(address);
   }
   
   dst_it->second.no_broadcast_time = duration;
@@ -311,7 +315,7 @@ void RoutingTable::Update(Time interval) {
   for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); /* no increment */) {
     
-    // Updatethe no_broadcast timers
+    // Update the no_broadcast timers
     Time bc_dt = dst_it->second.no_broadcast_time - interval;
     if (bc_dt <= Seconds(0)) {
       dst_it->second.no_broadcast_time = Seconds(0);

@@ -50,7 +50,7 @@ RoutingProtocol::RoutingProtocol ():
   fwacache_expire(MilliSeconds(1000)),
   nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
-  no_broadcast(Seconds(1)),
+  no_broadcast(MilliSeconds(100)),
   alpha_T_mac(0.7),
   T_hop(0.2),
   alpha_pheromone(0.7),
@@ -91,7 +91,7 @@ TypeId RoutingProtocol::GetTypeId(void) {
   )
   .AddAttribute ("NoBroadcast",
     "Time after a broadcast, after which one can not broadcast to that same destination again.",
-    TimeValue (Seconds(1)),
+    TimeValue (MilliSeconds(100)),
     MakeTimeAccessor(&RoutingProtocol::no_broadcast),
     MakeTimeChecker()
   )
