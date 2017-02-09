@@ -762,8 +762,7 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   
 }
 
-
-void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
+void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant) {
   
   if (!this->rtable.IsBroadcastAllowed(dst)) {
     NS_LOG_FUNCTION(this << "broadcast not allowed");
@@ -778,7 +777,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
       
-    Ipv4Address this_node = iface.GetLocal();  
+    //Ipv4Address this_node = iface.GetLocal();  
     
     // skip the loopback interface
     if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
@@ -786,7 +785,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
       continue;
     }
     
-    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
     NS_LOG_FUNCTION(this << "ant" << ant);
     TypeHeader type_header(AHNTYPE_FW_ANT);
     
@@ -812,6 +810,57 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
       this, socket, packet, destination);
+    
+  }
+  
+}
+
+
+void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
+  
+  
+  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
+    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+    
+    Ptr<Socket> socket = it->first;
+    Ipv4InterfaceAddress iface = it->second;
+    
+    // skip the loopback interface
+    if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+      //NS_LOG_FUNCTION(this << "skip lo");
+      continue;
+    }
+    
+    Ipv4Address this_node = iface.GetLocal();
+    
+    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+    this->BroadcastForwardAnt(dst, ant);
+    
+    /*NS_LOG_FUNCTION(this << "ant" << ant);
+    TypeHeader type_header(AHNTYPE_FW_ANT);
+    
+    Ptr<Packet> packet = Create<Packet> ();
+    SocketIpTtlTag tag;
+    tag.SetTtl(ant.GetTTL());
+    
+    packet->AddPacketTag(tag);
+    packet->AddHeader(ant);
+    
+    packet->AddHeader(type_header);
+    
+    
+    Ipv4Address destination;
+    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+        destination = Ipv4Address ("255.255.255.255");
+    } else { 
+        destination = iface.GetBroadcast ();
+    }
+    
+    NS_LOG_FUNCTION(this << "broadcast ant" << *packet << "dst" << dst);
+    
+    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+      this, socket, packet, destination);*/
     
   }
 }
@@ -1031,7 +1080,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
     // floods, we randomly select for now
-    this->BroadcastForwardAnt(final_dst);
+    this->BroadcastForwardAnt(final_dst, ant);
     return;
     
     //if (!this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random)) {

@@ -242,8 +242,8 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
     dst_it = this->dsts.find(address);
   }
   
-  if (dst_it->second.no_broadcast_time > Seconds(0)) {
-    NS_LOG_FUNCTION(this << "no bcast for " << address << " for " << dst_it->second.no_broadcast_time);
+  if (Simulator::Now() <= dst_it->second.no_broadcast_time) {
+    NS_LOG_FUNCTION(this << "no bcast for " << address << " for " << dst_it->second.no_broadcast_time - Simulator::Now());
     return false;
   }
   
@@ -258,7 +258,7 @@ void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
     dst_it = this->dsts.find(address);
   }
   
-  dst_it->second.no_broadcast_time = duration;
+  dst_it->second.no_broadcast_time = Simulator::Now() + duration;
   
   return;
 }
@@ -316,14 +316,16 @@ void RoutingTable::Update(Time interval) {
     dst_it != this->dsts.end(); /* no increment */) {
     
     // Update the no_broadcast timers
-    Time bc_dt = dst_it->second.no_broadcast_time - interval;
+    /*Time bc_dt = dst_it->second.no_broadcast_time - interval;
     if (bc_dt <= Seconds(0)) {
       dst_it->second.no_broadcast_time = Seconds(0);
     }
     else {
       dst_it->second.no_broadcast_time = bc_dt;
-    }
-  
+    }*/
+    
+    // NS_LOG_FUNCTION(this << "new nobcast: " << dst_it->second.no_broadcast_time);
+    
     // Calculate the time that ticked since the last occurence of update
     Time dst_dt = dst_it->second.expires_in - interval;
     

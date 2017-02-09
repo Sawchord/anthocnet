@@ -107,6 +107,7 @@ private:
   void UnicastForwardAnt(uint32_t iface, Ipv4Address dst, ForwardAntHeader ant);
   void UnicastBackwardAnt(uint32_t iface, Ipv4Address dst, BackwardAntHeader ant);
   void BroadcastForwardAnt(Ipv4Address dst);
+  void BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant);
   
   void SendCachedData();
   
