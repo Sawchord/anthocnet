@@ -261,9 +261,10 @@ operator<< (std::ostream & os, AntHeader const & h) {
 
 bool AntHeader::IsValid() {
   
-  NS_ASSERT(this->src != this->dst);
-  NS_ASSERT( ((size_t) this->hops + 1) == this->ant_stack.size() );
-  
+  //NS_ASSERT(this->src != this->dst);
+  //NS_ASSERT( ((size_t) this->hops + 1) == this->ant_stack.size() );
+  if (this->src == this->dst) return false;
+    
   return true;
 }
 

@@ -244,7 +244,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // TODO: Find out how to get ip address from idev
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
-  Ipv4Address this_node = Ipv4Address("0.0.0.0");
+  uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
+  Ipv4Address this_node = this->ipv4->GetAddress(recv_iface, 0).GetLocal();
   
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
@@ -276,8 +277,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   }
   
   // Get the socket and InterfaceAdress of the reciving net device
-  // uint32_t recv_iface = idev->GetIfIndex(); // Works too?
-  uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
   Ptr<Socket> recv_socket = this->sockets[recv_iface];
   Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
   
@@ -403,7 +402,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   // Get the interface pointer
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   
-  if (l3->GetNAddresses (interface) > 1) {
+  if (l3->GetNAddresses(interface) > 1) {
     NS_LOG_WARN ("interface has more than one address. \
     Only first will be used.");
   }
@@ -419,8 +418,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
       UdpSocketFactory::GetTypeId());
     NS_ASSERT(socket != 0);
     
-    socket->SetRecvCallback(MakeCallback(
-      &RoutingProtocol::Recv, this));
+    socket->SetRecvCallback(MakeCallback(&RoutingProtocol::Recv, this));
     socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
     socket->SetAllowBroadcast(true);
     socket->SetIpRecvTtl(true);
@@ -1116,7 +1114,6 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);
   
-  // FIXME: I need peekdistright?
   Ipv4Address dst = ant.PeekDst();
   Ipv4Address src = ant.GetSrc();
   

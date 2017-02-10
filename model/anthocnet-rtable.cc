@@ -315,22 +315,13 @@ void RoutingTable::Update(Time interval) {
   for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); /* no increment */) {
     
-    // Update the no_broadcast timers
-    /*Time bc_dt = dst_it->second.no_broadcast_time - interval;
-    if (bc_dt <= Seconds(0)) {
-      dst_it->second.no_broadcast_time = Seconds(0);
-    }
-    else {
-      dst_it->second.no_broadcast_time = bc_dt;
-    }*/
-    
-    // NS_LOG_FUNCTION(this << "new nobcast: " << dst_it->second.no_broadcast_time);
     
     // Calculate the time that ticked since the last occurence of update
     Time dst_dt = dst_it->second.expires_in - interval;
     
     // Remove outdated destinations
     if (dst_dt <= Seconds(0)) {
+      NS_LOG_FUNCTION(this << "dst" << dst_it->first << "timed out");
       this->RemoveDestination((dst_it++)->first);
     }
     else {
@@ -344,6 +335,7 @@ void RoutingTable::Update(Time interval) {
         Time nb_dt = nb_it->second.expires_in - interval;
         
         if (nb_dt <= Seconds(0)) {
+          NS_LOG_FUNCTION(this << "nb" << dst_it->first << ":" << nb_it->first << "timed out");
           this->RemoveNeighbor((nb_it++)->first , dst_it->first);
         }
         else {
