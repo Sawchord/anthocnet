@@ -57,8 +57,7 @@ RoutingProtocol::RoutingProtocol ():
   gamma_pheromone(0.7),
   avr_T_mac(Seconds(0)),
   rtable(RoutingTable(nb_expire, dst_expire, T_hop, alpha_pheromone, gamma_pheromone)),
-  data_cache(dcache_expire),
-  fwant_cache(fwacache_expire)
+  data_cache(dcache_expire)
   {
     // Initialize the sockets
     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
@@ -389,7 +388,40 @@ Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr,
   
 }
 
+void RoutingProtocol::AddArpCache(Ptr<ArpCache> a) {
+  this->arp_cache.push_back (a);
+}
 
+void RoutingProtocol::DelArpCache(Ptr<ArpCache> a) {
+  this->arp_cache.erase (std::remove (arp_cache.begin() , arp_cache.end() , a), arp_cache.end() );
+}
+
+std::vector<Ipv4Address> RoutingProtocol::LookupMacAddress(Mac48Address addr) {
+  
+  std::vector<Ipv4Address> ret;
+  
+  // Iterate over all interfaces arp cache
+  for (std::vector<Ptr<ArpCache> >::const_iterator i = this->arp_cache.begin ();
+      i != this->arp_cache.end (); ++i) {
+    
+    // Get all IpAddresses for a Mac
+    std::list<ArpCache::Entry*> lookup = (*i)->LookupInverse(addr);
+    
+    // Check they are valid and include them into output
+    for (std::list<ArpCache::Entry*>::const_iterator lit = lookup.begin();
+      lit != lookup.end(); ++lit ) {
+      
+      ArpCache::Entry* entry = *lit;
+      
+      if (entry != 0 && (entry->IsAlive () || entry->IsPermanent ()) && !entry->IsExpired ()) {
+        ret.push_back(entry->GetIpv4Address());
+      }
+    }
+    
+  }
+  
+  return ret;
+}
 
 // Add an interface to an operational AntHocNet instance
 void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
@@ -413,35 +445,57 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   }
   
   // If there is not yet a socket in use, set one up
-  if (this->sockets[interface] == 0) {
-    Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
-      UdpSocketFactory::GetTypeId());
-    NS_ASSERT(socket != 0);
-    
-    socket->SetRecvCallback(MakeCallback(&RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
-    socket->SetAllowBroadcast(true);
-    socket->SetIpRecvTtl(true);
-    socket->BindToNetDevice (l3->GetNetDevice(interface));
-    
-    // Insert socket into the lists
-    this->sockets[interface] = socket;
-    this->socket_addresses.insert(std::make_pair(socket, iface));
-    
-    
-    NS_LOG_FUNCTION(this << "interface" << interface 
-      << " address" << this->ipv4->GetAddress (interface, 0) 
-      << "broadcast" << iface.GetBroadcast()
-      << "socket" << socket);
-    
-  }
-  else {
+  if (this->sockets[interface] != 0) {
     NS_LOG_FUNCTION(this << "Address was already set up" <<
       this->ipv4->GetAddress (interface, 0).GetLocal ());
+    return;
   }
   
   
-  // TODO: Support from MacLayer in detecting offline Neighbors
+  Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
+    UdpSocketFactory::GetTypeId());
+  NS_ASSERT(socket != 0);
+  
+  socket->SetRecvCallback(MakeCallback(&RoutingProtocol::Recv, this));
+  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+  socket->SetAllowBroadcast(true);
+  socket->SetIpRecvTtl(true);
+  socket->BindToNetDevice (l3->GetNetDevice(interface));
+  
+  // Insert socket into the lists
+  this->sockets[interface] = socket;
+  this->socket_addresses.insert(std::make_pair(socket, iface));
+  
+  // Add the interfaces arp cache to the list of arpcaches
+  if (l3->GetInterface (interface)->GetArpCache ()) {
+    this->AddArpCache(l3->GetInterface (interface)->GetArpCache());
+  }
+  
+  // Add layer2 support if possible
+  Ptr<NetDevice> dev = this->ipv4->GetNetDevice(
+    this->ipv4->GetInterfaceForAddress (iface.GetLocal ()));
+  
+  Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
+  if (wifi != 0) {
+    Ptr<WifiMac> mac = wifi->GetMac ();
+    if (mac != 0) {
+      mac->TraceConnectWithoutContext ("TxErrHeader",
+        MakeCallback(&RoutingProtocol::ProcessTxError, this));
+    }
+    else {
+      NS_LOG_FUNCTION(this << "MAC=0 to L2 support");
+    }
+  }
+  else {
+    NS_LOG_FUNCTION(this << "WIFI=0 to L2 support");
+  }
+  
+  NS_LOG_FUNCTION(this << "interface" << interface 
+    << " address" << this->ipv4->GetAddress (interface, 0) 
+    << "broadcast" << iface.GetBroadcast()
+    << "socket" << socket);
+  
+  return;
 }
 
 void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
@@ -457,6 +511,20 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
     this->ipv4->GetAddress(interface, 0));
   
   NS_ASSERT(socket);
+  
+  // Disable layer 2 link state monitoring (if possible)
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
+  Ptr<NetDevice> dev = l3->GetNetDevice (interface);
+  Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
+  if (wifi != 0) {
+    Ptr<WifiMac> mac = wifi->GetMac()->GetObject<AdhocWifiMac>();
+    if (mac != 0) {
+      mac->TraceDisconnectWithoutContext ("TxErrHeader",
+        MakeCallback(&RoutingProtocol::ProcessTxError, this));
+        
+      this->DelArpCache(l3->GetInterface(interface)->GetArpCache());
+    }
+  }
   
   socket->Close();
   
@@ -926,12 +994,22 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       return;
   }
   
-  // TODO: Get better simulation of T_mac
-  //Time jitter = MilliSeconds (this->uniform_random->GetInteger (1, 10));
-  // Schedule the handling of the queue
-  //Simulator::Schedule(jitter, &RoutingProtocol::HandleQueue, this);
   return;
 }
+
+void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
+  
+  Mac48Address addr[4];
+  
+  addr[0] = header.GetAddr1();
+  addr[1] = header.GetAddr2();
+  addr[2] = header.GetAddr3();
+  addr[3] = header.GetAddr4();
+  
+  
+  
+}
+
 
 // Callback function to  something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,

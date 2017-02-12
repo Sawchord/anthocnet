@@ -30,6 +30,8 @@
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
+#include "ns3/wifi-mac-header.h"
+#include "ns3/arp-cache.h"
 #include "ns3/traced-callback.h"
 
 // TODO: Make these settable by GetTypeId()
@@ -111,7 +113,23 @@ private:
   
   void SendCachedData();
   
+  // Add ARP cache to be used to allow layer 2 notifications processing
+  void AddArpCache (Ptr<ArpCache>);
+  // Don't use given ARP cache any more (interface is down)
+  void DelArpCache (Ptr<ArpCache>);
+  
+  // Search all interfaces arpcaches for that mac address
+  std::vector<Ipv4Address> LookupMacAddress (Mac48Address addr);
+  
+  // Holds pointers to all arp caches, such that it can
+  // look up IP addresses from MACs. Needed for L2 support
+  std::vector<Ptr<ArpCache> > arp_cache;
+  
   // ----------------------------------------------
+  // Called when there is an error in the Layer 2 link
+  void ProcessTxError (WifiMacHeader const& header);
+  
+  
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);
   
@@ -126,9 +144,6 @@ private:
   
   // -------------------------------------------------
   // Ant Handlers
-  
-  // Handles the receive queue
-  void HandleQueue();
   
   // Handles receiving of a HelloAnt
   void HandleHelloAnt(Ptr<Packet> packet, uint32_t iface);
@@ -194,6 +209,7 @@ private:
   // The running average of the T_max value
   Time avr_T_mac;
   
+  // Holds the loopback device
   Ptr<NetDevice> lo;
   
   // The routing table
@@ -202,14 +218,12 @@ private:
   // The Cache for the data that has no route yet
   PacketCache data_cache;
   
-  // The cache for forward ants
-  PacketCache fwant_cache;
-  
   // The IP protocol
   Ptr<Ipv4> ipv4;
   
   // Holds information about the interfaces
   Ptr<Socket> sockets[MAX_INTERFACES];
+  
   //list<uint32_t>* free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
   
