@@ -232,7 +232,7 @@ void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const>
   //oss << Simulator::Now().GetSeconds() << "s IP Layer dropped " << *packet << " Address: " << ipv4->GetAddress(interface, 0) << " Interface: " << interface << " Reason: " << reason;
   //NS_LOG_UNCOND(oss.str());
   
-  data_drop_output << Simulator::Now().GetSeconds() << "IPLayer dropped at interface: " << interface << std::endl;
+  data_drop_output << Simulator::Now().GetSeconds() << " IPLayer dropped at interface: " << interface << std::endl;
   data_drop_output << "\t Reason: " << reason << std::endl;
   data_drop_output << "\t Header: " << header << std::endl;
   data_drop_output << "\t Packet: " << packet << std::endl;
@@ -242,7 +242,7 @@ void RoutingExperiment::IpDropTracer(const Ipv4Header& header, Ptr<Packet const>
 
 void RoutingExperiment::AntDropTracer(Ptr<Packet const> packet, std::string reason, Ipv4Address address) {
   
-  ant_drop_output << Simulator::Now().GetSeconds() << "Ant dropped at address: " << address << std::endl;
+  ant_drop_output << Simulator::Now().GetSeconds() << " Ant dropped at address: " << address << std::endl;
   ant_drop_output << "\t Reason: " << reason << std::endl;
   ant_drop_output << "\t Packet: " << packet << std::endl;
   
@@ -254,7 +254,7 @@ void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, std::string rea
   data_dropped++;
   
   
-  data_drop_output << Simulator::Now().GetSeconds() << "Data dropped at address: " << address << std::endl;
+  data_drop_output << Simulator::Now().GetSeconds() << " Data dropped at address: " << address << std::endl;
   data_drop_output << "\t Reason: " << reason << std::endl;
   data_drop_output << "\t Packet: " << packet << std::endl;
   
@@ -263,7 +263,7 @@ void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, std::string rea
 void RoutingExperiment::PhyTxDropTracer(Ptr<Packet const> packet) {
   
   data_dropped++;
-  data_drop_output << Simulator::Now().GetSeconds() << "PHYLayer Tx drop" << std::endl;
+  data_drop_output << Simulator::Now().GetSeconds() << " PHYLayer Tx drop" << std::endl;
   data_drop_output << "\t Packet: " << packet << std::endl;
     
 }
@@ -271,7 +271,7 @@ void RoutingExperiment::PhyTxDropTracer(Ptr<Packet const> packet) {
 void RoutingExperiment::PhyRxDropTracer(Ptr<Packet const> packet) {
     
   data_dropped++;
-  data_drop_output << Simulator::Now().GetSeconds() << "PHYLayer Rx drop" << std::endl;
+  data_drop_output << Simulator::Now().GetSeconds() << " PHYLayer Rx drop" << std::endl;
   data_drop_output << "\t Packet: " << packet << std::endl;  
 }
 

@@ -47,7 +47,6 @@ RoutingProtocol::RoutingProtocol ():
   rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
   dcache_expire(MilliSeconds(5000)),
-  fwacache_expire(MilliSeconds(1000)),
   nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
   no_broadcast(MilliSeconds(100)),
@@ -134,12 +133,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     "Time datapackets waits for a route to be found. Packets are dropped if expires",
     TimeValue (MilliSeconds(5000)),
     MakeTimeAccessor(&RoutingProtocol::dcache_expire),
-    MakeTimeChecker()
-  )
-  .AddAttribute ("ForwardAntExpire",
-    "Time the ForwanrdAnts are cached to discover doubles",
-    TimeValue (MilliSeconds(1000)),
-    MakeTimeAccessor(&RoutingProtocol::fwacache_expire),
     MakeTimeChecker()
   )
   .AddAttribute ("RTableUpdate",
@@ -998,6 +991,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 }
 
 void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
+
+  NS_LOG_FUNCTION(this);
   
   Mac48Address addr[4];
   
@@ -1006,7 +1001,16 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
   addr[2] = header.GetAddr3();
   addr[3] = header.GetAddr4();
   
-  
+  for (uint32_t i = 0; i < 4; i++) {
+    
+    std::vector<Ipv4Address> addresses = this->LookupMacAddress(addr[i]);
+    
+    for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
+      ad_it != addresses.end(); ++ad_it) {
+      NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
+      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress (*ad_it), *ad_it);
+    }
+  }
   
 }
 
@@ -1231,7 +1235,9 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
 void RoutingProtocol::SendCachedData() {
   
   NS_LOG_FUNCTION(this);
-  Ipv4Address this_node = Ipv4Address("0.0.0.0");
+  
+  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  
   // Iterate over all cached destinations
   std::vector <Ipv4Address> dsts = this->data_cache.GetDestinations();
   for (uint32_t i = 0; i < dsts.size(); i++) {
@@ -1241,13 +1247,19 @@ void RoutingProtocol::SendCachedData() {
     bool dst_found = false;
     
     while (this->data_cache.HasEntries(dst)) {
-      //std::vector<CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
+      
       std::pair<bool, CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
       
       // check, if cache entry is expired
       if (cv.first == false) {
         NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
-        this->data_drop(cv.second.packet, "Cached and expired", this_node);
+        
+        //uint32_t iface = this->ipv4->GetInterfaceForAddress (cv.second.header.GetSource());
+        //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
+        
+        //this->data_drop(cv.second.packet, "Cached and expired", this_node);
+        this->data_drop(cv.second.packet, "Cached and expired", cv.second.header.GetSource());
+        
         continue;
       }
       

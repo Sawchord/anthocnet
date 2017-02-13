@@ -137,7 +137,7 @@ void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   // Search for the interface
   std::map<uint32_t, NeighborInfo>::iterator nb_it = it->second.nbs.find(iface_index);
   if (nb_it == it->second.nbs.end()) {
-    NS_LOG_FUNCTION(this << "nb interface does not exist");
+    NS_LOG_FUNCTION(this << "nb not on this interface");
     return;
   }
   
@@ -243,7 +243,7 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   }
   
   if (Simulator::Now() <= dst_it->second.no_broadcast_time) {
-    NS_LOG_FUNCTION(this << "no bcast for " << address << " for " << dst_it->second.no_broadcast_time - Simulator::Now());
+    NS_LOG_FUNCTION(this << "no bcast to" << address << " for " << dst_it->second.no_broadcast_time - Simulator::Now());
     return false;
   }
   

@@ -176,9 +176,6 @@ private:
   // Time until an entry in the datacache expires and the packet is dropped
   Time dcache_expire;
   
-  // Time the forwardants are kept in the cache
-  Time fwacache_expire;
-  
   // Time until a neighbor expires
   Time nb_expire;
   
