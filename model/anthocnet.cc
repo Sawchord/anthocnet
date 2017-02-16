@@ -218,11 +218,13 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
     return route;
   }
   
+  // TODO: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
   this->StartForwardAnt(dst);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
+  // TODO: This seems to be buggy and lead to data drop
   return this->LoopbackRoute(header, oif);
   //return 
 }
@@ -1216,7 +1218,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
 
 void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   
-  NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION(this << "dst" << dst);
   
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   

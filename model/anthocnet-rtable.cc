@@ -386,7 +386,7 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   
   
   // Get the indexes into the pheromone of dst and nb table
-  uint32_t nb_index = nb_it->second.index;
+  uint32_t nb_index = nbif_it->second.index;
   uint32_t dst_index = dst_it->second.index;
   
   double T_id = 1.0 / ((T_sd + hops * this->T_hop) / 2);
@@ -610,8 +610,8 @@ void RoutingTable::Print(std::ostream& os) const{
         os << "(" << dst_it2->first << ":" << nb_it->first << "):";
         os << this->rtable[dst_it1->second.index][nb_it->second.index].pheromone << "|";  
         os << this->rtable[dst_it1->second.index][nb_it->second.index].avr_hops << "|";
-      os << this->rtable[dst_it1->second.index][nb_it->second.index].virtual_pheromone << "|\t";
-        
+        os << this->rtable[dst_it1->second.index][nb_it->second.index].virtual_pheromone;
+        os << "->(" << dst_it1->second.index << ":" << nb_it->second.index << ")\t";
         }
     }
     

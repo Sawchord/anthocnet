@@ -377,7 +377,7 @@ void RoutingExperiment::Run (double txp) {
   Packet::EnablePrinting ();
   m_txp = txp;
 
-  double TotalTime = 40.0;
+  double TotalTime = 200.0;
   std::string rate ("2048bps");
   std::string phyMode ("DsssRate11Mbps");
   std::string tr_name ("anthocnet-routing-compare");
