@@ -416,6 +416,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     << "average hops" << ra->avr_hops
     << "for" << dst_it->first << nb_it->first);
   
+  //NS_LOG_UNCOND(this);
+  
   return true;
 }
 
@@ -576,7 +578,7 @@ void RoutingTable::Print(std::ostream& os) const{
     
     if (dst_it1->second.nbs.size() != 0) {
       
-      os << "NB:( ";
+      os << " NB:( ";
       
       for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it1->second.nbs.begin();
       nb_it != dst_it1->second.nbs.end(); ++nb_it) {
@@ -606,7 +608,9 @@ void RoutingTable::Print(std::ostream& os) const{
         
         //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
         os << "(" << dst_it2->first << ":" << nb_it->first << "):";
-        os << this->rtable[dst_it1->second.index][nb_it->second.index].pheromone << "|\t";  
+        os << this->rtable[dst_it1->second.index][nb_it->second.index].pheromone << "|";  
+        os << this->rtable[dst_it1->second.index][nb_it->second.index].avr_hops << "|";
+      os << this->rtable[dst_it1->second.index][nb_it->second.index].virtual_pheromone << "|\t";
         
         }
     }

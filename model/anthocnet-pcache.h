@@ -60,7 +60,7 @@ void CachePacket(Ipv4Address dst, CacheEntry ce, Time expire);
 void CachePacket(Ipv4Address dst, CacheEntry ce);
 
 bool HasEntries(Ipv4Address dst);
-std::pair<bool, CacheEntry> GetCacheEntry(Ipv4Address dst, Time now = Simulator::Now());
+std::pair<bool, CacheEntry> GetCacheEntry(Ipv4Address dst);
 
 std::vector<Ipv4Address> GetDestinations();
 

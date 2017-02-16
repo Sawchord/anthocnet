@@ -111,7 +111,7 @@ private:
   void BroadcastForwardAnt(Ipv4Address dst);
   void BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant);
   
-  void SendCachedData();
+  void SendCachedData(Ipv4Address dst);
   
   // Add ARP cache to be used to allow layer 2 notifications processing
   void AddArpCache (Ptr<ArpCache>);

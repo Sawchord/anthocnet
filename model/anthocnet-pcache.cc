@@ -30,7 +30,7 @@ PacketCache::~PacketCache() {}
 void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce, Time expire) {
   
   ce.received_in = Simulator::Now();
-  ce.expire_in = expire;
+  ce.expire_in = Simulator::Now() + expire;
   
   std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
   
@@ -63,7 +63,7 @@ bool PacketCache::HasEntries(Ipv4Address dst) {
   return true;
 }
 
-std::pair<bool, CacheEntry> PacketCache::GetCacheEntry(Ipv4Address dst, Time now) {
+std::pair<bool, CacheEntry> PacketCache::GetCacheEntry(Ipv4Address dst) {
   
   
   std::map<Ipv4Address, std::list<CacheEntry> >::iterator it = this->cache.find(dst);
@@ -76,10 +76,10 @@ std::pair<bool, CacheEntry> PacketCache::GetCacheEntry(Ipv4Address dst, Time now
   CacheEntry ce = it->second.front();
   it->second.pop_front();
   
-  Time T = now - ce.received_in;
+  //Time T = now - ce.received_in;
   
   // Only include not expired packets.
-  if (T < ce.expire_in) {
+  if (ce.expire_in < Simulator::Now()) {
     return std::make_pair(false, ce);
   }
   else {

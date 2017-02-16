@@ -46,7 +46,7 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
-  dcache_expire(MilliSeconds(5000)),
+  dcache_expire(MilliSeconds(500000)),
   nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
   no_broadcast(MilliSeconds(100)),
@@ -203,7 +203,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   uint32_t iface;
   Ipv4Address nb;
   
-  
+  NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
@@ -240,6 +240,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address this_node = this->ipv4->GetAddress(recv_iface, 0).GetLocal();
   
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
+  
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
@@ -292,6 +293,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address nb;
   
   //Search for a route, 
+  NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
     // If a route was found:
@@ -749,6 +751,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   NS_LOG_FUNCTION(this);
   
   // Broadcast if no valid entries
+  NS_LOG_UNCOND(this->rtable);
   if (!this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     this->BroadcastForwardAnt(dst);
     return;
@@ -813,7 +816,7 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   packet->AddHeader(ant);
   packet->AddHeader(type_header);
   
-  NS_LOG_FUNCTION(this << "sending bwant" << ant);
+  NS_LOG_FUNCTION(this << "sending bwant" << ant << "dst" << dst);
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
   Simulator::Schedule(jitter, &RoutingProtocol::Send, 
@@ -894,32 +897,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     
     ForwardAntHeader ant (this_node, dst, this->initial_ttl);
     this->BroadcastForwardAnt(dst, ant);
-    
-    /*NS_LOG_FUNCTION(this << "ant" << ant);
-    TypeHeader type_header(AHNTYPE_FW_ANT);
-    
-    Ptr<Packet> packet = Create<Packet> ();
-    SocketIpTtlTag tag;
-    tag.SetTtl(ant.GetTTL());
-    
-    packet->AddPacketTag(tag);
-    packet->AddHeader(ant);
-    
-    packet->AddHeader(type_header);
-    
-    
-    Ipv4Address destination;
-    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
-        destination = Ipv4Address ("255.255.255.255");
-    } else { 
-        destination = iface.GetBroadcast ();
-    }
-    
-    NS_LOG_FUNCTION(this << "broadcast ant" << *packet << "dst" << dst);
-    
-    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-      this, socket, packet, destination);*/
     
   }
 }
@@ -1015,7 +992,7 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
 }
 
 
-// Callback function to  something in a deffered manner
+// Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
   NS_LOG_FUNCTION(this << "packet" << *packet << "destination" << destination << "socket" << socket);
@@ -1156,6 +1133,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   
   Ipv4Address next_nb;
   uint32_t next_iface;
+  NS_LOG_UNCOND(this->rtable);
   if(!this->rtable.SelectRoute(final_dst, 2.0, next_iface, next_nb, this->uniform_random)) {
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
@@ -1196,21 +1174,24 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);
   
-  Ipv4Address dst = ant.PeekDst();
+  Ipv4Address next_dst = ant.PeekDst();
+  Ipv4Address final_dst = ant.GetDst();
   Ipv4Address src = ant.GetSrc();
+  
+  NS_LOG_FUNCTION(this << "nb" << nb << "src" << src << "final_dst" << final_dst << "next_dst" << next_dst);
   
   // Check if this Node is the destination and manage behaviour
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   Ipv4InterfaceAddress tmp_if = l3->GetAddress(iface, 0);
   
-  // NOTE: Not properly tested
   if (ant.GetHops() == 0) {
     if (ant.PeekThis() == tmp_if.GetLocal()) {
       NS_LOG_FUNCTION(this << "bwant reached its origin.");
       // Now the RoutingTable needs an update
       if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
         ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) )) {
-        this->SendCachedData();
+        this->SendCachedData(src);
+        NS_LOG_UNCOND(this->rtable);
       }
       return;
     }
@@ -1224,7 +1205,8 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   // Now the RoutingTable needs an update
   if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
     ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) )) {
-    this->UnicastBackwardAnt(iface, dst, ant);
+    this->UnicastBackwardAnt(iface, next_dst, ant);
+    NS_LOG_UNCOND(this->rtable);
   }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
@@ -1232,64 +1214,54 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
 }
 
 
-void RoutingProtocol::SendCachedData() {
+void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   
   NS_LOG_FUNCTION(this);
   
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   
-  // Iterate over all cached destinations
-  std::vector <Ipv4Address> dsts = this->data_cache.GetDestinations();
-  for (uint32_t i = 0; i < dsts.size(); i++) {
+  
+  bool dst_found = false;
+  
+  while (this->data_cache.HasEntries(dst)) {
     
+    std::pair<bool, CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
     
-    Ipv4Address dst = dsts[i];
-    bool dst_found = false;
-    
-    while (this->data_cache.HasEntries(dst)) {
+    // check, if cache entry is expired
+    if (cv.first == false) {
+      NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
       
-      std::pair<bool, CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
+      //uint32_t iface = this->ipv4->GetInterfaceForAddress (cv.second.header.GetSource());
+      //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
       
-      // check, if cache entry is expired
-      if (cv.first == false) {
-        NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
-        
-        //uint32_t iface = this->ipv4->GetInterfaceForAddress (cv.second.header.GetSource());
-        //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
-        
-        //this->data_drop(cv.second.packet, "Cached and expired", this_node);
-        this->data_drop(cv.second.packet, "Cached and expired", cv.second.header.GetSource());
-        
-        continue;
-      }
+      this->data_drop(cv.second.packet, "Cached and expired", cv.second.header.GetSource());
       
-      
-      uint32_t iface;
-      Ipv4Address nb;
-      
-      
-      if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
-        Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
-        
-        // Create the route and call UnicastForwardCallback
-        rt->SetSource(cv.second.header.GetSource());
-        rt->SetDestination(dst);
-        rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
-        rt->SetGateway(nb);
-        
-        
-        // FIXME: Code ever reaches here?
-        NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "send");
-        cv.second.ucb(rt, cv.second.packet, cv.second.header);
-        
-        // If there was a route found, the destination must exist
-        // in rtable. We can safely assume, that all data to that destination
-        // will get routed out here
-        dst_found = true;
-      }
+      continue;
     }
     
     
+    uint32_t iface;
+    Ipv4Address nb;
+    
+    NS_LOG_UNCOND(this->rtable);
+    if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
+      Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
+      
+      // Create the route and call UnicastForwardCallback
+      rt->SetSource(cv.second.header.GetSource());
+      rt->SetDestination(dst);
+      rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
+      rt->SetGateway(nb);
+      
+      NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "send");
+      cv.second.ucb(rt, cv.second.packet, cv.second.header);
+      
+      // If there was a route found, the destination must exist
+      // in rtable. We can safely assume, that all data to that destination
+      // will get routed out here
+      dst_found = true;
+    }
+  
     // If this destination exists, all the data is routed out by now and can be discarded
     if (dst_found) {
         this->data_cache.RemoveCache(dst);
