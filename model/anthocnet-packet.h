@@ -26,6 +26,7 @@
 #include <map>
 #include <vector>
 #include "ns3/nstime.h"
+#include "ns3/log.h"
 
 namespace ns3 {
 namespace ahn {
@@ -40,6 +41,8 @@ typedef enum MessageType {
   AHNTYPE_RREP_ANT = 6, //!< RouteRepair Ant
   AHNTYPE_ERR = 7 //!< Error Ant
 } mtype_t;
+
+typedef std::pair<Ipv4Address, double> diffusion_t;
 
 /**
  * \brief This is a class used to read 
@@ -73,6 +76,43 @@ private:
   bool valid;
 };
 
+
+/**
+ * \brief The hello packet. It is used to notify the neigbor 
+ *        of the existance of the node as well as distribute the 
+ *        pheromone values.
+ */
+class HelloMsgHeader : public Header {
+public:
+  // ctor
+  HelloMsgHeader();
+  HelloMsgHeader(Ipv4Address src);
+  // dtor
+  ~HelloMsgHeader();
+  
+  static TypeId GetTypeId ();
+  TypeId GetInstanceTypeId () const;
+  
+  virtual bool IsValid();
+  
+  Ipv4Address GetSrc();
+  
+  void PushDiffusion(Ipv4Address dst, double pheromone);
+  diffusion_t PopDiffusion();
+  
+  uint32_t GetSerializedSize() const;
+  
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  
+  void Print (std::ostream&) const;
+  
+private:
+  
+  Ipv4Address src;
+  std::vector<diffusion_t> diffusion;
+  
+};
 
 
 /**
@@ -164,31 +204,6 @@ protected:
   // All the ants travelled so far/ yet to travel
   std::vector<Ipv4Address> ant_stack;
   
-};
-
-/**
- * \brief A HelloAnt is basically a ForwardAnt, 
- *        but without a Destination Address.
- *        Its TTL should always be 1 and its HopCount 0.
- *        All HelloAnts not following this convention need 
- *        to be discarded.
- *        The Stack of the Ant is empty.
- * \note  Since a lot of fields in the Ant are unused, on 
- *        might consider introducing a special HelloPacket,
- *        which is not an Ant. However, since this is a proof
- *        of concept, readability goes over conciseness.
- */
-class HelloAntHeader : public AntHeader {
-public:
-  // ctor
-  HelloAntHeader();
-  HelloAntHeader(Ipv4Address src);
-  // dtor
-  ~HelloAntHeader();
-  
-  static TypeId GetTypeId ();
-  
-  virtual bool IsValid();
 };
 
 

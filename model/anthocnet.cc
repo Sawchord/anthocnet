@@ -948,7 +948,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO:
-      //this->vip_queue.Enqueue(AHNTYPE_HELLO, iface, packet);
       this->HandleHelloAnt(packet, iface);
       break;
     case AHNTYPE_FW_ANT:
@@ -956,8 +955,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleForwardAnt(packet, iface, MilliSeconds(10));
       break;
     case AHNTYPE_BW_ANT:
-      //this->vip_queue.Enqueue(AHNTYPE_BW_ANT, iface, packet);
-      // TODO: Make HandleBackwardAnt work correcly
       this->HandleBackwardAnt(packet, iface, MilliSeconds(10));
       break;
     
@@ -1012,7 +1009,14 @@ void RoutingProtocol::HelloTimerExpire() {
     
     Ipv4Address src = iface.GetLocal();
     
-    HelloAntHeader hello_ant(src);
+    if (src == Ipv4Address("127.0.0.1")) {
+      continue;
+    }
+    
+    HelloMsgHeader hello_msg(src);
+    
+    // TODO: implement filling HelloMsg with important data
+  
     TypeHeader type_header(AHNTYPE_HELLO);
     Ptr<Packet> packet = Create<Packet>();
     
@@ -1020,7 +1024,7 @@ void RoutingProtocol::HelloTimerExpire() {
     tag.SetTtl(1);
     
     packet->AddPacketTag(tag);
-    packet->AddHeader(hello_ant);
+    packet->AddHeader(hello_msg);
     packet->AddHeader(type_header);
     
     Ipv4Address destination;
@@ -1059,10 +1063,10 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   
   NS_LOG_FUNCTION (this << iface);
   
-  HelloAntHeader ant;
-  packet->RemoveHeader(ant);
+  HelloMsgHeader hello_msg;
+  packet->RemoveHeader(hello_msg);
   
-  // TODO: Do i still need this Function
+  // TODO: implement the information bootstrap algorithm and execute it here
   
   return;
 

@@ -61,8 +61,8 @@ uint32_t TypeHeader::Deserialize (Buffer::Iterator start) {
   switch (type)
   {
     case AHNTYPE_FW_ANT:
-    case AHNTYPE_PRFW_ANT:
     case AHNTYPE_BW_ANT:
+    case AHNTYPE_PRFW_ANT:
     case AHNTYPE_HELLO:
     case AHNTYPE_DATA:
     case AHNTYPE_RREP_ANT:
@@ -131,6 +131,114 @@ operator<< (std::ostream & os, TypeHeader const & h) {
   return os;
 }
 
+
+// -------------------------------------------------
+// HelloMsg header
+
+NS_OBJECT_ENSURE_REGISTERED (HelloMsgHeader);
+
+HelloMsgHeader::HelloMsgHeader() {}
+HelloMsgHeader::~HelloMsgHeader() {}
+
+HelloMsgHeader::HelloMsgHeader(Ipv4Address src):
+  src(src)
+  {}
+
+TypeId HelloMsgHeader::GetTypeId () {
+  static TypeId tid = TypeId ("ns3::ahn::HelloMsgHeader")
+  .SetParent<Header> ()
+  .SetGroupName("AntHocNet")
+  .AddConstructor<HelloMsgHeader> ();
+  return tid;
+}
+
+TypeId HelloMsgHeader::GetInstanceTypeId () const {
+  return GetTypeId ();
+}
+
+bool HelloMsgHeader::IsValid() {
+  
+  if (this->src == Ipv4Address("0.0.0.0") || 
+    this->src == Ipv4Address("127.0.0.1") ) {
+    return false;
+  }
+  
+  if (this->diffusion.size() > 255) {
+    return false;
+  }
+  
+  return true;
+}
+
+Ipv4Address HelloMsgHeader::GetSrc() {
+  return this->src;
+}
+
+void HelloMsgHeader::PushDiffusion(Ipv4Address dst, double pheromone) {
+  this->diffusion.push_back(std::make_pair(dst, pheromone));
+}
+
+diffusion_t HelloMsgHeader::PopDiffusion() {
+  diffusion_t t = this->diffusion.back();
+  this->diffusion.pop_back();
+  return t;
+}
+
+uint32_t HelloMsgHeader::GetSerializedSize() const {
+  return 4 + 4 + this->diffusion.size() * 12;
+}
+
+void HelloMsgHeader::Serialize(Buffer::Iterator i) const {
+    
+  WriteTo(i, this->src);
+  i.WriteU32(this->diffusion.size());
+  
+  for (uint32_t c = 0; c < this->diffusion.size(); c++) {
+    WriteTo(i, this->diffusion[c].first);
+    i.WriteHtonU64((uint64_t) this->diffusion[c].second);
+  }
+  
+}
+
+uint32_t HelloMsgHeader::Deserialize(Buffer::Iterator start) {
+    Buffer::Iterator i = start;
+    
+    NS_ASSERT(this->diffusion.size() == 0);
+    
+    ReadFrom(i, this->src);
+    uint32_t diffsize = i.ReadU32();
+    
+    for(uint32_t c = 0; c < diffsize; c++) {
+      Ipv4Address address;
+      ReadFrom(i, address);
+      double pheromone = (double) i.ReadNtohU64();
+      
+      this->diffusion.push_back(std::make_pair(address, pheromone));
+    }
+    
+    uint32_t dist = i.GetDistanceFrom(start);
+    NS_ASSERT(dist = this->GetSerializedSize());
+    return dist;
+}
+
+
+void HelloMsgHeader::Print(std::ostream &os) const {
+  os << "Source Address: " << this->src 
+  << " Number of diffusion values: " << this->diffusion.size()
+  << ": [";
+  
+  for (auto it = this->diffusion.begin(); it != this->diffusion.end(); ++it) {
+    os << "(" << it->first << ":" << it->second << ")";
+  }
+  
+  os << "]";
+}
+
+std::ostream& operator<< (std::ostream & os, HelloMsgHeader const & h) {
+  h.Print (os);
+  return os;
+}
+
 //----------------------------------------------------------
 // Ant Header
 AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst, 
@@ -156,8 +264,8 @@ TypeId AntHeader::GetInstanceTypeId () const {
   return GetTypeId ();
 }
 
+// TODO: use auto and sizeof to make code reliable and shorter
 
-// ----------------------------------------------------
 // Implementation of functions inherited from Header class
 uint32_t AntHeader::GetSerializedSize () const {
   //Size: 1 Reserverd 1 TTL/MaxHops 1 Hops
@@ -218,20 +326,22 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   return dist;
 }
 
+
 void AntHeader::Print(std::ostream &os) const {
   os << "TTL/MaxHops: " << std::to_string(this->ttl_or_max_hops)
   << " Number of Hops: " << std::to_string(this->hops)
   << " Source Address: " << this->src
   << " Destination: " << this->dst
-  << " AntStack(" << this->ant_stack.size() << "): ";
+  << " AntStack(" << this->ant_stack.size() << "): [ ";
   
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
        it != this->ant_stack.end(); ++it) {
     os << *it << " ";
   }
+  
+  os << "]";
 }
 
-// --------------------------------------------------------
 // Setters and Getters 
 Ipv4Address AntHeader::GetSrc() {
     return this->src;
@@ -253,8 +363,7 @@ uint64_t AntHeader::GetT() {
 }
 
 
-std::ostream &
-operator<< (std::ostream & os, AntHeader const & h) {
+std::ostream& operator<< (std::ostream & os, AntHeader const & h) {
   h.Print (os);
   return os;
 }
@@ -268,46 +377,8 @@ bool AntHeader::IsValid() {
   return true;
 }
 
-// -------------------------------------------------
-// HelloAnt stuff
-HelloAntHeader::HelloAntHeader():
-// NOTE: Nullpointers as Ipv4Addresses do not work
-// the logger prints them on inialization and that raises a 
-// NULL-Pointer induced segfault.
-AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), 1, 0, 0.0)
-{}
-
-HelloAntHeader::HelloAntHeader (Ipv4Address src):
-AntHeader(src, Ipv4Address("255.255.255.255"), 1, 0, 0.0)
-{}
-
-HelloAntHeader::~HelloAntHeader() {}
-
-TypeId HelloAntHeader::GetTypeId () {
-  static TypeId tid = TypeId ("ns3::ahn::HelloAntHeader")
-  .SetParent<AntHeader> ()
-  .SetGroupName("AntHocNet")
-  .AddConstructor<HelloAntHeader> ();
-  return tid;
-}
-
-bool HelloAntHeader::IsValid() {
-  
-  // Check the super method
-  if (!AntHeader::IsValid()) {
-    return false;
-  }
-  
-  if(this->ttl_or_max_hops != 1 || this->hops != 0) {
-    return false;
-  }
-  
-  return true;
-}
-
-
 // ----------------------------------------------
-// ForwardAnt stunff
+// ForwardAnt stuff
 ForwardAntHeader::ForwardAntHeader() :
   AntHeader(Ipv4Address("0.0.0.0"), Ipv4Address("0.0.0.0"), 1, 0, 0)
 {}

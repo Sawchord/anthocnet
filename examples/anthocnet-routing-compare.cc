@@ -136,7 +136,7 @@ private:
 RoutingExperiment::RoutingExperiment () : 
     m_nWifis(10),
     m_nSinks(3),
-    m_total_time(20),
+    m_total_time(40),
     
     port(9),
     bytesTotal(0),
@@ -148,7 +148,7 @@ RoutingExperiment::RoutingExperiment () :
     m_traceMobility (false),
     m_protocol (2), // ANTHOCNET
     m_experiment (2), // UDPEcho
-    m_app_start(2),
+    m_app_start(20),
     
     
     m_output_iptxrx(false),
