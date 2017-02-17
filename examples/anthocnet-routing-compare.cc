@@ -97,6 +97,8 @@ private:
   uint32_t m_nWifis;
   uint32_t m_nSinks;
   
+  uint32_t m_total_time;
+  
   std::vector<ApplicationContainer*> apps;
   
   void Evaluate();
@@ -134,6 +136,7 @@ private:
 RoutingExperiment::RoutingExperiment () : 
     m_nWifis(10),
     m_nSinks(3),
+    m_total_time(20),
     
     port(9),
     bytesTotal(0),
@@ -145,7 +148,7 @@ RoutingExperiment::RoutingExperiment () :
     m_traceMobility (false),
     m_protocol (2), // ANTHOCNET
     m_experiment (2), // UDPEcho
-    m_app_start(20),
+    m_app_start(2),
     
     
     m_output_iptxrx(false),
@@ -164,6 +167,7 @@ std::string RoutingExperiment::CommandSetup (int argc, char **argv)
   cmd.AddValue("appStart", "Start the OnnOff Application after that many seconds", m_app_start);
   
   cmd.AddValue("protocol", "1=AODV; 2=ANTHOCNET", m_protocol);
+  cmd.AddValue("Time", "The total time of the experiment", m_total_time);
   cmd.AddValue("Experiment", "1=OnOff<--->Sink; 2=UDPEchoClient<--->UDPEchoServer", m_experiment);
   
   cmd.AddValue("nWifis", "The total number of nodes in this simulation", m_nWifis);
@@ -377,7 +381,7 @@ void RoutingExperiment::Run (double txp) {
   Packet::EnablePrinting ();
   m_txp = txp;
 
-  double TotalTime = 200.0;
+  double TotalTime = m_total_time;
   std::string rate ("2048bps");
   std::string phyMode ("DsssRate11Mbps");
   std::string tr_name ("anthocnet-routing-compare");

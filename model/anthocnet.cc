@@ -203,7 +203,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   uint32_t iface;
   Ipv4Address nb;
   
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
@@ -295,7 +295,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address nb;
   
   //Search for a route, 
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
     // If a route was found:
@@ -753,7 +753,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   NS_LOG_FUNCTION(this);
   
   // Broadcast if no valid entries
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (!this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
     this->BroadcastForwardAnt(dst);
     return;
@@ -1135,7 +1135,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   
   Ipv4Address next_nb;
   uint32_t next_iface;
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if(!this->rtable.SelectRoute(final_dst, 2.0, next_iface, next_nb, this->uniform_random)) {
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
@@ -1193,7 +1193,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
       if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
         ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) )) {
         this->SendCachedData(src);
-        NS_LOG_UNCOND(this->rtable);
+        //NS_LOG_UNCOND(this->rtable);
       }
       return;
     }
@@ -1208,7 +1208,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
     ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) )) {
     this->UnicastBackwardAnt(iface, next_dst, ant);
-    NS_LOG_UNCOND(this->rtable);
+    //NS_LOG_UNCOND(this->rtable);
   }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
@@ -1245,7 +1245,7 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     uint32_t iface;
     Ipv4Address nb;
     
-    NS_LOG_UNCOND(this->rtable);
+    //NS_LOG_UNCOND(this->rtable);
     if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
       Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
       
