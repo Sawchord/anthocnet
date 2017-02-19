@@ -95,7 +95,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
   
   // Before the neighbor can be added, it needs a destination.
   // Check if destination already exists
-  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
     NS_LOG_FUNCTION(this << "create dst");
     this->AddDestination(address);
@@ -128,14 +128,14 @@ void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
   // Search for the destination
-  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
     NS_LOG_FUNCTION(this << "nb address does not exist");
     return;
   }
   
   // Search for the interface
-  std::map<uint32_t, NeighborInfo>::iterator nb_it = it->second.nbs.find(iface_index);
+  auto nb_it = it->second.nbs.find(iface_index);
   if (nb_it == it->second.nbs.end()) {
     NS_LOG_FUNCTION(this << "nb not on this interface");
     return;
@@ -172,7 +172,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   }
   
   // Check if destination already exists
-  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  auto it = this->dsts.find(address);
   if (it != this->dsts.end()) {
     NS_LOG_FUNCTION(this << "dst already exist");
     return false;
@@ -206,7 +206,7 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
   NS_LOG_FUNCTION(this << "address" << address);
   
   // Check, if the destination exists
-  std::map<Ipv4Address, DestinationInfo>::iterator it = this->dsts.find(address);
+  auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
     NS_LOG_FUNCTION(this << "dst does not exist");
     return;
@@ -217,7 +217,7 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
   
   // FIXME: Very shady code, see, if it works
   // If so, remove the mark and sweep thing
-  for (std::map<uint32_t, NeighborInfo>::iterator nb_it = it->second.nbs.begin();
+  for (auto nb_it = it->second.nbs.begin();
     nb_it != it->second.nbs.end(); /* no increment*/) {
     this->RemoveNeighbor((nb_it++)->first, address);
   }
@@ -236,7 +236,7 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
 bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   
   // Check if destination exists
-  std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it = this->dsts.find(address);
+  auto dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
     this->AddDestination(address);
     dst_it = this->dsts.find(address);
@@ -252,7 +252,7 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
 
 void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
   
-  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(address);
+  auto dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
     this->AddDestination(address);
     dst_it = this->dsts.find(address);
@@ -267,10 +267,10 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
   
   NS_LOG_FUNCTION(this << "interface" << interface);
   
-  for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
+  for (auto dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); ++dst_it) {
     
-    std::map<uint32_t, NeighborInfo>::iterator nb_it = dst_it->second.nbs.find(interface);
+    auto nb_it = dst_it->second.nbs.find(interface);
     if (nb_it != dst_it->second.nbs.end()) {
       dst_it->second.nbs.erase(nb_it);
     }
@@ -286,14 +286,14 @@ void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
 void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   // Search destination, add if no exist
-  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(address);
+  auto dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
     this->AddNeighbor(iface_index, address);
     NS_LOG_FUNCTION(this << "added nbs address");
     return;
   }
   
-  std::map<uint32_t, NeighborInfo>::iterator nb_it = dst_it->second.nbs.find(iface_index);
+  auto nb_it = dst_it->second.nbs.find(iface_index);
   if (nb_it == dst_it->second.nbs.end()) {
     this->AddNeighbor(iface_index, address);
     NS_LOG_FUNCTION(this << "added nbs interface");
@@ -312,7 +312,7 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
 void RoutingTable::Update(Time interval) {
   
   // Iterate over the destinations
-  for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
+  for (auto dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); /* no increment */) {
     
     
@@ -329,7 +329,7 @@ void RoutingTable::Update(Time interval) {
       // Iterate over all the neigbors
       dst_it->second.expires_in = dst_dt;
       
-      for (std::map<uint32_t, NeighborInfo>::iterator nb_it = dst_it->second.nbs.begin();
+      for (auto nb_it = dst_it->second.nbs.begin();
       nb_it != dst_it->second.nbs.end(); /* no increment */) {
         
         Time nb_dt = nb_it->second.expires_in - interval;
@@ -352,6 +352,16 @@ void RoutingTable::Update(Time interval) {
   }
 }
 
+void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts) {
+  
+  std::vector<Ipv4Address> selected;
+  
+  
+  
+  
+}
+
+
 bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   Ipv4Address nb, uint64_t T_sd, uint32_t hops) {
     
@@ -360,20 +370,20 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     << iface << "nb" << nb << "T_sd" << T_sd << "hops" << hops);
   // First search the destination and add it if it did not exist.
    // Check if destination already exists
-  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
+  auto dst_it = this->dsts.find(dst);
   if (dst_it == this->dsts.end()) {
     this->AddDestination(dst);
     dst_it = this->dsts.find(dst);
   }
   
   // Find the neighbors iterators
-  std::map<Ipv4Address, DestinationInfo>::iterator nb_it = this->dsts.find(nb);
+  auto nb_it = this->dsts.find(nb);
   if (nb_it == this->dsts.end()) {
     NS_LOG_FUNCTION(this << "nb not in reach -> Ant dropped");
     return false;
   }
   
-  std::map<uint32_t, NeighborInfo>::iterator nbif_it = nb_it->second.nbs.find(iface);
+  auto nbif_it = nb_it->second.nbs.find(iface);
   if (nbif_it == nb_it->second.nbs.end()) {
     NS_LOG_FUNCTION(this << "interface not found -> Ant dropped");
     return false;
@@ -432,10 +442,10 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
   uint32_t select = vr->GetInteger(0, this->n_nb-1);
   uint32_t counter = 0;
   
-  for (std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.begin();
+  for (auto dst_it = this->dsts.begin();
     dst_it != this->dsts.end(); ++dst_it) {
     
-    for (std::map<uint32_t, NeighborInfo>::iterator nb_it = dst_it->second.nbs.begin();
+    for (auto nb_it = dst_it->second.nbs.begin();
       nb_it != dst_it->second.nbs.end(); ++nb_it) {
       
       if (counter == select) {
@@ -465,7 +475,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   // return Neighbor entry if so
   
   //Get the destination index:
-  std::map<Ipv4Address, DestinationInfo>::iterator dst_it = this->dsts.find(dst);
+  auto dst_it = this->dsts.find(dst);
   
   // Fail, if there are no entries to that destination at all
   if (dst_it == this->dsts.end()) {
@@ -476,7 +486,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   // Check, if the destination is a neighbor
   if (dst_it->second.nbs.size() != 0) {
     
-    std::map<uint32_t, NeighborInfo>::iterator nb_it = dst_it->second.nbs.begin();
+    auto nb_it = dst_it->second.nbs.begin();
     iface = nb_it->first;
     nb = dst_it->first;
     
@@ -490,9 +500,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   double total_pheromone = 0.0;
   uint32_t initialized = 0;
   
-  for (std::map<Ipv4Address, DestinationInfo>::iterator dst2_it = this->dsts.begin();
+  for (auto dst2_it = this->dsts.begin();
     dst2_it != this->dsts.end(); ++dst2_it) {
-    for (std::map<uint32_t, NeighborInfo>::iterator nb_it = dst2_it->second.nbs.begin();
+    for (auto nb_it = dst2_it->second.nbs.begin();
       nb_it != dst2_it->second.nbs.end(); ++nb_it) {
       
       uint32_t nb_index = nb_it->second.index;
@@ -526,9 +536,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   // probability and adds it to an aggregator. If the aggregator gets over the 
   // random value, the particular Neighbor is selected.
   
-  for (std::map<Ipv4Address, DestinationInfo>::iterator dst2_it = this->dsts.begin();
+  for (auto dst2_it = this->dsts.begin();
     dst2_it != this->dsts.end(); ++dst2_it) {
-    for (std::map<uint32_t, NeighborInfo>::iterator nb_it = dst2_it->second.nbs.begin();
+    for (auto nb_it = dst2_it->second.nbs.begin();
       nb_it != dst2_it->second.nbs.end(); ++nb_it) {
       
       uint32_t nb_index = nb_it->second.index;
@@ -568,7 +578,7 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
 // FIXME: This function causes program to crash
 void RoutingTable::Print(std::ostream& os) const{
   
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it1 = this->dsts.begin();
+  for (auto dst_it1 = this->dsts.begin();
     dst_it1 != this->dsts.end(); ++dst_it1) {
     
     // Output the destination info 
@@ -580,7 +590,7 @@ void RoutingTable::Print(std::ostream& os) const{
       
       os << " NB:( ";
       
-      for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it1->second.nbs.begin();
+      for (auto nb_it = dst_it1->second.nbs.begin();
       nb_it != dst_it1->second.nbs.end(); ++nb_it) {
       
         //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
@@ -594,16 +604,16 @@ void RoutingTable::Print(std::ostream& os) const{
   os << std::endl;
   
   // Print the pheromone table
-  for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it1 = this->dsts.begin();
+  for (auto dst_it1 = this->dsts.begin();
     dst_it1 != this->dsts.end(); ++dst_it1) {
     
     os << dst_it1->first << ":";
     
     // Iterate over all neigbors
-    for (std::map<Ipv4Address, DestinationInfo>::const_iterator dst_it2 = this->dsts.begin();
+    for (auto dst_it2 = this->dsts.begin();
       dst_it2 != this->dsts.end(); ++dst_it2) {
       
-      for (std::map<uint32_t, NeighborInfo>::const_iterator nb_it = dst_it2->second.nbs.begin();
+      for (auto nb_it = dst_it2->second.nbs.begin();
         nb_it != dst_it2->second.nbs.end(); ++nb_it) {
         
         //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";

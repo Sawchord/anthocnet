@@ -41,6 +41,8 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 
+#include "anthocnet-packet.h"
+
 namespace ns3 {
 namespace ahn {
 using namespace std;
@@ -208,6 +210,15 @@ public:
    * \param interval The time interval, in which this function is called.
    */
   void Update(Time interval);
+  
+  /**
+   * \brief Takes a reference to a newly created HelloMsg and fills it
+   *        values according to paper section 4.2.4
+   * \param msg The reference to the message
+   * \param num_dsts The maximum number of destinations to
+   *        include informatuion for
+   */
+  void ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts);
   
   /**
    * \brief Handles the RoutingTable side of receiving a Backward ant.
