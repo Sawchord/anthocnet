@@ -84,7 +84,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
   return this->AddNeighbor(iface_index, address, this->initial_lifetime_nb);
 }
 
-bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire) {
+bool RoutingTable::AddNeighbor(uint32_t iface_index, 
+                               Ipv4Address address, Time expire) {
   
   NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
@@ -107,7 +108,8 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address, Time e
       //this->nbs.insert(std::make_pair(new_nb, NeighborInfo(i, expire)));
       
       this->nb_usemap[i] = true;
-      it->second.nbs.insert(std::make_pair(iface_index, NeighborInfo(i, expire)));
+      it->second.nbs.insert(std::make_pair(iface_index, 
+                                           NeighborInfo(i, expire)));
       
       for (uint32_t j = 0; j < MAX_DESTINATIONS; j++) {
         this->rtable[j][i] = RoutingTableEntry();
@@ -215,8 +217,6 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
   // TODO: Delete the neighbors if any, before deleting the destination
   //it->second.nbs.erase(it->second.nbs.begin(), it->second.nbs.end());
   
-  // FIXME: Very shady code, see, if it works
-  // If so, remove the mark and sweep thing
   for (auto nb_it = it->second.nbs.begin();
     nb_it != it->second.nbs.end(); /* no increment*/) {
     this->RemoveNeighbor((nb_it++)->first, address);
@@ -243,7 +243,9 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   }
   
   if (Simulator::Now() <= dst_it->second.no_broadcast_time) {
-    NS_LOG_FUNCTION(this << "no bcast to" << address << " for " << dst_it->second.no_broadcast_time - Simulator::Now());
+    NS_LOG_FUNCTION(this << "no bcast to" 
+      << address << " for " 
+      << dst_it->second.no_broadcast_time - Simulator::Now());
     return false;
   }
   
@@ -335,7 +337,8 @@ void RoutingTable::Update(Time interval) {
         Time nb_dt = nb_it->second.expires_in - interval;
         
         if (nb_dt <= Seconds(0)) {
-          NS_LOG_FUNCTION(this << "nb" << dst_it->first << ":" << nb_it->first << "timed out");
+          NS_LOG_FUNCTION(this << "nb" 
+            << dst_it->first << ":" << nb_it->first << "timed out");
           this->RemoveNeighbor((nb_it++)->first , dst_it->first);
         }
         else {
@@ -352,11 +355,93 @@ void RoutingTable::Update(Time interval) {
   }
 }
 
-void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts) {
+void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts, 
+                                     double consideration, 
+                                     Ptr<UniformRandomVariable> vr) {
   
-  std::vector<Ipv4Address> selected;
+  // NOTE: This is extremly inefficient.
+  // Maybe consider to add additional data into
+  // RoutingTable, to make a full iteration faster.
   
+  bool use_random = true;
   
+  // If there are less known destinations than requested,
+  // there is no need to select some randomly
+  if (this->n_dst <= num_dsts) {
+    use_random = false;
+  }
+  
+  std::list<std::pair<Ipv4Address, double> > selection;
+  
+  // Iterate over all possible connections
+  for (auto dst_it = this->dsts.begin();
+       dst_it != this->dsts.end(); ++dst_it) {
+    
+    Ipv4Address best_nb;
+    double best = NAN;
+    
+    // Iterate over all neighbors
+    // to get all destinations best nb candidates
+    for (auto nb_it1 = this->dsts.begin(); 
+         nb_it1 != this->dsts.end(); ++nb_it1) {
+      
+      for (auto nb_it2 = nb_it1->second.nbs.begin();
+           nb_it2 != nb_it1->second.nbs.end(); ++nb_it2) {
+        
+        uint32_t dst_idx = dst_it->second.index;
+        uint32_t nb_idx = nb_it2->second.index;
+        // FIXME: Check this really works
+        // Check the real pheromone value
+        if (std::abs(best) <= this->rtable[dst_idx][nb_idx].pheromone
+            || best != best) {// check for nan
+          best = this->rtable[dst_idx][nb_idx].pheromone;
+          best_nb = nb_it1->first;
+        }
+        
+        // Check the virtual pheromone
+        // We mark virtual pheromone by a negative value instead of flag
+        if (std::abs(best * (1.0 + consideration))
+            <= this->rtable[dst_idx][nb_idx].virtual_pheromone) {
+          best = -1.0 * this->rtable[dst_idx][nb_idx].virtual_pheromone;
+          best_nb = nb_it1->first;
+        }
+      } 
+    }
+    
+    
+    // Check if still NAN
+    if (best == best) {
+      selection.push_back(std::make_pair(best_nb, best));
+    }
+    
+  }
+  
+  // Now select some of the pairs we found
+  for (uint32_t i = 0; i < num_dsts; i++) {
+    
+    if (selection.empty()) {
+      break;
+    }
+    
+    uint32_t select;
+    if (use_random) {
+      select = std::floor(vr->GetValue(0.0, selection.size()));
+    }
+    else {
+      select = i;
+    }
+    
+    // Get to the selection
+    auto sel_it = selection.begin();
+    for (uint32_t c = select; c > 0; c--) {
+      sel_it++;
+    }
+    
+    
+    NS_LOG_FUNCTION(this << "selected" << sel_it->first << sel_it->second);
+    msg.PushDiffusion(sel_it->first, sel_it->second);
+    
+  }
   
   
 }
@@ -443,10 +528,10 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
   uint32_t counter = 0;
   
   for (auto dst_it = this->dsts.begin();
-    dst_it != this->dsts.end(); ++dst_it) {
+       dst_it != this->dsts.end(); ++dst_it) {
     
     for (auto nb_it = dst_it->second.nbs.begin();
-      nb_it != dst_it->second.nbs.end(); ++nb_it) {
+         nb_it != dst_it->second.nbs.end(); ++nb_it) {
       
       if (counter == select) {
         iface = nb_it->first;
@@ -501,20 +586,20 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   uint32_t initialized = 0;
   
   for (auto dst2_it = this->dsts.begin();
-    dst2_it != this->dsts.end(); ++dst2_it) {
+       dst2_it != this->dsts.end(); ++dst2_it) {
     for (auto nb_it = dst2_it->second.nbs.begin();
-      nb_it != dst2_it->second.nbs.end(); ++nb_it) {
+         nb_it != dst2_it->second.nbs.end(); ++nb_it) {
       
       uint32_t nb_index = nb_it->second.index;
       
       // Skip the unititialized entries
       if (this->rtable[dst_index][nb_index].pheromone != 
-        this->rtable[dst_index][nb_index].pheromone) {
+          this->rtable[dst_index][nb_index].pheromone) {
         continue;
       }
       initialized++;
       
-      total_pheromone += pow(this->rtable[dst_index][nb_index].pheromone , power);
+      total_pheromone += pow(this->rtable[dst_index][nb_index].pheromone, power);
     }
   }
   
@@ -527,7 +612,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   
   double select = vr->GetValue(0.0, 1.0);
   
-  NS_LOG_FUNCTION(this << "total_pheromone" << total_pheromone << "select" << select);
+  NS_LOG_FUNCTION(this << "total_pheromone" 
+    << total_pheromone << "select" << select);
   
   double selected = 0.0;
   
@@ -537,9 +623,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   // random value, the particular Neighbor is selected.
   
   for (auto dst2_it = this->dsts.begin();
-    dst2_it != this->dsts.end(); ++dst2_it) {
+       dst2_it != this->dsts.end(); ++dst2_it) {
     for (auto nb_it = dst2_it->second.nbs.begin();
-      nb_it != dst2_it->second.nbs.end(); ++nb_it) {
+         nb_it != dst2_it->second.nbs.end(); ++nb_it) {
       
       uint32_t nb_index = nb_it->second.index;
       
@@ -548,7 +634,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
         continue;
       }
       
-      selected += (pow(this->rtable[dst_index][nb_index].pheromone, power) / total_pheromone);
+      selected += (pow(this->rtable[dst_index][nb_index].pheromone, power)
+                  / total_pheromone);
       
       NS_LOG_FUNCTION(this << "selected" << selected);
       
@@ -559,7 +646,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
         // Using this destination means it is relevant, update timeout
         dst2_it->second.expires_in = this->initial_lifetime_dst;
         
-        NS_LOG_FUNCTION(this << "dst" << dst << "routed nb" << nb << "iface" << iface);
+        NS_LOG_FUNCTION(this << "dst" << dst 
+          << "routed nb" << nb << "iface" << iface);
         return true;
       }
     }
@@ -579,7 +667,7 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
 void RoutingTable::Print(std::ostream& os) const{
   
   for (auto dst_it1 = this->dsts.begin();
-    dst_it1 != this->dsts.end(); ++dst_it1) {
+       dst_it1 != this->dsts.end(); ++dst_it1) {
     
     // Output the destination info 
     //os << " DST:[" << dst_it1->first << " : " << dst_it1->second.index ;
@@ -591,9 +679,8 @@ void RoutingTable::Print(std::ostream& os) const{
       os << " NB:( ";
       
       for (auto nb_it = dst_it1->second.nbs.begin();
-      nb_it != dst_it1->second.nbs.end(); ++nb_it) {
+           nb_it != dst_it1->second.nbs.end(); ++nb_it) {
       
-        //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
         os << nb_it->first << " ";
       }
       os << ")";
@@ -605,23 +692,25 @@ void RoutingTable::Print(std::ostream& os) const{
   
   // Print the pheromone table
   for (auto dst_it1 = this->dsts.begin();
-    dst_it1 != this->dsts.end(); ++dst_it1) {
+       dst_it1 != this->dsts.end(); ++dst_it1) {
     
     os << dst_it1->first << ":";
     
     // Iterate over all neigbors
     for (auto dst_it2 = this->dsts.begin();
-      dst_it2 != this->dsts.end(); ++dst_it2) {
+         dst_it2 != this->dsts.end(); ++dst_it2) {
       
       for (auto nb_it = dst_it2->second.nbs.begin();
-        nb_it != dst_it2->second.nbs.end(); ++nb_it) {
+           nb_it != dst_it2->second.nbs.end(); ++nb_it) {
         
-        //os << "\nNB:[(" <<  dst_it2->first << ":" << nb_it->first << ") : " << nb_it->second.index << "]";
+        uint32_t dst_idx = dst_it1->second.index;
+        uint32_t nb_idx = nb_it->second.index;
+        
         os << "(" << dst_it2->first << ":" << nb_it->first << "):";
-        os << this->rtable[dst_it1->second.index][nb_it->second.index].pheromone << "|";  
-        os << this->rtable[dst_it1->second.index][nb_it->second.index].avr_hops << "|";
-        os << this->rtable[dst_it1->second.index][nb_it->second.index].virtual_pheromone;
-        os << "->(" << dst_it1->second.index << ":" << nb_it->second.index << ")\t";
+        os << this->rtable[dst_idx][nb_idx].pheromone << "|";  
+        os << this->rtable[dst_idx][nb_idx].avr_hops << "|";
+        os << this->rtable[dst_idx][nb_idx].virtual_pheromone;
+        os << "->(" << dst_idx << ":" << nb_idx << ")\t";
         }
     }
     

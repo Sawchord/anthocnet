@@ -217,8 +217,12 @@ public:
    * \param msg The reference to the message
    * \param num_dsts The maximum number of destinations to
    *        include informatuion for
+   * \param consideration Percentage, how much the virtual pheromone value 
+   *        must be higher than a real one to be considered more valuable
+   * \param vr Give rtable access to a uniform_random variable
    */
-  void ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts);
+  void ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
+                         double consideration, Ptr<UniformRandomVariable> vr);
   
   /**
    * \brief Handles the RoutingTable side of receiving a Backward ant.
