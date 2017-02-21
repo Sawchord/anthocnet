@@ -223,6 +223,13 @@ public:
                          Ptr<UniformRandomVariable> vr);
   
   /**
+   * \brief Takes reference to a HelloMsg and updates values accordingly
+   * \param msg The refence to the Msg to handle
+   * \param iface The interface this message was received on
+   */
+  void HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface);
+  
+  /**
    * \brief Handles the RoutingTable side of receiving a Backward ant.
    * \param dst The destination of the path that is set up. 
    * \note The destination of the path is the source of the backward ant.

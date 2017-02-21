@@ -176,7 +176,7 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   // Check if destination already exists
   auto it = this->dsts.find(address);
   if (it != this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "dst already exist");
+    //NS_LOG_FUNCTION(this << "dst already exist");
     return false;
   }
   
@@ -286,6 +286,8 @@ void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
 }
 
 void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
+  
+  NS_LOG_FUNCTION(this << "address" << address);
   
   // Search destination, add if no exist
   auto dst_it = this->dsts.find(address);
@@ -445,6 +447,39 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
   
 }
 
+void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
+  
+  if(!msg.IsValid()) {
+    NS_LOG_FUNCTION(this << "Malformed HellMsg -> dropped");
+    return;
+  }
+  
+  auto nb_it1 = this->dsts.find(msg.GetSrc());
+  if (nb_it1 == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "could not find src -> dropped");
+    return;
+  }
+  
+  auto nb_it2 = nb_it1->second.nbs.find(iface);
+  if (nb_it2 == nb_it1->second.nbs.end()) {
+    //NS_LOG_FUNCTION(<<)
+  }
+  
+  
+  while (msg.GetSize() != 0) {
+    
+    auto pos_dst = msg.PopDiffusion();
+    
+    // Get destination or add if not yet exist
+    this->AddDestination(pos_dst.first);
+    //auto dst_it = this->dsts.find(pos_dst.first);
+    
+    
+  }
+  
+  
+  
+}
 
 bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   Ipv4Address nb, uint64_t T_sd, uint32_t hops) {

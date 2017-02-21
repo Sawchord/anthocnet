@@ -237,7 +237,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
   LocalDeliverCallback lcb, ErrorCallback ecb) {
   
-  // TODO: Find out how to get ip address from idev
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
   uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
@@ -245,6 +244,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
+  // TODO: Register activity for destination here
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
@@ -943,6 +943,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
+    // NOTE: Doing this here is ok, since inly AntHocnet Port
+    // comes here, and AnthocNet uses Ipv4 transparent
     this->rtable.UpdateNeighbor(iface, src);
     
     NS_LOG_FUNCTION(this << "socket" << socket 
@@ -979,6 +981,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   return;
 }
 
+// NOTE: Untested
 void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
 
   NS_LOG_FUNCTION(this);
@@ -1029,7 +1032,6 @@ void RoutingProtocol::HelloTimerExpire() {
     }
     
     HelloMsgHeader hello_msg(src);
-    // TODO: implement filling HelloMsg with important data
     
     this->rtable.ConstructHelloMsg(hello_msg, 10, this->uniform_random);
     
@@ -1055,7 +1057,7 @@ void RoutingProtocol::HelloTimerExpire() {
     // Jittery send simulates clock divergence
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     
-    // FIXME: The simulation does not work with jitter set to fixed value
+    // NOTE: The simulation does not work with jitter set to fixed value
     // Is this due to a bug, or is it due to all nodes sneding at once
     //Time jitter = MilliSeconds(10);
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
@@ -1196,11 +1198,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
     + NanoSeconds((1 - this->alpha_T_mac) * T_mac.GetNanoSeconds());
   
-  NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac << "given T_mac" << T_mac);
   
   // Calculate the T_ind value used to update this ant
-  uint64_t T_ind =  (1) * this->avr_T_mac.GetMilliSeconds();
+  uint64_t T_ind =  (1) * this->avr_T_mac.GetNanoSeconds();
   
+  //NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac 
+  //  << "given T_mac" << T_mac << "T_ind" << T_ind);
   
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);

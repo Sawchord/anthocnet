@@ -97,6 +97,8 @@ public:
   
   Ipv4Address GetSrc();
   
+  uint32_t GetSize();
+  
   void PushDiffusion(Ipv4Address dst, double pheromone);
   diffusion_t PopDiffusion();
   

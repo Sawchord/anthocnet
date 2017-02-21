@@ -174,6 +174,10 @@ Ipv4Address HelloMsgHeader::GetSrc() {
   return this->src;
 }
 
+uint32_t HelloMsgHeader::GetSize() {
+  return this->diffusion.size();
+}
+
 void HelloMsgHeader::PushDiffusion(Ipv4Address dst, double pheromone) {
   this->diffusion.push_back(std::make_pair(dst, pheromone));
 }
