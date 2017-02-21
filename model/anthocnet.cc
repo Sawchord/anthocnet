@@ -1014,9 +1014,10 @@ void RoutingProtocol::HelloTimerExpire() {
     }
     
     HelloMsgHeader hello_msg(src);
-    
     // TODO: implement filling HelloMsg with important data
-  
+    
+    this->rtable.ConstructHelloMsg(hello_msg, 10, 0.1, this->uniform_random);
+    
     TypeHeader type_header(AHNTYPE_HELLO);
     Ptr<Packet> packet = Create<Packet>();
     

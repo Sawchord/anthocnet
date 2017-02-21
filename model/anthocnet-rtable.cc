@@ -377,7 +377,7 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
   for (auto dst_it = this->dsts.begin();
        dst_it != this->dsts.end(); ++dst_it) {
     
-    Ipv4Address best_nb;
+    Ipv4Address best_dst = dst_it->first;
     double best = NAN;
     
     // Iterate over all neighbors
@@ -390,12 +390,11 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
         
         uint32_t dst_idx = dst_it->second.index;
         uint32_t nb_idx = nb_it2->second.index;
-        // FIXME: Check this really works
+	  
         // Check the real pheromone value
         if (std::abs(best) <= this->rtable[dst_idx][nb_idx].pheromone
             || best != best) {// check for nan
           best = this->rtable[dst_idx][nb_idx].pheromone;
-          best_nb = nb_it1->first;
         }
         
         // Check the virtual pheromone
@@ -403,7 +402,6 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
         if (std::abs(best * (1.0 + consideration))
             <= this->rtable[dst_idx][nb_idx].virtual_pheromone) {
           best = -1.0 * this->rtable[dst_idx][nb_idx].virtual_pheromone;
-          best_nb = nb_it1->first;
         }
       } 
     }
@@ -411,7 +409,7 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
     
     // Check if still NAN
     if (best == best) {
-      selection.push_back(std::make_pair(best_nb, best));
+      selection.push_back(std::make_pair(best_dst, best));
     }
     
   }
@@ -428,18 +426,21 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       select = std::floor(vr->GetValue(0.0, selection.size()));
     }
     else {
-      select = i;
+      select = 0;
     }
+    
+    NS_LOG_FUNCTION(this << "select" << select << "ndst" << selection.size());
     
     // Get to the selection
     auto sel_it = selection.begin();
     for (uint32_t c = select; c > 0; c--) {
       sel_it++;
     }
+    double selected = sel_it->second;
     
-    
-    NS_LOG_FUNCTION(this << "selected" << sel_it->first << sel_it->second);
+    NS_LOG_FUNCTION(this << "selected" << sel_it->first << selected);
     msg.PushDiffusion(sel_it->first, sel_it->second);
+    selection.erase(sel_it);
     
   }
   

@@ -195,6 +195,7 @@ void HelloMsgHeader::Serialize(Buffer::Iterator i) const {
   
   for (uint32_t c = 0; c < this->diffusion.size(); c++) {
     WriteTo(i, this->diffusion[c].first);
+    
     i.WriteHtonU64((uint64_t) this->diffusion[c].second);
   }
   
