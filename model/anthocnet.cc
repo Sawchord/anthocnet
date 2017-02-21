@@ -55,7 +55,8 @@ RoutingProtocol::RoutingProtocol ():
   alpha_pheromone(0.7),
   gamma_pheromone(0.7),
   avr_T_mac(Seconds(0)),
-  rtable(RoutingTable(nb_expire, dst_expire, T_hop, alpha_pheromone, gamma_pheromone)),
+  rtable(RoutingTable(nb_expire, dst_expire, 
+					  T_hop, alpha_pheromone, gamma_pheromone)),
   data_cache(dcache_expire)
   {
     // Initialize the sockets
@@ -88,7 +89,7 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeTimeChecker()
   )
   .AddAttribute ("NoBroadcast",
-    "Time after a broadcast, after which one can not broadcast to that same destination again.",
+    "Time after broadcast,where no broadcast is allowed to same destination",
     TimeValue (MilliSeconds(100)),
     MakeTimeAccessor(&RoutingProtocol::no_broadcast),
     MakeTimeChecker()
@@ -130,7 +131,7 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeDoubleChecker<double>()
   )
   .AddAttribute ("DataCacheExpire",
-    "Time datapackets waits for a route to be found. Packets are dropped if expires",
+    "Time data packets wait for route to be found. Dropped if expires",
     TimeValue (MilliSeconds(5000)),
     MakeTimeAccessor(&RoutingProtocol::dcache_expire),
     MakeTimeChecker()
@@ -179,8 +180,9 @@ void RoutingProtocol::DoDispose() {
 
 // ------------------------------------------------------------------
 // Implementation of Ipv4Protocol inherited functions
-Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, 
-  Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
+Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, 
+                                             const Ipv4Header &header, 
+                                             Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
   
   if (!p) {
     NS_LOG_DEBUG("Empty packet");
@@ -220,7 +222,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &he
   
   // TODO: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
-  this->StartForwardAnt(dst);
+  //this->StartForwardAnt(dst);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
@@ -378,7 +380,8 @@ Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr,
   else {
       rt->SetSource (j->second.GetLocal ());
     }
-  NS_ASSERT_MSG (rt->GetSource () != Ipv4Address (), "Valid AntHocNet source address not found");
+  NS_ASSERT_MSG (rt->GetSource () != Ipv4Address (),
+  "Valid AntHocNet source address not found");
   rt->SetGateway (Ipv4Address ("127.0.0.1"));
   rt->SetOutputDevice (lo);
   return rt;
@@ -390,7 +393,9 @@ void RoutingProtocol::AddArpCache(Ptr<ArpCache> a) {
 }
 
 void RoutingProtocol::DelArpCache(Ptr<ArpCache> a) {
-  this->arp_cache.erase (std::remove (arp_cache.begin() , arp_cache.end() , a), arp_cache.end() );
+  this->arp_cache.erase (std::remove (arp_cache.begin(), 
+                                      arp_cache.end() , a), 
+                         arp_cache.end() );
 }
 
 std::vector<Ipv4Address> RoutingProtocol::LookupMacAddress(Mac48Address addr) {
@@ -410,7 +415,8 @@ std::vector<Ipv4Address> RoutingProtocol::LookupMacAddress(Mac48Address addr) {
       
       ArpCache::Entry* entry = *lit;
       
-      if (entry != 0 && (entry->IsAlive () || entry->IsPermanent ()) && !entry->IsExpired ()) {
+      if (entry != 0 && (entry->IsAlive () 
+          || entry->IsPermanent ()) && !entry->IsExpired ()) {
         ret.push_back(entry->GetIpv4Address());
       }
     }
@@ -531,7 +537,8 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   
 }
 
-void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress address) {
+void RoutingProtocol::NotifyAddAddress (uint32_t interface,
+                                        Ipv4InterfaceAddress address) {
   
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
   
@@ -541,7 +548,7 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   }
   
   if (l3->GetNAddresses(interface) > 1) {
-    NS_LOG_WARN("AntHocNet does not support more than one address per interface");
+    NS_LOG_WARN("AntHocNet does not support more than one addr per interface");
     return;
   }
   
@@ -575,7 +582,8 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
     
     
     NS_LOG_FUNCTION(this << "interface" << interface 
-      << " address" << address << "broadcast" << iface.GetBroadcast() << "socket" << socket);
+      << " address" << address << "broadcast" 
+      << iface.GetBroadcast() << "socket" << socket);
     return;
     
   }
@@ -585,7 +593,8 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface, Ipv4InterfaceAddress
   
 }
 
-void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, Ipv4InterfaceAddress address) {
+void RoutingProtocol::NotifyRemoveAddress (uint32_t interface, 
+                                           Ipv4InterfaceAddress address) {
   
   Ptr<Socket> socket = FindSocketWithInterfaceAddress(address);
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -702,7 +711,8 @@ void RoutingProtocol::Start() {
   socket->SetIpRecvTtl(true);
   
   this->sockets[0] = socket;
-  this->socket_addresses.insert(std::make_pair(socket, ipv4->GetAddress (0, 0)));
+  this->socket_addresses.insert(std::make_pair(socket, 
+                                               ipv4->GetAddress (0, 0)));
   
 }
 
@@ -826,7 +836,8 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   
 }
 
-void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant) {
+void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, 
+                                          ForwardAntHeader ant) {
   
   if (!this->rtable.IsBroadcastAllowed(dst)) {
     NS_LOG_FUNCTION(this << "broadcast not allowed");
@@ -836,7 +847,8 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant)
   this->rtable.NoBroadcast(dst, this->no_broadcast);
   
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+      it = this->socket_addresses.begin(); 
+      it != this->socket_addresses.end(); ++it) {
     
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
@@ -884,7 +896,8 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
   
   
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+      it = this->socket_addresses.begin();
+      it != this->socket_addresses.end(); ++it) {
     
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
@@ -945,13 +958,13 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     << "type" << type
   );
   
+  // TODO: Better T_mac value than presented here
   // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO:
       this->HandleHelloAnt(packet, iface);
       break;
     case AHNTYPE_FW_ANT:
-      //this->packet_queue.Enqueue(AHNTYPE_FW_ANT, iface, packet);
       this->HandleForwardAnt(packet, iface, MilliSeconds(10));
       break;
     case AHNTYPE_BW_ANT:
@@ -984,7 +997,7 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
     for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
       ad_it != addresses.end(); ++ad_it) {
       NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
-      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress (*ad_it), *ad_it);
+      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), *ad_it);
     }
   }
   
@@ -994,7 +1007,8 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
-  NS_LOG_FUNCTION(this << "packet" << *packet << "destination" << destination << "socket" << socket);
+  NS_LOG_FUNCTION(this << "packet" << *packet 
+    << "destination" << destination << "socket" << socket);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
 
@@ -1002,7 +1016,8 @@ void RoutingProtocol::HelloTimerExpire() {
     
   // send a hello over each socket
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-    it = this->socket_addresses.begin(); it != this->socket_addresses.end(); ++it) {
+      it = this->socket_addresses.begin();
+      it != this->socket_addresses.end(); ++it) {
     
     Ptr<Socket> socket = it->first;
     Ipv4InterfaceAddress iface = it->second;
@@ -1016,7 +1031,7 @@ void RoutingProtocol::HelloTimerExpire() {
     HelloMsgHeader hello_msg(src);
     // TODO: implement filling HelloMsg with important data
     
-    this->rtable.ConstructHelloMsg(hello_msg, 10, 0.1, this->uniform_random);
+    this->rtable.ConstructHelloMsg(hello_msg, 10, this->uniform_random);
     
     TypeHeader type_header(AHNTYPE_HELLO);
     Ptr<Packet> packet = Create<Packet>();
@@ -1073,7 +1088,8 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time T_mac) {
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
+                                       uint32_t iface, Time T_mac) {
   
   ForwardAntHeader ant;
   packet->RemoveHeader(ant);
@@ -1126,8 +1142,9 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
     
     Ptr<Socket> socket2 = this->sockets[iface];
     
-    NS_LOG_FUNCTION(this << "received a fwant for this node. converting to bwant");
-    NS_LOG_FUNCTION(this << "sending bwant" << "iface" << iface << "dst" << dst);
+    NS_LOG_FUNCTION(this << "received fwant -> converting to bwant");
+    NS_LOG_FUNCTION(this << "sending bwant" << "iface"
+      << iface << "dst" << dst);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
@@ -1141,14 +1158,16 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   Ipv4Address next_nb;
   uint32_t next_iface;
   //NS_LOG_UNCOND(this->rtable);
-  if(!this->rtable.SelectRoute(final_dst, 2.0, next_iface, next_nb, this->uniform_random)) {
+  if(!this->rtable.SelectRoute(final_dst, 2.0, 
+      next_iface, next_nb, this->uniform_random)) {
     
     // FIXME: The protocol says, broadcast, but since this leads to massive 
     // floods, we randomly select for now
     this->BroadcastForwardAnt(final_dst, ant);
     return;
     
-    //if (!this->rtable.SelectRandomRoute(next_iface, next_nb, this->uniform_random)) {
+    //if (!this->rtable.SelectRandomRoute(next_iface,
+    //    next_nb, this->uniform_random)) {
     //  NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
     //  return;
     //}
@@ -1160,7 +1179,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, Time 
   return;
 }
 
-void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Time T_mac) {
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  
+                                        uint32_t iface, Time T_mac) {
   
   // Deserialize the ant
   BackwardAntHeader ant;
@@ -1172,7 +1192,11 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   }
   
   // Update the running average on T_mac
-  this->avr_T_mac = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * T_mac;
+  this->avr_T_mac = 
+    NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
+    + NanoSeconds((1 - this->alpha_T_mac) * T_mac.GetNanoSeconds());
+  
+  NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac << "given T_mac" << T_mac);
   
   // Calculate the T_ind value used to update this ant
   uint64_t T_ind =  (1) * this->avr_T_mac.GetMilliSeconds();
@@ -1185,7 +1209,8 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  uint32_t iface, Tim
   Ipv4Address final_dst = ant.GetDst();
   Ipv4Address src = ant.GetSrc();
   
-  NS_LOG_FUNCTION(this << "nb" << nb << "src" << src << "final_dst" << final_dst << "next_dst" << next_dst);
+  NS_LOG_FUNCTION(this << "nb" << nb << "src" << src 
+    << "final_dst" << final_dst << "next_dst" << next_dst);
   
   // Check if this Node is the destination and manage behaviour
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -1238,10 +1263,12 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     if (cv.first == false) {
       NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
       
-      //uint32_t iface = this->ipv4->GetInterfaceForAddress (cv.second.header.GetSource());
+      //uint32_t iface = this->ipv4->GetInterfaceForAddress(
+      //    cv.second.header.GetSource());
       //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
       
-      this->data_drop(cv.second.packet, "Cached and expired", cv.second.header.GetSource());
+      this->data_drop(cv.second.packet, 
+                      "Cached and expired", cv.second.header.GetSource());
       
       continue;
     }
@@ -1269,7 +1296,8 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       dst_found = true;
     }
   
-    // If this destination exists, all the data is routed out by now and can be discarded
+    // If this destination exists, all the data 
+    // is routed out by now and can be discarded
     if (dst_found) {
         this->data_cache.RemoveCache(dst);
     }

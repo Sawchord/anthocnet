@@ -245,7 +245,7 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   if (Simulator::Now() <= dst_it->second.no_broadcast_time) {
     NS_LOG_FUNCTION(this << "no bcast to" 
       << address << " for " 
-      << dst_it->second.no_broadcast_time - Simulator::Now());
+      << (dst_it->second.no_broadcast_time - Simulator::Now()).GetMilliSeconds());
     return false;
   }
   
@@ -356,7 +356,6 @@ void RoutingTable::Update(Time interval) {
 }
 
 void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts, 
-                                     double consideration, 
                                      Ptr<UniformRandomVariable> vr) {
   
   // NOTE: This is extremly inefficient.
@@ -399,8 +398,7 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
         
         // Check the virtual pheromone
         // We mark virtual pheromone by a negative value instead of flag
-        if (std::abs(best * (1.0 + consideration))
-            <= this->rtable[dst_idx][nb_idx].virtual_pheromone) {
+        if (std::abs(best) <= this->rtable[dst_idx][nb_idx].virtual_pheromone){
           best = -1.0 * this->rtable[dst_idx][nb_idx].virtual_pheromone;
         }
       } 
