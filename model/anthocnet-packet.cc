@@ -193,20 +193,31 @@ uint32_t HelloMsgHeader::GetSerializedSize() const {
 }
 
 void HelloMsgHeader::Serialize(Buffer::Iterator i) const {
-    
+  
+  char buf[sizeof(double)];
+  
   WriteTo(i, this->src);
   i.WriteU32(this->diffusion.size());
   
   for (uint32_t c = 0; c < this->diffusion.size(); c++) {
     WriteTo(i, this->diffusion[c].first);
     
-    i.WriteHtonU64((uint64_t) this->diffusion[c].second);
+    memcpy(&buf, &this->diffusion[c].second, sizeof(double));
+    
+    for (uint32_t b = 0; b < sizeof(double); b++) {
+      i.WriteU8(buf[b]);
+    }
+    
+    //i.WriteHtonU64((uint64_t) this->diffusion[c].second);
   }
   
 }
 
 uint32_t HelloMsgHeader::Deserialize(Buffer::Iterator start) {
     Buffer::Iterator i = start;
+    
+    char buf[sizeof(double)];
+    double pheromone;
     
     NS_ASSERT(this->diffusion.size() == 0);
     
@@ -216,7 +227,15 @@ uint32_t HelloMsgHeader::Deserialize(Buffer::Iterator start) {
     for(uint32_t c = 0; c < diffsize; c++) {
       Ipv4Address address;
       ReadFrom(i, address);
-      double pheromone = (double) i.ReadNtohU64();
+      
+      for (uint32_t b = 0; b < sizeof(double); b++) {
+        buf[b] = i.ReadU8();
+      }
+      
+      memcpy(&pheromone, &buf, sizeof(double));
+      
+      //double pheromone = (double) i.ReadNtohU64();
+      
       
       this->diffusion.push_back(std::make_pair(address, pheromone));
     }

@@ -1083,7 +1083,7 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
-  
+  this->rtable.HandleHelloMsg(hello_msg, iface);
   // TODO: implement the information bootstrap algorithm and execute it here
   
   return;

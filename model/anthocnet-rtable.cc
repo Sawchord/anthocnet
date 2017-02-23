@@ -462,10 +462,9 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
   
   auto nb_it2 = nb_it1->second.nbs.find(iface);
   if (nb_it2 == nb_it1->second.nbs.end()) {
-    //NS_LOG_FUNCTION(<<)
   }
   
-  
+  // Bootstrap information for every possible destination
   while (msg.GetSize() != 0) {
     
     auto pos_dst = msg.PopDiffusion();
@@ -474,6 +473,9 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
     this->AddDestination(pos_dst.first);
     //auto dst_it = this->dsts.find(pos_dst.first);
     
+	// TODO: Use better estimation of information goodness
+	double bootstrap_info = 1/(1/(pos_dst.second) + 10);
+	NS_LOG_FUNCTION(this << "bootstapped" << bootstrap_info << "from" << pos_dst.second );
     
   }
   
