@@ -1,4 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2016 Leon Tan
  *
@@ -33,6 +32,7 @@
 #include "ns3/wifi-mac-header.h"
 #include "ns3/arp-cache.h"
 #include "ns3/traced-callback.h"
+#include "ns3/wifi-phy.h"
 
 // TODO: Make these settable by GetTypeId()
 //       instead of hardcoding them
@@ -129,7 +129,16 @@ private:
   // Called when there is an error in the Layer 2 link
   void ProcessTxError (WifiMacHeader const& header);
   
+  // Called after receving a packet at layer 2 (Needed as metric)
+  void ProcessRxTrace(Ptr<Packet const> packet);
   
+  void ProcessMonitorSnifferRx(Ptr<Packet const> packet, 
+                              uint16_t frequency, uint16_t channel, 
+                              uint32_t rate, WifiPreamble isShortPreable,
+                              WifiTxVector tx_vector, mpduInfo mpdu,
+                              signalNoiseDbm snr);
+  
+  // ----------------------------------------------
   // Callback function for receiving a packet
   void Recv(Ptr<Socket> socket);
   
@@ -221,7 +230,6 @@ private:
   // Holds information about the interfaces
   Ptr<Socket> sockets[MAX_INTERFACES];
   
-  //list<uint32_t>* free_sockets;
   std::map< Ptr<Socket>, Ipv4InterfaceAddress> socket_addresses;
   
 };

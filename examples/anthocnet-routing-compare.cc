@@ -356,6 +356,7 @@ int main (int argc, char *argv[]) {
   
   std::cout << dir_string << std::endl;
   double txp = 7.5;
+  //double txp = 3.5;
 
   experiment.Run (txp);
   
@@ -404,7 +405,8 @@ void RoutingExperiment::Run (double txp) {
 
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
   //wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
   wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());

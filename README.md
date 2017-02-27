@@ -24,3 +24,4 @@ To activate insight:
 
 To activate callgrind:
 ./waf --run anthocnet-compare --command-template="valgrind --tool=callgrind %s"
+./waf --run anthocnet-compare --command-template="valgrind --tool=callgrind --time-stamp=yes %s"

@@ -1,4 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2016 Leon Tan
  *
@@ -480,10 +479,19 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   
   Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
   if (wifi != 0) {
-    Ptr<WifiMac> mac = wifi->GetMac ();
+    Ptr<WifiMac> mac = wifi->GetMac();
+    Ptr<WifiPhy> phy = wifi->GetPhy();
     if (mac != 0) {
+      
       mac->TraceConnectWithoutContext ("TxErrHeader",
         MakeCallback(&RoutingProtocol::ProcessTxError, this));
+      
+      phy->TraceConnectWithoutContext ("PhyRxBegin",
+        MakeCallback(&RoutingProtocol::ProcessRxTrace, this));
+      
+      phy->TraceConnectWithoutContext ("MonitorSnifferRx",
+        MakeCallback(&RoutingProtocol::ProcessMonitorSnifferRx, this));
+      
     }
     else {
       NS_LOG_FUNCTION(this << "MAC=0 to L2 support");
@@ -916,6 +924,52 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Callbacks for lower levels
+void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
+
+  NS_LOG_FUNCTION(this);
+  
+  Mac48Address addr[4];
+  
+  addr[0] = header.GetAddr1();
+  addr[1] = header.GetAddr2();
+  addr[2] = header.GetAddr3();
+  addr[3] = header.GetAddr4();
+  
+  for (uint32_t i = 0; i < 4; i++) {
+    
+    std::vector<Ipv4Address> addresses = this->LookupMacAddress(addr[i]);
+    
+    for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
+      ad_it != addresses.end(); ++ad_it) {
+      NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
+      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), *ad_it);
+    }
+  }
+  
+}
+
+void RoutingProtocol::ProcessRxTrace(Ptr<Packet const> packet) {
+  
+  //NS_LOG_FUNCTION(this << "Time: " << Simulator::Now() << "packet" << *packet);
+  NS_LOG_FUNCTION(this << "Time: " << Simulator::Now());
+  
+}
+  
+void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet, 
+                              uint16_t frequency, uint16_t channel, 
+                              uint32_t rate, WifiPreamble isShortPreable,
+                              WifiTxVector tx_vector, mpduInfo mpdu,
+                              signalNoiseDbm snr) {
+  
+  
+  
+  NS_LOG_FUNCTION(this << "s and r" << snr.signal << snr.noise << "snr_dbm" << snr.signal - snr.noise);
+  
+}
+
+
 // -------------------------------------------------------
 // Callback functions used in receiving and timers
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
@@ -981,31 +1035,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   return;
 }
 
-// NOTE: Untested
-void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
-
-  NS_LOG_FUNCTION(this);
-  
-  Mac48Address addr[4];
-  
-  addr[0] = header.GetAddr1();
-  addr[1] = header.GetAddr2();
-  addr[2] = header.GetAddr3();
-  addr[3] = header.GetAddr4();
-  
-  for (uint32_t i = 0; i < 4; i++) {
-    
-    std::vector<Ipv4Address> addresses = this->LookupMacAddress(addr[i]);
-    
-    for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
-      ad_it != addresses.end(); ++ad_it) {
-      NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
-      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), *ad_it);
-    }
-  }
-  
-}
-
 
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
@@ -1059,7 +1088,6 @@ void RoutingProtocol::HelloTimerExpire() {
     
     // NOTE: The simulation does not work with jitter set to fixed value
     // Is this due to a bug, or is it due to all nodes sneding at once
-    //Time jitter = MilliSeconds(10);
     Simulator::Schedule(jitter, &RoutingProtocol::Send, 
       this, socket, packet, destination);
   }
@@ -1100,9 +1128,6 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
     NS_LOG_WARN("Received invalid ForwardAnt ->Dropped");
     return;
   }
-  
-  // No need to update the avr_T_mac, since this is the non-priviledged
-  // queue.
   
   // TODO: Cache FW ants and discard doubled ants.
   
