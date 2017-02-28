@@ -17,6 +17,8 @@
 #ifndef ANTHOCNET_H
 #define ANTHOCNET_H
 
+
+#include "anthocnet-config.h"
 #include "anthocnet-rtable.h"
 #include "anthocnet-packet.h"
 #include "anthocnet-pcache.h"
@@ -33,6 +35,20 @@
 #include "ns3/arp-cache.h"
 #include "ns3/traced-callback.h"
 #include "ns3/wifi-phy.h"
+
+#include "ns3/log.h"
+#include "ns3/boolean.h"
+#include "ns3/random-variable-stream.h"
+#include "ns3/inet-socket-address.h"
+#include "ns3/trace-source-accessor.h"
+#include "ns3/udp-socket-factory.h"
+#include "ns3/udp-l4-protocol.h"
+#include "ns3/udp-header.h"
+#include "ns3/wifi-net-device.h"
+#include "ns3/adhoc-wifi-mac.h"
+#include "ns3/string.h"
+#include "ns3/pointer.h"
+
 
 // TODO: Make these settable by GetTypeId()
 //       instead of hardcoding them

@@ -19,13 +19,18 @@
 #define ANTHOCNETPACKET_H
 
 #include <iostream>
+#include <map>
+#include <vector>
+#include <string>
+
 #include "ns3/header.h"
 #include "ns3/enum.h"
 #include "ns3/ipv4-address.h"
-#include <map>
-#include <vector>
 #include "ns3/nstime.h"
 #include "ns3/log.h"
+#include "anthocnet-packet.h"
+#include "ns3/address-utils.h"
+#include "ns3/packet.h"
 
 namespace ns3 {
 namespace ahn {

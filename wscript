@@ -28,6 +28,7 @@ def build(bld):
         'model/anthocnet-rtable.h',
         'model/anthocnet-pcache.h',
         'model/anthocnet-packet.h',
+        'model/anthocnet-config.h',
         'helper/anthocnet-helper.h',
         ]
 
