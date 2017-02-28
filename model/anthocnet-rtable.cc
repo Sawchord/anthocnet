@@ -428,16 +428,16 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       select = 0;
     }
     
-    NS_LOG_FUNCTION(this << "select" << select << "ndst" << selection.size());
+    //NS_LOG_FUNCTION(this << "select" << select << "ndst" << selection.size());
     
     // Get to the selection
     auto sel_it = selection.begin();
     for (uint32_t c = select; c > 0; c--) {
       sel_it++;
     }
-    double selected = sel_it->second;
     
-    NS_LOG_FUNCTION(this << "selected" << sel_it->first << selected);
+    //double selected = sel_it->second;
+    //NS_LOG_FUNCTION(this << "selected" << sel_it->first << selected);
     msg.PushDiffusion(sel_it->first, sel_it->second);
     selection.erase(sel_it);
     

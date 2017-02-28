@@ -405,8 +405,8 @@ void RoutingExperiment::Run (double txp) {
 
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel;
-  //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  //wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
   //wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
   wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());

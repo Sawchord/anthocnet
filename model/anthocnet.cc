@@ -40,7 +40,15 @@ RoutingProtocol::RoutingProtocol ():
   T_hop(0.2),
   alpha_pheromone(0.7),
   gamma_pheromone(0.7),
+  eta_value(0.7),
+  snr_threshold(20.0),
+  bad_snr_cost(4.0),
+  
+  // These are no configs but rather inital values 
+  last_rx_begin(Seconds(0)),
   avr_T_mac(Seconds(0)),
+  last_snr(snr_threshold),
+  
   rtable(RoutingTable(nb_expire, dst_expire, 
 					  T_hop, alpha_pheromone, gamma_pheromone)),
   data_cache(dcache_expire)
@@ -105,15 +113,33 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeDoubleChecker<double>()
   )
   .AddAttribute("AlphaPheromone",
-    "The hop count uses a running average with a decline defined by alpha",
+    "The hop count uses a running average with a decay defined by alpha",
     DoubleValue(0.7),
     MakeDoubleAccessor(&RoutingProtocol::alpha_pheromone),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("GammaPheromone",
-    "The pheromone uses a running average with a decline defined by gamma",
+    "The pheromone uses a running average with a decay defined by gamma",
     DoubleValue(0.7),
     MakeDoubleAccessor(&RoutingProtocol::gamma_pheromone),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("EtaValue",
+    "The Rx Time is a running average with a decay defined by eta",
+    DoubleValue(0.7),
+    MakeDoubleAccessor(&RoutingProtocol::eta_value),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("SnrThreshold",
+    "Connections with a SNR below this value are considered bad connections",
+    DoubleValue(20.0),
+    MakeDoubleAccessor(&RoutingProtocol::snr_threshold),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("BadSnrCost",
+    "The cost added to the vost function, if a connection is bad",
+    DoubleValue(4.0),
+    MakeDoubleAccessor(&RoutingProtocol::bad_snr_cost),
     MakeDoubleChecker<double>()
   )
   .AddAttribute ("DataCacheExpire",
@@ -206,9 +232,13 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
     return route;
   }
   
-  // TODO: Starting forward ant is unnecessary
+  // NOTE: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
   //this->StartForwardAnt(dst);
+  
+  // Since this initiates a Route Input without
+  // a preceeding Rx, we need to set Rx manually
+  //this->last_rx_begin = Simulator::Now();
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
@@ -231,6 +261,9 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
   // TODO: Register activity for destination here
+  
+  // Claculate the new average receive time
+  //this->UpdateAvrTMac();
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
@@ -473,8 +506,11 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
       mac->TraceConnectWithoutContext ("TxErrHeader",
         MakeCallback(&RoutingProtocol::ProcessTxError, this));
       
+      mac->TraceConnectWithoutContext ("MacRx",
+        MakeCallback(&RoutingProtocol::ProcessMacRxTrace, this));
+      
       phy->TraceConnectWithoutContext ("PhyRxBegin",
-        MakeCallback(&RoutingProtocol::ProcessRxTrace, this));
+        MakeCallback(&RoutingProtocol::ProcessPhyRxTrace, this));
       
       phy->TraceConnectWithoutContext ("MonitorSnifferRx",
         MakeCallback(&RoutingProtocol::ProcessMonitorSnifferRx, this));
@@ -662,7 +698,7 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   this->lo = ipv4->GetNetDevice(0);
   
   // Initiate the protocol and start operating
-  Simulator::ScheduleNow (&RoutingProtocol::Start, this);
+  Simulator::ScheduleNow(&RoutingProtocol::Start, this);
 }
 
 void RoutingProtocol::PrintRoutingTable 
@@ -937,10 +973,10 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
   
 }
 
-void RoutingProtocol::ProcessRxTrace(Ptr<Packet const> packet) {
+void RoutingProtocol::ProcessPhyRxTrace(Ptr<Packet const> packet) {
   
-  //NS_LOG_FUNCTION(this << "Time: " << Simulator::Now() << "packet" << *packet);
-  NS_LOG_FUNCTION(this << "Time: " << Simulator::Now());
+  this->last_rx_begin = Simulator::Now();
+  //NS_LOG_FUNCTION(this << "Time: " << Simulator::Now());
   
 }
   
@@ -950,12 +986,28 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
                               WifiTxVector tx_vector, mpduInfo mpdu,
                               signalNoiseDbm snr) {
   
-  
-  
-  NS_LOG_FUNCTION(this << "s and r" << snr.signal << snr.noise << "snr_dbm" << snr.signal - snr.noise);
+  this->last_snr = snr.signal - snr.noise;
+  //NS_LOG_FUNCTION(this << "s and r" << snr.signal 
+    //<< snr.noise << "snr_dbm" << snr.signal - snr.noise);
   
 }
 
+void RoutingProtocol::ProcessMacRxTrace(Ptr<Packet const> packet) {
+  
+  Time new_T_mac = Simulator::Now() - this->last_rx_begin;
+  
+  if (this->avr_T_mac == Time(0)) {
+    this->avr_T_mac = new_T_mac;
+  }
+  else {
+    this->avr_T_mac = 
+      NanoSeconds((this->eta_value) * this->avr_T_mac.GetNanoSeconds())
+      + NanoSeconds((1.0 - this->eta_value) * new_T_mac.GetNanoSeconds());
+  }
+  
+  //NS_LOG_FUNCTION(this << "updated avr_T_mac" 
+  //  << this->avr_T_mac.GetNanoSeconds() << " Time" << Simulator::Now());
+}
 
 // -------------------------------------------------------
 // Callback functions used in receiving and timers
@@ -1205,10 +1257,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
+  
+  // FIXME: what does this here
   // Update the running average on T_mac
-  this->avr_T_mac = 
-    NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
-    + NanoSeconds((1 - this->alpha_T_mac) * T_mac.GetNanoSeconds());
+  //this->avr_T_mac = 
+  //  NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
+  //  + NanoSeconds((1 - this->alpha_T_mac) * T_mac.GetNanoSeconds());
   
   
   // Calculate the T_ind value used to update this ant

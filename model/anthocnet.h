@@ -144,7 +144,11 @@ private:
   void ProcessTxError (WifiMacHeader const& header);
   
   // Called after receving a packet at layer 2 (Needed as metric)
-  void ProcessRxTrace(Ptr<Packet const> packet);
+  void ProcessPhyRxTrace(Ptr<Packet const> packet);
+  void ProcessMacRxTrace(Ptr<Packet const> packet);
+  
+  // Used by RouteInput, is the other side to ProcessRxTrace
+  void UpdateAvrTMac();
   
   void ProcessMonitorSnifferRx(Ptr<Packet const> packet, 
                               uint16_t frequency, uint16_t channel, 
@@ -191,11 +195,6 @@ private:
   Time rtable_update_interval;
   Timer rtable_update_timer;
   
-  // Maximal receive queue length
-  uint32_t rqueue_max_len;
-  // Expire time of the queues
-  Time queue_expire;
-  
   // Time until an entry in the datacache expires and the packet is dropped
   Time dcache_expire;
   
@@ -214,20 +213,36 @@ private:
   // The T_hop heuristic
   double T_hop;
   
-  // The hop counts alpha value
+  // The decay factor in the calculation of the avergage hops
   double alpha_pheromone;
   
-  // The pheromones gamma value
+  // The decay factor for the calculation of the pheromone
   double gamma_pheromone;
   
+  // The decay factor for the average Rx time calculation
+  double eta_value;
+  
+  // These values are used by the snr part of the cost calculation
+  // When snr is considered good or bad
+  double snr_threshold;
+  // The extra cost factor to a bad snr
+  double bad_snr_cost;
   
   Ptr<UniformRandomVariable> uniform_random;
   
   //----------------------------------------------
   // All the global state of the protocol go here
   
-  // The running average of the T_max value
+  // Used to calculate avr_T_mac
+  Time last_rx_begin;
+  
+  // The running average of the T_mac value
+  // This is calculated by getting the Time difference
+  // between last rx_begin and the start of routeinput
   Time avr_T_mac;
+  
+  // The last measured snr
+  double last_snr; 
   
   // Holds the loopback device
   Ptr<NetDevice> lo;
