@@ -17,8 +17,6 @@
 #ifndef ANTHOCNET_H
 #define ANTHOCNET_H
 
-
-#include "anthocnet-config.h"
 #include "anthocnet-rtable.h"
 #include "anthocnet-packet.h"
 #include "anthocnet-pcache.h"
