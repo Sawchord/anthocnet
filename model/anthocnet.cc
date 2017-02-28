@@ -236,10 +236,6 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   // If not found, send it to loopback to handle it in the packet cache.
   //this->StartForwardAnt(dst);
   
-  // Since this initiates a Route Input without
-  // a preceeding Rx, we need to set Rx manually
-  //this->last_rx_begin = Simulator::Now();
-  
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
   // TODO: This seems to be buggy and lead to data drop
@@ -261,9 +257,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
   
   // TODO: Register activity for destination here
-  
-  // Claculate the new average receive time
-  //this->UpdateAvrTMac();
   
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
@@ -1060,10 +1053,10 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleHelloAnt(packet, iface);
       break;
     case AHNTYPE_FW_ANT:
-      this->HandleForwardAnt(packet, iface, MilliSeconds(10));
+      this->HandleForwardAnt(packet, iface);
       break;
     case AHNTYPE_BW_ANT:
-      this->HandleBackwardAnt(packet, iface, MilliSeconds(10));
+      this->HandleBackwardAnt(packet, iface);
       break;
     
     default:
@@ -1157,8 +1150,7 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
-                                       uint32_t iface, Time T_mac) {
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   
   ForwardAntHeader ant;
   packet->RemoveHeader(ant);
@@ -1245,24 +1237,16 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet,
   return;
 }
 
-void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,  
-                                        uint32_t iface, Time T_mac) {
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
   
   // Deserialize the ant
   BackwardAntHeader ant;
   packet->RemoveHeader(ant);
   
   if (!ant.IsValid()) {
-    NS_LOG_WARN("Received invalid BackwardAnt ->Dropped");
+    NS_LOG_WARN("Received invalid BackwardAnt -> Dropped");
     return;
   }
-  
-  
-  // FIXME: what does this here
-  // Update the running average on T_mac
-  //this->avr_T_mac = 
-  //  NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
-  //  + NanoSeconds((1 - this->alpha_T_mac) * T_mac.GetNanoSeconds());
   
   
   // Calculate the T_ind value used to update this ant
@@ -1288,11 +1272,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
   if (ant.GetHops() == 0) {
     if (ant.PeekThis() == tmp_if.GetLocal()) {
       NS_LOG_FUNCTION(this << "bwant reached its origin.");
+      
       // Now the RoutingTable needs an update
       if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
         ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) )) {
         this->SendCachedData(src);
-        //NS_LOG_UNCOND(this->rtable);
+      
       }
       return;
     }

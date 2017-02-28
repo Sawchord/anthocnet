@@ -519,7 +519,11 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   uint32_t nb_index = nbif_it->second.index;
   uint32_t dst_index = dst_it->second.index;
   
-  double T_id = 1.0 / ((T_sd + hops * this->T_hop) / 2);
+  // NOTE: This is the cost function.
+  // One could get crazy here and have some 
+  // really cool functions
+  
+  double T_id = ((T_sd + hops * this->T_hop) / 2);
   
   // Update the routing table
   RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
@@ -535,11 +539,11 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   
   // Check if pheromone value is NAN
   if (ra->pheromone != ra->pheromone) {
-    ra->pheromone = T_id;
+    ra->pheromone = (1.0 / T_id);
   }
   else {
     ra->pheromone = this->gamma_pheromone*ra->pheromone +
-      (1.0 - this->gamma_pheromone) * T_id;
+      (1.0 - this->gamma_pheromone) * (1.0 / T_id);
   }
   
   NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
