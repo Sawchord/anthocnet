@@ -86,7 +86,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
 bool RoutingTable::AddNeighbor(uint32_t iface_index, 
                                Ipv4Address address, Time expire) {
   
-  NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
+  //NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
   if (iface_index >= MAX_NEIGHBORS) {
     NS_LOG_ERROR("iface index to large index: " << iface_index);
@@ -95,16 +95,24 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
   
   // Before the neighbor can be added, it needs a destination.
   // Check if destination already exists
+  // TODO: Just add destination since it
+  // checks existance for you
   auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "create dst");
+    //NS_LOG_FUNCTION(this << "create dst");
     this->AddDestination(address);
     it = this->dsts.find(address);
   }
   
+  // If interface already exist, just return
+  auto it2 = it->second.nbs.find(iface_index);
+  if (it2 != it->second.nbs.end()) {
+	//NS_LOG_FUNCTION(this << "nb interface already exist");  
+	return false;
+  }
+  
   for (uint32_t i = 0; i < MAX_NEIGHBORS; i++) {
     if (!this->nb_usemap[i]) {
-      //this->nbs.insert(std::make_pair(new_nb, NeighborInfo(i, expire)));
       
       this->nb_usemap[i] = true;
       it->second.nbs.insert(std::make_pair(iface_index, 
@@ -114,7 +122,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
         this->rtable[j][i] = RoutingTableEntry();
       }
       
-      NS_LOG_FUNCTION(this << "index" << i);
+      //NS_LOG_FUNCTION(this << "index" << i);
       break;
     }
   }
@@ -126,19 +134,19 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
 
 void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
   
-  NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
+  //NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
   // Search for the destination
   auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "nb address does not exist");
+    //NS_LOG_FUNCTION(this << "nb address does not exist");
     return;
   }
   
   // Search for the interface
   auto nb_it = it->second.nbs.find(iface_index);
   if (nb_it == it->second.nbs.end()) {
-    NS_LOG_FUNCTION(this << "nb not on this interface");
+    //NS_LOG_FUNCTION(this << "nb not on this interface");
     return;
   }
   
@@ -165,7 +173,7 @@ bool RoutingTable::AddDestination(Ipv4Address address) {
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
   
-  NS_LOG_FUNCTION(this << "address" << address);
+  //NS_LOG_FUNCTION(this << "address" << address);
   
   if (this->n_dst == MAX_DESTINATIONS-1) {
     NS_LOG_ERROR(this << "Out of destination slots in rtable");
@@ -185,13 +193,13 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
       this->dsts.insert(std::make_pair(address, DestinationInfo(i, expire)));
       
       // Reset the row in the array
-      uint32_t delete_index = it->second.index;
-      NS_LOG_FUNCTION(this << "index" << delete_index);
+      //uint32_t delete_index = it->second.index;
+      //NS_LOG_FUNCTION(this << "index" << delete_index);
       for (uint32_t j = 0; j < MAX_NEIGHBORS; j++) {
         this->rtable[i][j] = RoutingTableEntry();
       }
       
-      NS_LOG_FUNCTION(this << "index" << i);
+      //NS_LOG_FUNCTION(this << "index" << i);
       break;
     }
   }
@@ -286,20 +294,20 @@ void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
 
 void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
-  NS_LOG_FUNCTION(this << "address" << address);
+  //NS_LOG_FUNCTION(this << "address" << address);
   
   // Search destination, add if no exist
   auto dst_it = this->dsts.find(address);
   if (dst_it == this->dsts.end()) {
     this->AddNeighbor(iface_index, address);
-    NS_LOG_FUNCTION(this << "added nbs address");
+    //NS_LOG_FUNCTION(this << "added nbs address");
     return;
   }
   
   auto nb_it = dst_it->second.nbs.find(iface_index);
   if (nb_it == dst_it->second.nbs.end()) {
     this->AddNeighbor(iface_index, address);
-    NS_LOG_FUNCTION(this << "added nbs interface");
+    //NS_LOG_FUNCTION(this << "added nbs interface");
     return;
   }
   
@@ -453,15 +461,15 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
     return;
   }
   
-  auto nb_it1 = this->dsts.find(msg.GetSrc());
-  if (nb_it1 == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "could not find src -> dropped");
-    return;
-  }
+  //auto nb_it1 = this->dsts.find(msg.GetSrc());
+  //if (nb_it1 == this->dsts.end()) {
+  //  NS_LOG_FUNCTION(this << "could not find src -> dropped");
+  //  return;
+  //}
   
-  auto nb_it2 = nb_it1->second.nbs.find(iface);
-  if (nb_it2 == nb_it1->second.nbs.end()) {
-  }
+  //auto nb_it2 = nb_it1->second.nbs.find(iface);
+  //if (nb_it2 == nb_it1->second.nbs.end()) {
+  //}
   
   // Bootstrap information for every possible destination
   while (msg.GetSize() != 0) {
@@ -470,16 +478,46 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
     
     // Get destination or add if not yet exist
     this->AddDestination(pos_dst.first);
-    //auto dst_it = this->dsts.find(pos_dst.first);
+    this->AddDestination(msg.GetSrc());
+  
+    // Get iterators to the destination and the neigbor
+    auto dst_it = this->dsts.find(pos_dst.first);
+    auto nb_it1 = this->dsts.find(msg.GetSrc());
     
-	// TODO: Use better estimation of information goodness
-	double bootstrap_info = 1/(1/(pos_dst.second) + 10);
-	NS_LOG_FUNCTION(this << "bootstapped" << bootstrap_info << "from" << pos_dst.second );
+    this->AddNeighbor(iface, msg.GetSrc());
+    auto nb_it2 = nb_it1->second.nbs.find(iface);
+    
+    uint32_t dst_index = dst_it->second.index;
+    uint32_t nb_index = nb_it2->second.index;
+    
+    bool is_virtual = false;
+    
+    if (pos_dst.second < 0) {
+      is_virtual = true;
+      pos_dst.second *= -1.0;
+    }
+    
+    // TODO: Use better estimation of information goodness
+    double bootstrap_info = (1.0/ (1.0/(pos_dst.second) + 10));
+    NS_LOG_FUNCTION(this << "bootstapped" 
+      << bootstrap_info << "from" << pos_dst.second 
+      << "dst" << pos_dst.first << "nb" << msg.GetSrc()
+      << "dst_in" << dst_index << "nb_index" << nb_index
+      << "virt" << is_virtual);
+      
+    RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
+    
+    // TODO: Add special case where real pheromone is used
+    
+    if (ra->virtual_pheromone != ra->virtual_pheromone) {
+      ra->virtual_pheromone = bootstrap_info;
+    }
+    else {
+      ra->virtual_pheromone = this->alpha_pheromone*ra->virtual_pheromone +
+        (1.0 - this->alpha_pheromone) * (bootstrap_info);
+    }
     
   }
-  
-  
-  
 }
 
 bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
@@ -549,8 +587,6 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
     << "average hops" << ra->avr_hops
     << "for" << dst_it->first << nb_it->first);
-  
-  //NS_LOG_UNCOND(this);
   
   return true;
 }

@@ -636,8 +636,12 @@ void RoutingExperiment::Run (double txp) {
   
   // Start the net animator
   AnimationInterface anim (tr_name + "_animation.xml");
+  
   anim.EnablePacketMetadata ();
   anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), Seconds(TotalTime), MilliSeconds(100));
+  
+  // reduce anim file, if only positions is needed
+  anim.SkipPacketTracing();
   
   Ptr<FlowMonitor> flowmon;
   FlowMonitorHelper flowmonHelper;

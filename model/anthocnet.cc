@@ -234,13 +234,12 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   
   // NOTE: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
-  //this->StartForwardAnt(dst);
+  // this->StartForwardAnt(dst);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
   // TODO: This seems to be buggy and lead to data drop
   return this->LoopbackRoute(header, oif);
-  //return 
 }
 
 
@@ -527,8 +526,6 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
 
 void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   
-  // TODO: Support MacLayer?
-  
   NS_LOG_FUNCTION (this << this->ipv4->GetAddress (interface, 0).GetLocal ());
   
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol> ();
@@ -545,10 +542,20 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
   Ptr<WifiNetDevice> wifi = dev->GetObject<WifiNetDevice> ();
   if (wifi != 0) {
     Ptr<WifiMac> mac = wifi->GetMac()->GetObject<AdhocWifiMac>();
+    Ptr<WifiPhy> phy = wifi->GetPhy();
     if (mac != 0) {
       mac->TraceDisconnectWithoutContext ("TxErrHeader",
         MakeCallback(&RoutingProtocol::ProcessTxError, this));
         
+        mac->TraceDisconnectWithoutContext ("MacRx",
+        MakeCallback(&RoutingProtocol::ProcessMacRxTrace, this));
+      
+      phy->TraceDisconnectWithoutContext ("PhyRxBegin",
+        MakeCallback(&RoutingProtocol::ProcessPhyRxTrace, this));
+      
+      phy->TraceDisconnectWithoutContext ("MonitorSnifferRx",
+        MakeCallback(&RoutingProtocol::ProcessMonitorSnifferRx, this));
+      
       this->DelArpCache(l3->GetInterface(interface)->GetArpCache());
     }
   }
@@ -743,7 +750,7 @@ void RoutingProtocol::Start() {
 Ptr<Socket> RoutingProtocol::FindSocketWithInterfaceAddress (
   Ipv4InterfaceAddress addr ) const
 {
-  NS_LOG_FUNCTION (this << addr);
+  //NS_LOG_FUNCTION (this << addr);
   for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j =
     this->socket_addresses.begin (); j != this->socket_addresses.end (); ++j)
   {
@@ -1128,7 +1135,7 @@ void RoutingProtocol::HelloTimerExpire() {
 }
 
 void RoutingProtocol::RTableTimerExpire() {
-  NS_LOG_FUNCTION(this);
+  //NS_LOG_FUNCTION(this);
   
   this->rtable.Update(this->rtable_update_interval);
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
@@ -1144,7 +1151,8 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg, iface);
-  // TODO: implement the information bootstrap algorithm and execute it here
+  
+  NS_LOG_UNCOND(this->rtable);
   
   return;
 
@@ -1249,8 +1257,17 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
   }
   
   
+  //this->avr_T_mac = 
+  // NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
+  // + NanoSeconds((1 - this->alpha_T_mac) * MilliSeconds(10).GetNanoSeconds());
+  
+  //this->avr_T_mac 
+  //  = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * MilliSeconds(0);
+
+   
   // Calculate the T_ind value used to update this ant
-  uint64_t T_ind =  (1) * this->avr_T_mac.GetNanoSeconds();
+  uint64_t T_ind = this->avr_T_mac.GetNanoSeconds();
+  
   
   //NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac 
   //  << "given T_mac" << T_mac << "T_ind" << T_ind);
@@ -1292,7 +1309,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
   if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
     ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) )) {
     this->UnicastBackwardAnt(iface, next_dst, ant);
-    //NS_LOG_UNCOND(this->rtable);
+    NS_LOG_UNCOND(this->rtable);
   }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
