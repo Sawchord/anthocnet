@@ -186,6 +186,8 @@ public:
   Ipv4Address GetDst();
   void SetDst(Ipv4Address dst);
   
+  void SetBCount(uint8_t count);
+  bool DecBCount();
   
 protected:
   

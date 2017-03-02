@@ -808,6 +808,8 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   Ipv4Address this_node = it->second.GetLocal();
   ForwardAntHeader ant (this_node, dst, this->initial_ttl);
   
+  // TODO: Make max broadcast settable
+  ant.SetBCount(10);
   this->UnicastForwardAnt(iface, nb, ant);
 }
 
@@ -942,6 +944,8 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
     Ipv4Address this_node = iface.GetLocal();
     
     ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+    ant.SetBCount(10);
+    
     this->BroadcastForwardAnt(dst, ant);
     
   }
@@ -1227,18 +1231,34 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   if(!this->rtable.SelectRoute(final_dst, 2.0, 
       next_iface, next_nb, this->uniform_random)) {
     
-    // FIXME: The protocol says, broadcast, but since this leads to massive 
-    // floods, we randomly select for now
-    this->BroadcastForwardAnt(final_dst, ant);
-    return;
+    //this->BroadcastForwardAnt(final_dst, ant);
+    //return;
     
     //if (!this->rtable.SelectRandomRoute(next_iface,
-    //    next_nb, this->uniform_random)) {
+    ///    next_nb, this->uniform_random)) {
     //  NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
     //  return;
     //}
     //NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
     //return;
+    
+    // This is the new Implementation using a 
+    // counted amount of broadcasr
+    if (ant.DecBCount()) {
+      this->BroadcastForwardAnt(final_dst, ant);
+      NS_LOG_FUNCTION(this << "nonrandom select");
+      return;
+    }
+    else {
+      if (!this->rtable.SelectRandomRoute(next_iface,
+        next_nb, this->uniform_random)) {
+        NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
+        return;
+      }
+      NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
+      // Do not return, instead go on tu unicast
+    }*/
+    
   }
   
   this->UnicastForwardAnt(next_iface, next_nb, ant);

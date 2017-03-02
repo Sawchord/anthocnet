@@ -369,6 +369,20 @@ uint64_t AntHeader::GetT() {
   return this->T;
 }
 
+void AntHeader::SetBCount(uint8_t count) {
+  if (count > 0x0F) count = 0x0F;
+  this->flags = ((this->flags & 0xF0) | (count & 0x0F));
+}
+
+bool AntHeader::DecBCount() {
+  if (this->flags & 0x0F) {
+    this->flags--;
+    return true;
+  }
+  else {
+    return false;
+  }
+}
 
 std::ostream& operator<< (std::ostream & os, AntHeader const & h) {
   h.Print (os);
