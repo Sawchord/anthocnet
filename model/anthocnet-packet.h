@@ -40,10 +40,8 @@ typedef enum MessageType {
   AHNTYPE_FW_ANT = 1, //!< Forward Ant
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
   AHNTYPE_BW_ANT = 3, //!< Backward Ant
-  AHNTYPE_HELLO = 4, //!< Hello Packet
-  AHNTYPE_DATA = 5, //!< Data packet
-  AHNTYPE_RREP_ANT = 6, //!< RouteRepair Ant
-  AHNTYPE_ERR = 7 //!< Error Ant
+  AHNTYPE_HELLO_MSG = 4, //!< Hello Packet
+  AHNTYPE_HELLO_ACK = 5 //!< Hello Acknowledgement
 } mtype_t;
 
 typedef std::pair<Ipv4Address, double> diffusion_t;
@@ -57,7 +55,7 @@ class TypeHeader : public Header {
 public:
   
   //ctor
-  TypeHeader(MessageType t = AHNTYPE_HELLO);
+  TypeHeader(MessageType t = AHNTYPE_HELLO_MSG);
   //dtor
   ~TypeHeader();
   
@@ -130,7 +128,7 @@ private:
 0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |     Type      |    Reserved   |  TTL/Max Hops |   Hop Count   |
+  |     Type      |     Flags     |  TTL/Max Hops |   Hop Count   |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   |                        Source IP Address                      |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -192,7 +190,7 @@ public:
 protected:
   
   // Not used for now, set 0 on send, ignored on recv
-  uint8_t reserved;
+  uint8_t flags;
   
   // This field inidicates the time to life on a fwd ant
   // and the maximum number of hops from src to dst on a bw ant

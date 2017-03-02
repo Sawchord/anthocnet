@@ -62,10 +62,8 @@ uint32_t TypeHeader::Deserialize (Buffer::Iterator start) {
     case AHNTYPE_FW_ANT:
     case AHNTYPE_BW_ANT:
     case AHNTYPE_PRFW_ANT:
-    case AHNTYPE_HELLO:
-    case AHNTYPE_DATA:
-    case AHNTYPE_RREP_ANT:
-    case AHNTYPE_ERR:
+    case AHNTYPE_HELLO_MSG:
+    case AHNTYPE_HELLO_ACK:
       this->type = (MessageType) type;
       break;
     default:
@@ -95,25 +93,14 @@ void TypeHeader::Print (std::ostream &os) const {
       os << "BACKWARD_ANT";
       break;
     }
-    case AHNTYPE_HELLO:
+    case AHNTYPE_HELLO_MSG:
     {
-      os << "HELLO_MESSAGE";
+      os << "HELLO_MSG";
       break;
     }
-    case AHNTYPE_DATA:
+    case AHNTYPE_HELLO_ACK:
     {
-      os << "DATA";
-      break;
-    }
-    case AHNTYPE_RREP_ANT:
-    {
-      os << "REPAIR_ANT";
-      break;
-    }
-    case AHNTYPE_ERR:
-    {
-      os << "ERROR";
-      break;
+      os << "HELLO_ACK";
     }
     default:
       os << "UNKNOWN_TYPE";
@@ -233,9 +220,6 @@ uint32_t HelloMsgHeader::Deserialize(Buffer::Iterator start) {
       
       memcpy(&pheromone, &buf, sizeof(double));
       
-      //double pheromone = (double) i.ReadNtohU64();
-      
-      
       this->diffusion.push_back(std::make_pair(address, pheromone));
     }
     
@@ -266,7 +250,7 @@ std::ostream& operator<< (std::ostream & os, HelloMsgHeader const & h) {
 // Ant Header
 AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst, 
   uint8_t ttl_or_max_hops, uint8_t hops, uint64_t T) : 
-reserved(0), 
+flags(0), 
 ttl_or_max_hops(ttl_or_max_hops), hops(hops),
 src(src), dst(dst), T(T)
 {}
@@ -301,7 +285,7 @@ uint32_t AntHeader::GetSerializedSize () const {
 
 void AntHeader::Serialize (Buffer::Iterator i) const {
   // Write the first line
-  i.WriteU8 (0x0); // Reserved is always 0 for now
+  i.WriteU8 (this->flags); // Reserved is always 0 for now
   i.WriteU8 (this->ttl_or_max_hops);
   i.WriteU8 (this->hops);
   
@@ -324,7 +308,7 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   Buffer::Iterator i = start;
   
   // Read the first line
-  this->reserved = 0x0; i.ReadU8 (); // Skip reserved
+  this->flags = i.ReadU8 ();
   this->ttl_or_max_hops = i.ReadU8 ();
   this->hops = i.ReadU8 ();
   

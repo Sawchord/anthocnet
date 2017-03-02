@@ -328,7 +328,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     // Also start a forward ant towards the destination
     
     CacheEntry ce;
-    ce.type = AHNTYPE_DATA;
+    //ce.type = AHNTYPE_DATA;
     ce.iface = 0;
     ce.header = header;
     ce.packet = p;
@@ -1056,7 +1056,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // TODO: Better T_mac value than presented here
   // Now enqueue the received packets
   switch (type.Get()) {
-    case AHNTYPE_HELLO:
+    case AHNTYPE_HELLO_MSG:
       this->HandleHelloAnt(packet, iface);
       break;
     case AHNTYPE_FW_ANT:
@@ -1103,7 +1103,7 @@ void RoutingProtocol::HelloTimerExpire() {
     
     this->rtable.ConstructHelloMsg(hello_msg, 10, this->uniform_random);
     
-    TypeHeader type_header(AHNTYPE_HELLO);
+    TypeHeader type_header(AHNTYPE_HELLO_MSG);
     Ptr<Packet> packet = Create<Packet>();
     
     SocketIpTtlTag tag;
@@ -1152,7 +1152,7 @@ void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg, iface);
   
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   
   return;
 
@@ -1309,7 +1309,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
   if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
     ant.GetT(), (ant.GetMaxHops() - ant.GetHops()) )) {
     this->UnicastBackwardAnt(iface, next_dst, ant);
-    NS_LOG_UNCOND(this->rtable);
+    //NS_LOG_UNCOND(this->rtable);
   }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
