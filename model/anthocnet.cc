@@ -1031,7 +1031,69 @@ void RoutingProtocol::ProcessMacRxTrace(Ptr<Packet const> packet) {
 }
 
 // -------------------------------------------------------
-// Callback functions used in receiving and timers
+// Callback functions used in  timers
+void RoutingProtocol::HelloTimerExpire() {
+  
+  this->last_hello = Simulator::Now();
+  
+  // send a hello over each socket
+  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
+      it = this->socket_addresses.begin();
+      it != this->socket_addresses.end(); ++it) {
+    
+    Ptr<Socket> socket = it->first;
+    Ipv4InterfaceAddress iface = it->second;
+    
+    Ipv4Address src = iface.GetLocal();
+    
+    if (src == Ipv4Address("127.0.0.1")) {
+      continue;
+    }
+    
+    HelloMsgHeader hello_msg(src);
+    
+    this->rtable.ConstructHelloMsg(hello_msg, 10, this->uniform_random);
+    
+    TypeHeader type_header(AHNTYPE_HELLO_MSG);
+    Ptr<Packet> packet = Create<Packet>();
+    
+    SocketIpTtlTag tag;
+    tag.SetTtl(1);
+    
+    packet->AddPacketTag(tag);
+    packet->AddHeader(hello_msg);
+    packet->AddHeader(type_header);
+    
+    Ipv4Address destination;
+    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+        destination = Ipv4Address ("255.255.255.255");
+    } else { 
+        destination = iface.GetBroadcast ();
+    }
+    
+    NS_LOG_FUNCTION(this << "iface" << iface << "packet" << *packet);
+    
+    // Jittery send simulates clock divergence
+    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+    
+    // NOTE: The simulation does not work with jitter set to fixed value
+    // Is this due to a bug, or is it due to all nodes sneding at once
+    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+      this, socket, packet, destination);
+  }
+  
+  this->hello_timer.Schedule(this->hello_interval);
+}
+
+void RoutingProtocol::RTableTimerExpire() {
+  //NS_LOG_FUNCTION(this);
+  
+  this->rtable.Update(this->rtable_update_interval);
+  this->rtable_update_timer.Schedule(this->rtable_update_interval);
+}
+
+// -----------------------------------------------------
+// Receiving and Sending stuff
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
   
   // retrieve soucre
@@ -1103,67 +1165,6 @@ void RoutingProtocol::Send(Ptr<Socket> socket,
     << "destination" << destination << "socket" << socket);
   socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
 }
-
-void RoutingProtocol::HelloTimerExpire() {
-  
-  this->last_hello = Simulator::Now();
-  
-  // send a hello over each socket
-  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-      it = this->socket_addresses.begin();
-      it != this->socket_addresses.end(); ++it) {
-    
-    Ptr<Socket> socket = it->first;
-    Ipv4InterfaceAddress iface = it->second;
-    
-    Ipv4Address src = iface.GetLocal();
-    
-    if (src == Ipv4Address("127.0.0.1")) {
-      continue;
-    }
-    
-    HelloMsgHeader hello_msg(src);
-    
-    this->rtable.ConstructHelloMsg(hello_msg, 10, this->uniform_random);
-    
-    TypeHeader type_header(AHNTYPE_HELLO_MSG);
-    Ptr<Packet> packet = Create<Packet>();
-    
-    SocketIpTtlTag tag;
-    tag.SetTtl(1);
-    
-    packet->AddPacketTag(tag);
-    packet->AddHeader(hello_msg);
-    packet->AddHeader(type_header);
-    
-    Ipv4Address destination;
-    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
-        destination = Ipv4Address ("255.255.255.255");
-    } else { 
-        destination = iface.GetBroadcast ();
-    }
-    
-    NS_LOG_FUNCTION(this << "iface" << iface << "packet" << *packet);
-    
-    // Jittery send simulates clock divergence
-    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-    
-    // NOTE: The simulation does not work with jitter set to fixed value
-    // Is this due to a bug, or is it due to all nodes sneding at once
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-      this, socket, packet, destination);
-  }
-  
-  this->hello_timer.Schedule(this->hello_interval);
-}
-
-void RoutingProtocol::RTableTimerExpire() {
-  //NS_LOG_FUNCTION(this);
-  
-  this->rtable.Update(this->rtable_update_interval);
-  this->rtable_update_timer.Schedule(this->rtable_update_interval);
-}
-
 // -------------------------------------------------------
 // Handlers of the different Ants
 
