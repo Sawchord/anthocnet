@@ -101,6 +101,7 @@ void TypeHeader::Print (std::ostream &os) const {
     case AHNTYPE_HELLO_ACK:
     {
       os << "HELLO_ACK";
+      break;
     }
     default:
       os << "UNKNOWN_TYPE";

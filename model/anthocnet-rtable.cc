@@ -278,19 +278,18 @@ void RoutingTable::ProcessAck(Ipv4Address address, uint32_t iface,
   }
   
   Time delta = Simulator::Now() - last_hello;
-  
   Time avr = nb_it->second.avr_T_send;
   
   if (avr == Seconds(0)) {
     nb_it->second.avr_T_send = delta;
   }
   else {
-    nb_it->second.avr_T_send = (eta_value * avr) +
-      ((1.0 - eta_value) * delta);
+    nb_it->second.avr_T_send = NanoSeconds(eta_value * avr.GetNanoSeconds()) +
+      NanoSeconds((1.0 - eta_value) * delta.GetNanoSeconds());
   }
   
   NS_LOG_FUNCTION(this << "dst" << address << "iface" << iface
-    << "new avr_T_send" << nb_it->second.avr_T_send);
+    << "new avr_T_send" << nb_it->second.avr_T_send.GetMicroSeconds());
   
 }
 

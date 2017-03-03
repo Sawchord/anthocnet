@@ -1119,8 +1119,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
-    // NOTE: Doing this here is ok, since inly AntHocnet Port
-    // comes here, and AnthocNet uses Ipv4 transparent
+    // NOTE: Doing this here is ok, since only AntHocnet Port
+    // comes here, and AnthocNet uses Ipv4 transparently
     this->rtable.UpdateNeighbor(iface, src);
     
     NS_LOG_FUNCTION(this << "socket" << socket 
@@ -1140,7 +1140,11 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO_MSG:
-      this->HandleHelloAnt(packet, iface);
+      this->HandleHelloMsg(packet, iface);
+      break;
+    case AHNTYPE_HELLO_ACK:
+      this->rtable.ProcessAck(src, iface, 
+                              this->eta_value, this->last_hello);
       break;
     case AHNTYPE_FW_ANT:
       this->HandleForwardAnt(packet, iface);
@@ -1168,7 +1172,7 @@ void RoutingProtocol::Send(Ptr<Socket> socket,
 // -------------------------------------------------------
 // Handlers of the different Ants
 
-void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
+void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);

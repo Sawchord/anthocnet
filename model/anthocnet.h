@@ -173,7 +173,10 @@ private:
   // Ant Handlers
   
   // Handles receiving of a HelloAnt
-  void HandleHelloAnt(Ptr<Packet> packet, uint32_t iface);
+  void HandleHelloMsg(Ptr<Packet> packet, uint32_t iface);
+  
+  // Handles receiving of a HelloAck
+  void HandleHelloAck(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a ForwardAnt
   void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface);
@@ -249,7 +252,6 @@ private:
   
   // Last time the Hello Timer expired
   Time last_hello;
-  
   
   // The running average of the T_mac value
   // This is calculated by getting the Time difference
