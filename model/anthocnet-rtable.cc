@@ -461,16 +461,6 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
     return;
   }
   
-  //auto nb_it1 = this->dsts.find(msg.GetSrc());
-  //if (nb_it1 == this->dsts.end()) {
-  //  NS_LOG_FUNCTION(this << "could not find src -> dropped");
-  //  return;
-  //}
-  
-  //auto nb_it2 = nb_it1->second.nbs.find(iface);
-  //if (nb_it2 == nb_it1->second.nbs.end()) {
-  //}
-  
   // Bootstrap information for every possible destination
   while (msg.GetSize() != 0) {
     
@@ -628,11 +618,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
   
   NS_LOG_FUNCTION(this << "dst" << dst);
-  
-  // TODO: check, if deterministicly choosing the Neighbor (makes sense to me)
-  // is really the way to go here 
-  // check, if the destination is a neigbor
-  // return Neighbor entry if so
   
   //Get the destination index:
   auto dst_it = this->dsts.find(dst);
