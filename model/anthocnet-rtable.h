@@ -179,6 +179,14 @@ public:
                    double eta_vlue, Time last_hello);
   
   /**
+   * @brief Returns average send round trip transmission time.
+   * @param address The address of the neighbor.
+   * @param iface The interface of the neighbor.
+   * @return The round trip time or 0 if there is no such neighbor.
+   */
+  Time GetTSend(Ipv4Address address, uint32_t iface);
+  
+  /**
    * @brief Disables broadcast to a destination for a certain amount of time.
    * @param address The address to disallow the broadcast to
    * @param duration The time, until broadcast is allowed again

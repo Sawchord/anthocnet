@@ -293,6 +293,20 @@ void RoutingTable::ProcessAck(Ipv4Address address, uint32_t iface,
   
 }
 
+Time RoutingTable::GetTSend(Ipv4Address address, uint32_t iface) {
+  
+  auto dst_it = this->dsts.find(address);
+  if (dst_it == this->dsts.end()) {
+    return Seconds(0);
+  }
+  
+  auto nb_it = dst_it->second.nbs.find(iface);
+  if (nb_it == dst_it->second.nbs.end()) {
+    return Seconds(0);
+  }
+  return nb_it->second.avr_T_send;
+}
+
 void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
   
   auto dst_it = this->dsts.find(address);

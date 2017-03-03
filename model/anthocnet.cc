@@ -1150,7 +1150,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleForwardAnt(packet, iface);
       break;
     case AHNTYPE_BW_ANT:
-      this->HandleBackwardAnt(packet, iface);
+      this->HandleBackwardAnt(packet, src, iface);
       break;
     
     default:
@@ -1302,7 +1302,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   return;
 }
 
-void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
+void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, 
+                                        Ipv4Address orig_src, uint32_t iface) {
   
   // Deserialize the ant
   BackwardAntHeader ant;
@@ -1323,8 +1324,9 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet, uint32_t iface) {
 
    
   // Calculate the T_ind value used to update this ant
-  uint64_t T_ind = this->avr_T_mac.GetNanoSeconds();
+  //uint64_t T_ind = this->avr_T_mac.GetNanoSeconds();
   
+  uint64_t T_ind = this->rtable.GetTSend(orig_src, iface).GetNanoSeconds();
   
   //NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac 
   //  << "given T_mac" << T_mac << "T_ind" << T_ind);
