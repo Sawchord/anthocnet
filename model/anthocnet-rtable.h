@@ -91,6 +91,9 @@ public:
   // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
   Time expires_in;
   
+  // Average time to send data to this neighbor
+  Time avr_T_send;
+  
 };
 
 
@@ -112,6 +115,10 @@ public:
   // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
   Time no_broadcast_time;
   
+  // Last Time a RouteOutput was called on this destination.
+  // Important for the proactive ants
+  Time session_time;
+  
   // A map of all interfaces on this node, trough that the 
   // Destination can be reached. If this map is not empty, it means the 
   // destination is a neigbor
@@ -128,8 +135,6 @@ public:
   RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double alpha, double gamma);
   //dtor 
   ~RoutingTable();
-    
-  // TODO: Develop plausible API for the routing table.
   
   /**
    * @brief Adds a neighbor to the routing table

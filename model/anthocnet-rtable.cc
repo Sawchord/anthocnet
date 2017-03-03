@@ -41,7 +41,8 @@ RoutingTableEntry::~RoutingTableEntry() {}
 DestinationInfo::DestinationInfo(uint32_t index, Time expire) :
   index(index),
   expires_in(expire),
-  no_broadcast_time(Seconds(0))
+  no_broadcast_time(Seconds(0)),
+  session_time(Seconds(0))
   {}
 
 DestinationInfo::~DestinationInfo() {
@@ -51,7 +52,8 @@ DestinationInfo::~DestinationInfo() {
 // --------------------------------------------------------
 NeighborInfo::NeighborInfo(uint32_t index, Time expire) :
   index(index),
-  expires_in(expire)
+  expires_in(expire),
+  avr_T_send(Seconds(0))
   {}
 
 NeighborInfo::~NeighborInfo() {

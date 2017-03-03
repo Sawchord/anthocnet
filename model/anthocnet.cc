@@ -32,9 +32,12 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
+  pr_ant_interval(MilliSeconds(1000)),
+  pr_ant_timer(Timer::CANCEL_ON_DESTROY),
   dcache_expire(MilliSeconds(500000)),
   nb_expire(MilliSeconds(5000)),
   dst_expire(Seconds(30)),
+  session_expire(Seconds(10)),
   no_broadcast(MilliSeconds(100)),
   alpha_T_mac(0.7),
   T_hop(0.2),
@@ -46,6 +49,7 @@ RoutingProtocol::RoutingProtocol ():
   
   // These are no configs but rather inital values 
   last_rx_begin(Seconds(0)),
+  last_hello(Seconds(0)),
   avr_T_mac(Seconds(0)),
   last_snr(snr_threshold),
   
@@ -92,6 +96,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     "Time without traffic, after which a destination is considered offline.",
     TimeValue (Seconds(30)),
     MakeTimeAccessor(&RoutingProtocol::dst_expire),
+    MakeTimeChecker()
+  )
+  .AddAttribute ("SessionExpire",
+    "Time without outbound traffic, after a session is considered over",
+    TimeValue (Seconds(10)),
+    MakeTimeAccessor(&RoutingProtocol::session_expire),
     MakeTimeChecker()
   )
   .AddAttribute("InitialTTL",
@@ -152,6 +162,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     "The interval, in which the RoutingTable is updated.",
     TimeValue (MilliSeconds(1000)),
     MakeTimeAccessor(&RoutingProtocol::rtable_update_interval),
+    MakeTimeChecker()
+  )
+  .AddAttribute ("ProactiveAntTimer",
+    "The interval, in which an active session sends out proactive ants",
+    TimeValue (MilliSeconds(1000)),
+    MakeTimeAccessor(&RoutingProtocol::pr_ant_interval),
     MakeTimeChecker()
   )
   .AddAttribute ("UniformRv",
@@ -730,6 +746,7 @@ void RoutingProtocol::Start() {
     &RoutingProtocol::RTableTimerExpire, this);
   this->rtable_update_timer.Schedule(this->rtable_update_interval);
   
+  // TODO: Start pr ant timer
   
   // Open socket on the loopback
   
@@ -1088,7 +1105,9 @@ void RoutingProtocol::Send(Ptr<Socket> socket,
 }
 
 void RoutingProtocol::HelloTimerExpire() {
-    
+  
+  this->last_hello = Simulator::Now();
+  
   // send a hello over each socket
   for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
       it = this->socket_addresses.begin();
@@ -1150,11 +1169,24 @@ void RoutingProtocol::RTableTimerExpire() {
 
 void RoutingProtocol::HandleHelloAnt(Ptr<Packet> packet, uint32_t iface) {
   
-  NS_LOG_FUNCTION (this << iface);
-  
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg, iface);
+  
+  NS_LOG_FUNCTION (this << iface << "packet" << *packet);
+  
+  // Prepare ack
+  Ptr<Packet> packet2 = Create<Packet>();
+  TypeHeader type_header(AHNTYPE_HELLO_ACK);
+  packet2->AddHeader(type_header);
+  
+  Ipv4Address dst = hello_msg.GetSrc();
+  
+  Ptr<Socket> socket = this->sockets[iface];
+  
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    this, socket, packet2, dst);
   
   //NS_LOG_UNCOND(this->rtable);
   
@@ -1257,7 +1289,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
       }
       NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
       // Do not return, instead go on tu unicast
-    }*/
+    }
     
   }
   

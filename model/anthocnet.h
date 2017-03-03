@@ -187,6 +187,9 @@ private:
   // The time to live of a new born forward and
   uint8_t initial_ttl;
   
+  // -------------------------------------------------
+  // Timers and their intervals
+  
   // The frequency in which to send Hello Ants
   Time hello_interval;
   Timer hello_timer;
@@ -194,6 +197,11 @@ private:
   // Frequency, in which to update the RoutingTable
   Time rtable_update_interval;
   Timer rtable_update_timer;
+  
+  // Frequency, in which proactive ants are sent out
+  Time pr_ant_interval;
+  Timer pr_ant_timer;
+  
   
   // Time until an entry in the datacache expires and the packet is dropped
   Time dcache_expire;
@@ -203,6 +211,9 @@ private:
   
   // Time until a destination expires
   Time dst_expire;
+  
+  // Time after a RouteOutput that a session is considered active
+  Time session_expire;
   
   // Drawback time after a broadcast
   Time no_broadcast;
@@ -235,6 +246,10 @@ private:
   
   // Used to calculate avr_T_mac
   Time last_rx_begin;
+  
+  // Last time the Hello Timer expired
+  Time last_hello;
+  
   
   // The running average of the T_mac value
   // This is calculated by getting the Time difference
