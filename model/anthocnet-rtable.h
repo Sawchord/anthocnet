@@ -138,10 +138,10 @@ public:
   
   /**
    * @brief Adds a neighbor to the routing table
-   * @arg iface_index The index of the interface on which to
+   * @param iface_index The index of the interface on which to
    *  reach this neighbor
-   * @arg address The address of the neighbor
-   * @arg now The time when this addition was made
+   * @param address The address of the neighbor
+   * @param now The time when this addition was made
    * @returns True if neighbor was added, false if neighbor was already present
    */
   bool AddNeighbor(uint32_t iface_index, Ipv4Address address);
@@ -157,7 +157,7 @@ public:
   
   /**
    * @brief Adds a destination to the routing table
-   * @arg address The address of the destination
+   * @param address The address of the destination
    * @returns True if neighbor was added, false if neighbor already present.
    */
   bool AddDestination(Ipv4Address address);
@@ -171,9 +171,17 @@ public:
   bool IsBroadcastAllowed(Ipv4Address address);
   
   /**
+   * @brief Called, whenever an ACK packet is received.
+   * @param address The address of the node sending the ack.
+   * @param iface The interfac,on which the ack was received.
+   */
+  void ProcessAck(Ipv4Address address, uint32_t iface, 
+                   double eta_vlue, Time last_hello);
+  
+  /**
    * @brief Disables broadcast to a destination for a certain amount of time.
-   * @arg address The address to disallow the broadcast to
-   * @arg duration The time, until broadcast is allowed again
+   * @param address The address to disallow the broadcast to
+   * @param duration The time, until broadcast is allowed again
    */
   void NoBroadcast(Ipv4Address address, Time duration);
   

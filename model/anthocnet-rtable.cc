@@ -261,6 +261,39 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   return true;
 }
 
+void RoutingTable::ProcessAck(Ipv4Address address, uint32_t iface, 
+                               double eta_value, Time last_hello) {
+  
+  // If we get an ack without a Hello, what do do?
+  // Be happy or suspicios?
+  
+  auto dst_it = this->dsts.find(address);
+  if (dst_it == this->dsts.end()) {
+    return;
+  }
+  
+  auto nb_it = dst_it->second.nbs.find(iface);
+  if (nb_it == dst_it->second.nbs.end()) {
+    return;
+  }
+  
+  Time delta = Simulator::Now() - last_hello;
+  
+  Time avr = nb_it->second.avr_T_send;
+  
+  if (avr == Seconds(0)) {
+    nb_it->second.avr_T_send = delta;
+  }
+  else {
+    nb_it->second.avr_T_send = (eta_value * avr) +
+      ((1.0 - eta_value) * delta);
+  }
+  
+  NS_LOG_FUNCTION(this << "dst" << address << "iface" << iface
+    << "new avr_T_send" << nb_it->second.avr_T_send);
+  
+}
+
 void RoutingTable::NoBroadcast(Ipv4Address address, Time duration) {
   
   auto dst_it = this->dsts.find(address);
