@@ -256,7 +256,7 @@ std::list<Ipv4Address> RoutingTable::GetSessions() {
   
   std::list<Ipv4Address> ret;
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it){
-    if (Simulator::Now() - dst_it->second.session_time > this->session_expire){
+    if (Simulator::Now() - dst_it->second.session_time < this->session_expire){
       ret.push_back(dst_it->first);
     }
   }

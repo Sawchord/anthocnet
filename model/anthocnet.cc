@@ -1123,16 +1123,16 @@ void RoutingProtocol::HelloTimerExpire() {
 
 void RoutingProtocol::PrAntTimerExpire() {
   
-  /*for (auto dst_it = this->rtable.dsts.begin();
-    dst_it != this->rtable.dsts.end(); ++dst_it) {
-    
-    if (Simulator::Now() - dst_it->second.session_time < session_expire) {
-      // start proactive ant
-      // TODO
-      
-    }
-  }*/
+  NS_LOG_FUNCTION(this);
   
+  std::list<Ipv4Address> dests = this->rtable.GetSessions();
+  for (auto dst_it = dests.begin(); dst_it != dests.end(); ++dst_it) {
+    NS_LOG_FUNCTION(this << "sampling" << *dst_it);
+    this->StartForwardAnt(*dst_it, true);
+  }
+  
+  
+  this->pr_ant_timer.Schedule(this->pr_ant_interval);
 }
 
 void RoutingProtocol::RTableTimerExpire() {
