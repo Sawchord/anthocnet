@@ -663,7 +663,17 @@ bool RoutingTable::SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
 }
 
 bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
-  uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr) {
+                               uint32_t& iface, Ipv4Address& nb, 
+                               Ptr<UniformRandomVariable> vr) {
+  
+  return this->SelectRoute(dst, power, iface, nb, vr, false, 1.0);
+}
+
+
+bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
+                               uint32_t& iface, Ipv4Address& nb, 
+                               Ptr<UniformRandomVariable> vr,
+                               bool consider_virtual, double virtual_malus){
   
   NS_LOG_FUNCTION(this << "dst" << dst);
   

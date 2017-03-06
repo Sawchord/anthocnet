@@ -289,7 +289,11 @@ public:
    */
   bool SelectRoute(Ipv4Address dst, double power,
     uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
-      
+  
+  bool SelectRoute(Ipv4Address dst, double power,
+    uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+    bool use_virtual, double virtual_malus);
+  
   void Print(std::ostream& os) const;
   
 private:
