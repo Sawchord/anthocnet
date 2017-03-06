@@ -132,7 +132,8 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Time nb_expire, Time dst_expire, double T_hop, double alpha, double gamma);
+  RoutingTable(Time nb_expire, Time dst_expire, Time session_expire,
+               double T_hop, double alpha, double gamma);
   //dtor 
   ~RoutingTable();
   
@@ -169,6 +170,12 @@ public:
    * @param dst The destination to which the session is running
    */
   void RegisterSession(Ipv4Address dst);
+  
+  /**
+   * @brief Used to get all destintions with active sessions.
+   * @return List of destinations
+   */
+  std::list<Ipv4Address> GetSessions();
   
   /**
    * @brief Checks, if it is allowed to broadcast to that destination.
@@ -335,6 +342,7 @@ private:
   // Destinations, if they are unused
   Time initial_lifetime_dst;
   
+  Time session_expire;
   
 };
 

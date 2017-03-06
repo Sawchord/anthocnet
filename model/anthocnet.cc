@@ -53,7 +53,7 @@ RoutingProtocol::RoutingProtocol ():
   avr_T_mac(Seconds(0)),
   last_snr(snr_threshold),
   
-  rtable(RoutingTable(nb_expire, dst_expire, 
+  rtable(RoutingTable(nb_expire, dst_expire, session_expire, 
 					  T_hop, alpha_pheromone, gamma_pheromone)),
   data_cache(dcache_expire)
   {

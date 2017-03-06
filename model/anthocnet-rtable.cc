@@ -61,7 +61,7 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Time nb_expire, Time dst_expire,
+RoutingTable::RoutingTable(Time nb_expire, Time dst_expire, Time session_expire,
                            double T_hop, double alpha, double gamma) :
   n_dst(0),
   n_nb(0),
@@ -69,7 +69,8 @@ RoutingTable::RoutingTable(Time nb_expire, Time dst_expire,
   alpha_pheromone(alpha),
   gamma_pheromone(gamma),
   initial_lifetime_nb(nb_expire),
-  initial_lifetime_dst(dst_expire)
+  initial_lifetime_dst(dst_expire),
+  session_expire(session_expire)
 {
   // Initialize the usemaps
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) this->dst_usemap[i] = false;
@@ -249,6 +250,18 @@ void RoutingTable::RegisterSession(Ipv4Address dst) {
   
   dst_it->second.session_time = Simulator::Now();
   
+}
+
+std::list<Ipv4Address> RoutingTable::GetSessions() {
+  
+  std::list<Ipv4Address> ret;
+  for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it){
+    if (Simulator::Now() - dst_it->second.session_time > this->session_expire){
+      ret.push_back(dst_it->first);
+    }
+  }
+  
+  return ret;
 }
 
 bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
