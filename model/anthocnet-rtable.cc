@@ -675,6 +675,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
                                Ptr<UniformRandomVariable> vr,
                                bool consider_virtual, double virtual_malus){
   
+  
   NS_LOG_FUNCTION(this << "dst" << dst);
   
   //Get the destination index:
@@ -710,14 +711,27 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
       
       uint32_t nb_index = nb_it->second.index;
       
-      // Skip the unititialized entries
-      if (this->rtable[dst_index][nb_index].pheromone != 
-          this->rtable[dst_index][nb_index].pheromone) {
-        continue;
-      }
-      initialized++;
+      double pheromone = this->rtable[dst_index][nb_index].pheromone;
+      double virtual_pheromone = 
+        this->rtable[dst_index][nb_index].virtual_pheromone;
       
-      total_pheromone += pow(this->rtable[dst_index][nb_index].pheromone, power);
+      
+      if (pheromone == pheromone) {
+        initialized++;
+        if (consider_virtual && virtual_pheromone == virtual_pheromone) {
+          
+          if (virtual_pheromone > virtual_malus * pheromone) {
+            total_pheromone += pow(virtual_pheromone, power);
+          }
+          else {
+            total_pheromone += pow(pheromone, power);
+          }
+        }
+        else {
+          total_pheromone += pow(pheromone, power);
+        }
+      }
+      
     }
   }
   
@@ -746,14 +760,25 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
          nb_it != dst2_it->second.nbs.end(); ++nb_it) {
       
       uint32_t nb_index = nb_it->second.index;
+      double pheromone = this->rtable[dst_index][nb_index].pheromone;
+      double virtual_pheromone = 
+        this->rtable[dst_index][nb_index].virtual_pheromone;
+    
+      if (pheromone == pheromone) {
+        if (consider_virtual && virtual_pheromone == virtual_pheromone) {
+          
+          if (virtual_pheromone > virtual_malus * pheromone) {
+            selected += (pow(virtual_pheromone, power)/ total_pheromone);
+          }
+          else {
+            selected += (pow(pheromone, power)/ total_pheromone);
+          }
+        }
+        else {
+          selected += (pow(pheromone, power)/ total_pheromone);
+        }
+      } 
       
-      if (this->rtable[dst_index][nb_index].pheromone != 
-          this->rtable[dst_index][nb_index].pheromone) {
-        continue;
-      }
-      
-      selected += (pow(this->rtable[dst_index][nb_index].pheromone, power)
-                  / total_pheromone);
       
       NS_LOG_FUNCTION(this << "selected" << selected);
       
