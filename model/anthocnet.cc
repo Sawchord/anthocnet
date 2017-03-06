@@ -228,13 +228,15 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   // Try to find a destination in the rtable right away
   Ipv4Address dst = header.GetDestination();
   
+  this->rtable.RegisterSession(dst);
+  
   NS_LOG_FUNCTION(this << "oif" << oif << "dst" << dst);
   
   uint32_t iface;
   Ipv4Address nb;
   
   //NS_LOG_UNCOND(this->rtable);
-  if (this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
+  if (this->rtable.SelectRoute(dst, 20.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
     Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -250,7 +252,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   
   // NOTE: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
-  // this->StartForwardAnt(dst);
+  // this->StartForwardAnt(dst, false);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
@@ -355,7 +357,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     this->data_cache.CachePacket(dst, ce);
     
     // TODO: Only start FWAnt, if origin not 127.0.0.1
-    this->StartForwardAnt(dst);
+    this->StartForwardAnt(dst, false);
     return true;
   }
   
@@ -741,6 +743,10 @@ void RoutingProtocol::Start() {
   this->hello_timer.SetFunction(&RoutingProtocol::HelloTimerExpire, this);
   this->hello_timer.Schedule(this->hello_interval);
   
+  // Start the proacrive ant timer
+  this->pr_ant_timer.SetFunction(&RoutingProtocol::PrAntTimerExpire, this);
+  this->pr_ant_timer.Schedule(this->pr_ant_interval);
+  
   // Start the RTableUpdateTimer
   this->rtable_update_timer.SetFunction(
     &RoutingProtocol::RTableTimerExpire, this);
@@ -803,7 +809,7 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
 }
 
 
-void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
+void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   
   uint32_t iface;
   Ipv4Address nb;
@@ -811,12 +817,21 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   NS_LOG_FUNCTION(this);
   
   // Broadcast if no valid entries
-  //NS_LOG_UNCOND(this->rtable);
-  if (!this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random)) {
-    this->BroadcastForwardAnt(dst);
-    return;
-  }
   
+  if (is_proactive) {
+    if (!this->rtable.SelectRoute(dst, 2.0, iface, nb, this->uniform_random,
+      true, 1.10)) {
+      this->BroadcastForwardAnt(dst, true);
+      return;
+    }
+  }
+  else {
+    if (!this->rtable.SelectRoute(dst, 20.0, iface, nb, this->uniform_random,
+      false, 1.0)) {
+      this->BroadcastForwardAnt(dst, false);
+      return;
+    }
+  }
   // If destination was found, send an ant
   Ptr<Socket> socket = this->sockets[iface];
   std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator it
@@ -825,14 +840,19 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst) {
   Ipv4Address this_node = it->second.GetLocal();
   ForwardAntHeader ant (this_node, dst, this->initial_ttl);
   
-  // TODO: Make max broadcast settable
-  ant.SetBCount(10);
-  this->UnicastForwardAnt(iface, nb, ant);
+  // TODO: Make max broadcast settable by option
+  if (is_proactive) {
+    ant.SetBCount(2); 
+  }
+  else {
+    ant.SetBCount(10); 
+  }
+  this->UnicastForwardAnt(iface, nb, ant, is_proactive);
 }
 
 
 void RoutingProtocol::UnicastForwardAnt(uint32_t iface, 
-  Ipv4Address dst, ForwardAntHeader ant) {
+  Ipv4Address dst, ForwardAntHeader ant, bool is_proactive) {
   
   // Get the socket which runs on iface
   Ptr<Socket> socket = this->sockets[iface];
@@ -841,7 +861,14 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   
   // Create the packet and set it up correspondingly
   Ptr<Packet> packet = Create<Packet> ();
-  TypeHeader type_header(AHNTYPE_FW_ANT);
+  TypeHeader type_header;
+  
+  if (is_proactive) {
+    type_header = TypeHeader(AHNTYPE_PRFW_ANT);
+  }
+  else { 
+    type_header = TypeHeader(AHNTYPE_FW_ANT);
+  }
   
   SocketIpTtlTag tag;
   tag.SetTtl(ant.GetTTL());
@@ -886,8 +913,39 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   
 }
 
+void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
+  
+  
+  for (auto sock_it = this->socket_addresses.begin();
+      sock_it != this->socket_addresses.end(); ++sock_it) {
+    
+    Ptr<Socket> socket = sock_it->first;
+    Ipv4InterfaceAddress iface = sock_it->second;
+    
+    // skip the loopback interface
+    if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+      //NS_LOG_FUNCTION(this << "skip lo");
+      continue;
+    }
+    
+    Ipv4Address this_node = iface.GetLocal();
+    
+    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+    if (is_proactive) {
+      ant.SetBCount(2);
+    }
+    else {
+      ant.SetBCount(10);
+    }
+    
+    this->BroadcastForwardAnt(dst, ant, is_proactive);
+    
+  }
+}
+
 void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, 
-                                          ForwardAntHeader ant) {
+                                          ForwardAntHeader ant,
+                                          bool is_proactive) {
   
   if (!this->rtable.IsBroadcastAllowed(dst)) {
     NS_LOG_FUNCTION(this << "broadcast not allowed");
@@ -896,14 +954,11 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
   
   this->rtable.NoBroadcast(dst, this->no_broadcast);
   
-  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-      it = this->socket_addresses.begin(); 
-      it != this->socket_addresses.end(); ++it) {
+  for (auto sock_it = this->socket_addresses.begin(); 
+      sock_it != this->socket_addresses.end(); ++sock_it) {
     
-    Ptr<Socket> socket = it->first;
-    Ipv4InterfaceAddress iface = it->second;
-      
-    //Ipv4Address this_node = iface.GetLocal();  
+    Ptr<Socket> socket = sock_it->first;
+    Ipv4InterfaceAddress iface = sock_it->second;
     
     // skip the loopback interface
     if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
@@ -912,7 +967,14 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
     }
     
     NS_LOG_FUNCTION(this << "ant" << ant);
-    TypeHeader type_header(AHNTYPE_FW_ANT);
+    
+    TypeHeader type_header;
+    if (is_proactive) {
+      type_header = TypeHeader(AHNTYPE_PRFW_ANT);
+    }
+    else {
+      type_header = TypeHeader(AHNTYPE_FW_ANT); 
+    }
     
     Ptr<Packet> packet = Create<Packet> ();
     SocketIpTtlTag tag;
@@ -941,32 +1003,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
   
 }
 
-
-void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst) {
-  
-  
-  for (std::map<Ptr<Socket> , Ipv4InterfaceAddress>::const_iterator
-      it = this->socket_addresses.begin();
-      it != this->socket_addresses.end(); ++it) {
-    
-    Ptr<Socket> socket = it->first;
-    Ipv4InterfaceAddress iface = it->second;
-    
-    // skip the loopback interface
-    if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
-      //NS_LOG_FUNCTION(this << "skip lo");
-      continue;
-    }
-    
-    Ipv4Address this_node = iface.GetLocal();
-    
-    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
-    ant.SetBCount(10);
-    
-    this->BroadcastForwardAnt(dst, ant);
-    
-  }
-}
 
 // ---------------------------------------------------------------------
 // Callbacks for lower levels
@@ -1085,6 +1121,20 @@ void RoutingProtocol::HelloTimerExpire() {
   this->hello_timer.Schedule(this->hello_interval);
 }
 
+void RoutingProtocol::PrAntTimerExpire() {
+  
+  /*for (auto dst_it = this->rtable.dsts.begin();
+    dst_it != this->rtable.dsts.end(); ++dst_it) {
+    
+    if (Simulator::Now() - dst_it->second.session_time < session_expire) {
+      // start proactive ant
+      // TODO
+      
+    }
+  }*/
+  
+}
+
 void RoutingProtocol::RTableTimerExpire() {
   //NS_LOG_FUNCTION(this);
   
@@ -1136,7 +1186,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     << "type" << type
   );
   
-  // TODO: Better T_mac value than presented here
   // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO_MSG:
@@ -1265,24 +1314,14 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   Ipv4Address next_nb;
   uint32_t next_iface;
   //NS_LOG_UNCOND(this->rtable);
-  if(!this->rtable.SelectRoute(final_dst, 2.0, 
+  if(!this->rtable.SelectRoute(final_dst, 20.0, 
       next_iface, next_nb, this->uniform_random)) {
-    
-    //this->BroadcastForwardAnt(final_dst, ant);
-    //return;
-    
-    //if (!this->rtable.SelectRandomRoute(next_iface,
-    ///    next_nb, this->uniform_random)) {
-    //  NS_LOG_FUNCTION(this << "no routes -> Ant dropped");
-    //  return;
-    //}
-    //NS_LOG_FUNCTION(this << "random selected" << next_nb << next_iface);
-    //return;
     
     // This is the new Implementation using a 
     // counted amount of broadcasr
     if (ant.DecBCount()) {
-      this->BroadcastForwardAnt(final_dst, ant);
+      // FIXME: once this function support reactive ants, support it here
+      this->BroadcastForwardAnt(final_dst, ant, false);
       NS_LOG_FUNCTION(this << "nonrandom select");
       return;
     }
@@ -1298,7 +1337,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
     
   }
   
-  this->UnicastForwardAnt(next_iface, next_nb, ant);
+  this->UnicastForwardAnt(next_iface, next_nb, ant, false);
   return;
 }
 

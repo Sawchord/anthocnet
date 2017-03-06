@@ -164,6 +164,13 @@ public:
   bool AddDestination(Ipv4Address address, Time expire);
   
   /**
+   * @brief Marks, that this node has traffic for a destiation.
+   *        I.e there is a session running
+   * @param dst The destination to which the session is running
+   */
+  void RegisterSession(Ipv4Address dst);
+  
+  /**
    * @brief Checks, if it is allowed to broadcast to that destination.
    * @arg address The address to check.
    * @returns True, if it is allowed to broadcast, false otherwise.

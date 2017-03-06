@@ -242,6 +242,15 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
   return;
 }
 
+void RoutingTable::RegisterSession(Ipv4Address dst) {
+  
+  this->AddDestination(dst);
+  auto dst_it = this->dsts.find(dst);
+  
+  dst_it->second.session_time = Simulator::Now();
+  
+}
+
 bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
   
   // Check if destination exists

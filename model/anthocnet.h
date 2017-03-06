@@ -115,15 +115,20 @@ private:
    */  
   uint32_t FindSocketIndex(Ptr<Socket>)const;
   
-  void StartForwardAnt(Ipv4Address dst);
-  
   TracedCallback<Ptr<Packet const>, std::string, Ipv4Address> ant_drop;
   TracedCallback<Ptr<Packet const>, std::string, Ipv4Address> data_drop;
   
-  void UnicastForwardAnt(uint32_t iface, Ipv4Address dst, ForwardAntHeader ant);
-  void UnicastBackwardAnt(uint32_t iface, Ipv4Address dst, BackwardAntHeader ant);
-  void BroadcastForwardAnt(Ipv4Address dst);
-  void BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant);
+  void StartForwardAnt(Ipv4Address dst, bool is_proactive);
+  
+  void UnicastForwardAnt(uint32_t iface, Ipv4Address dst, ForwardAntHeader ant,
+                         bool is_proactive);
+  
+  void BroadcastForwardAnt(Ipv4Address dst, bool is_proactive);
+  void BroadcastForwardAnt(Ipv4Address dst, ForwardAntHeader ant,\
+                           bool is_proactive);
+  
+  void UnicastBackwardAnt(uint32_t iface, Ipv4Address dst, 
+                          BackwardAntHeader ant);
   
   void SendCachedData(Ipv4Address dst);
   
@@ -165,6 +170,9 @@ private:
   
   // Send a HelloAnt every other second
   void HelloTimerExpire();
+  
+  // Send sampler ants to all destinations having active sessions
+  void PrAntTimerExpire();
   
   // Update the RoutingTable (mainly throw out old data)
   void RTableTimerExpire();
