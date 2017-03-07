@@ -184,7 +184,7 @@ private:
   void HandleHelloMsg(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a ForwardAnt
-  void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface);
+  void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, bool is_proactive);
   
   // Handles receiving of a BackwardAnt
   void HandleBackwardAnt(Ptr<Packet> packet,Ipv4Address orig_src, uint32_t iface);

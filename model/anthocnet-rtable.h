@@ -118,6 +118,7 @@ public:
   // Last Time a RouteOutput was called on this destination.
   // Important for the proactive ants
   Time session_time;
+  bool session_active;
   
   // A map of all interfaces on this node, trough that the 
   // Destination can be reached. If this map is not empty, it means the 

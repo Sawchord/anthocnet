@@ -42,7 +42,8 @@ DestinationInfo::DestinationInfo(uint32_t index, Time expire) :
   index(index),
   expires_in(expire),
   no_broadcast_time(Seconds(0)),
-  session_time(Seconds(0))
+  session_time(Seconds(0)),
+  session_active(false)
   {}
 
 DestinationInfo::~DestinationInfo() {
@@ -249,6 +250,7 @@ void RoutingTable::RegisterSession(Ipv4Address dst) {
   auto dst_it = this->dsts.find(dst);
   
   dst_it->second.session_time = Simulator::Now();
+  dst_it->second.session_active = true;
   
 }
 
@@ -256,8 +258,12 @@ std::list<Ipv4Address> RoutingTable::GetSessions() {
   
   std::list<Ipv4Address> ret;
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it){
-    if (Simulator::Now() - dst_it->second.session_time < this->session_expire){
+    if (dst_it->second.session_active &&
+        Simulator::Now() - dst_it->second.session_time < this->session_expire){
       ret.push_back(dst_it->first);
+    }
+    else {
+      dst_it->second.session_active = false;
     }
   }
   

@@ -228,7 +228,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   // Try to find a destination in the rtable right away
   Ipv4Address dst = header.GetDestination();
   
-  this->rtable.RegisterSession(dst);
+  //this->rtable.RegisterSession(dst);
   
   NS_LOG_FUNCTION(this << "oif" << oif << "dst" << dst);
   
@@ -1196,7 +1196,10 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
                               this->eta_value, this->last_hello);
       break;
     case AHNTYPE_FW_ANT:
-      this->HandleForwardAnt(packet, iface);
+      this->HandleForwardAnt(packet, iface, false);
+      break;
+    case AHNTYPE_PRFW_ANT:
+      this->HandleForwardAnt(packet, iface, true);
       break;
     case AHNTYPE_BW_ANT:
       this->HandleBackwardAnt(packet, src, iface);
@@ -1248,7 +1251,8 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
+void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
+                                       bool is_proactive) {
   
   ForwardAntHeader ant;
   packet->RemoveHeader(ant);
@@ -1314,14 +1318,19 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface) {
   Ipv4Address next_nb;
   uint32_t next_iface;
   //NS_LOG_UNCOND(this->rtable);
-  if(!this->rtable.SelectRoute(final_dst, 20.0, 
-      next_iface, next_nb, this->uniform_random)) {
+  if(
+    (!is_proactive && !this->rtable.SelectRoute(final_dst, 20.0, 
+      next_iface, next_nb, this->uniform_random, false, 1.0))
+    ||
+    (is_proactive && !this->rtable.SelectRoute(final_dst, 2.0, 
+      next_iface, next_nb, this->uniform_random, true, 1.10))
+  )
+  {
     
     // This is the new Implementation using a 
     // counted amount of broadcasr
     if (ant.DecBCount()) {
-      // FIXME: once this function support reactive ants, support it here
-      this->BroadcastForwardAnt(final_dst, ant, false);
+      this->BroadcastForwardAnt(final_dst, ant, is_proactive);
       NS_LOG_FUNCTION(this << "nonrandom select");
       return;
     }
