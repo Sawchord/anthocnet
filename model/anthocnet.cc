@@ -228,7 +228,12 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   // Try to find a destination in the rtable right away
   Ipv4Address dst = header.GetDestination();
   
-  //this->rtable.RegisterSession(dst);
+  
+  UdpHeader h;
+  p->PeekHeader(h);
+  if (h.GetSourcePort() != 5555) {
+    this->rtable.RegisterSession(dst);
+  }
   
   NS_LOG_FUNCTION(this << "oif" << oif << "dst" << dst);
   
