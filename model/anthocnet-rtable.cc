@@ -563,8 +563,9 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
       pos_dst.second *= -1.0;
     }
     
-    // TODO: Use better estimation of information goodness
-    double bootstrap_info = (1.0/ (1.0/(pos_dst.second) + 10));
+    double T_id = this->GetTSend(pos_dst.first, iface).GetNanoSeconds();
+    
+    double bootstrap_info = (1.0/ (1.0/(pos_dst.second) + T_id));
     NS_LOG_FUNCTION(this << "bootstapped" 
       << bootstrap_info << "from" << pos_dst.second 
       << "dst" << pos_dst.first << "nb" << msg.GetSrc()
