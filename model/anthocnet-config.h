@@ -42,6 +42,8 @@ public:
   
   static TypeId GetTypeId();
   
+  uint32_t GetN() const;
+  
   virtual void DoDispose();
 protected:
   virtual void DoInitialize();

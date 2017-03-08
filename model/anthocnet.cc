@@ -20,6 +20,7 @@
     << ipv4->GetObject<Node> ()->GetId () +1 << "] "; }
 
 #include "anthocnet.h"
+#include "ns3/object-ptr-container.h"
 
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingProtocol");
@@ -66,6 +67,13 @@ RoutingProtocol::RoutingProtocol ():
   
 RoutingProtocol::~RoutingProtocol() {}
 
+uint8_t RoutingProtocol::GetNConfigs() const {
+  return 1;
+}
+Ptr<AntHocNetConfig> RoutingProtocol::GetConfig(uint8_t index) const {
+  return this->config;
+}
+
 NS_OBJECT_ENSURE_REGISTERED(RoutingProtocol);
 
 
@@ -80,6 +88,20 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeTimeAccessor(&RoutingProtocol::hello_interval),
     MakeTimeChecker()
   )
+  
+  
+  .AddAttribute("Config",
+    "Pointer to the configuration of this module",
+    ObjectPtrContainerValue(),
+    MakeObjectPtrContainerAccessor<RoutingProtocol, AntHocNetConfig, uint8_t>(
+                                   &RoutingProtocol::GetConfig,
+                                   &RoutingProtocol::GetNConfigs
+                                                                             ),
+    MakeObjectPtrContainerChecker<AntHocNetConfig>()
+  )
+  
+  
+  
   .AddAttribute ("NeighborExpire",
     "Time without HelloAnt, after which a neighbor is considered offline.",
     TimeValue (Seconds(5)),

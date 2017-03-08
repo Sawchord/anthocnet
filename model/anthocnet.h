@@ -17,6 +17,7 @@
 #ifndef ANTHOCNET_H
 #define ANTHOCNET_H
 
+#include "anthocnet-config.h"
 #include "anthocnet-rtable.h"
 #include "anthocnet-packet.h"
 #include "anthocnet-pcache.h"
@@ -191,6 +192,9 @@ private:
   
   //-----------------------------------------------
   // All the network config stuff go here 
+  Ptr<AntHocNetConfig> config;
+  uint8_t GetNConfigs() const;
+  Ptr<AntHocNetConfig> GetConfig(uint8_t index) const;
   
   // The time to live of a new born forward and
   uint8_t initial_ttl;

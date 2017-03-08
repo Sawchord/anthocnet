@@ -33,7 +33,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   .SetParent<Object> ()
   .SetGroupName("AntHocNet")
   .AddConstructor<AntHocNetConfig>()
- 
+  
   .AddAttribute ("HelloInterval",
     "HELLO messages emission interval.",
     TimeValue (Seconds(1)),
@@ -141,6 +141,11 @@ void AntHocNetConfig::DoDispose() {
 void AntHocNetConfig::DoInitialize() {
   
 }
+
+uint32_t AntHocNetConfig::GetN() const {
+  return 1;
+}
+
 // End of namespaces
 }
 }
