@@ -21,6 +21,7 @@
 #include "ns3/object-factory.h"
 #include "ns3/node.h"
 #include "ns3/node-container.h"
+#include "ns3/object-ptr-container.h"
 #include "ns3/ipv4-routing-helper.h"
 
 
@@ -63,6 +64,7 @@ public:
   
 private:
   ObjectFactory agent_factory;
+  ObjectFactory config_factory;
 };
 
 }

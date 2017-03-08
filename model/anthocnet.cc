@@ -28,7 +28,6 @@ namespace ahn {
 
 //ctor
 RoutingProtocol::RoutingProtocol ():
-  initial_ttl(16),
   hello_interval(Seconds(1)),
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_interval(MilliSeconds(1000)),
@@ -67,10 +66,11 @@ RoutingProtocol::RoutingProtocol ():
   
 RoutingProtocol::~RoutingProtocol() {}
 
-uint8_t RoutingProtocol::GetNConfigs() const {
-  return 1;
+void RoutingProtocol::SetConfig(Ptr<AntHocNetConfig> config) {
+  this->config = config;
 }
-Ptr<AntHocNetConfig> RoutingProtocol::GetConfig(uint8_t index) const {
+
+Ptr<AntHocNetConfig> RoutingProtocol::GetConfig() const {
   return this->config;
 }
 
@@ -88,19 +88,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakeTimeAccessor(&RoutingProtocol::hello_interval),
     MakeTimeChecker()
   )
-  
-  
   .AddAttribute("Config",
     "Pointer to the configuration of this module",
-    ObjectPtrContainerValue(),
-    MakeObjectPtrContainerAccessor<RoutingProtocol, AntHocNetConfig, uint8_t>(
-                                   &RoutingProtocol::GetConfig,
-                                   &RoutingProtocol::GetNConfigs
-                                                                             ),
-    MakeObjectPtrContainerChecker<AntHocNetConfig>()
+    PointerValue(),
+    MakePointerAccessor(&RoutingProtocol::config),
+    MakePointerChecker<AntHocNetConfig>()
   )
-  
-  
   
   .AddAttribute ("NeighborExpire",
     "Time without HelloAnt, after which a neighbor is considered offline.",
@@ -125,12 +118,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     TimeValue (Seconds(10)),
     MakeTimeAccessor(&RoutingProtocol::session_expire),
     MakeTimeChecker()
-  )
-  .AddAttribute("InitialTTL",
-    "The TTL value of a newly generated Ant.",
-    UintegerValue(16),
-    MakeUintegerAccessor(&RoutingProtocol::initial_ttl),
-    MakeUintegerChecker<uint8_t>()
   )
   .AddAttribute("AlphaTMac",
     "The alpha value of the running average of T_mac.",
@@ -865,7 +852,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
     = this->socket_addresses.find(socket);
   
   Ipv4Address this_node = it->second.GetLocal();
-  ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+  ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
   
   // TODO: Make max broadcast settable by option
   if (is_proactive) {
@@ -957,7 +944,9 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     
     Ipv4Address this_node = iface.GetLocal();
     
-    ForwardAntHeader ant (this_node, dst, this->initial_ttl);
+    NS_LOG_UNCOND("TTL: " << std::to_string(this->config->initial_ttl));
+    
+    ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
     if (is_proactive) {
       ant.SetBCount(2);
     }

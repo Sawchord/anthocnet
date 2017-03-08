@@ -84,6 +84,10 @@ public:
 
   virtual void DoDispose();
   
+  // Added for initialization
+  void SetConfig(Ptr<AntHocNetConfig> config);
+  Ptr<AntHocNetConfig> GetConfig() const;
+  
 protected:
     virtual void DoInitialize();
   
@@ -193,11 +197,6 @@ private:
   //-----------------------------------------------
   // All the network config stuff go here 
   Ptr<AntHocNetConfig> config;
-  uint8_t GetNConfigs() const;
-  Ptr<AntHocNetConfig> GetConfig(uint8_t index) const;
-  
-  // The time to live of a new born forward and
-  uint8_t initial_ttl;
   
   // -------------------------------------------------
   // Timers and their intervals

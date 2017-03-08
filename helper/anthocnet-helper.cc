@@ -20,27 +20,36 @@
 namespace ns3 {
 
 AntHocNetHelper::AntHocNetHelper() : Ipv4RoutingHelper() {
-  this->agent_factory.SetTypeId(
-    "ns3::ahn::RoutingProtocol");
+  this->agent_factory.SetTypeId("ns3::ahn::RoutingProtocol");
+  this->config_factory.SetTypeId("ns3::ahn::AntHocNetConfig");
 }
 
 AntHocNetHelper* AntHocNetHelper::Copy (void) const {
   return new AntHocNetHelper (*this);
 }
 
-Ptr<Ipv4RoutingProtocol> AntHocNetHelper::Create
-  (Ptr<Node> node) const {
+Ptr<Ipv4RoutingProtocol> AntHocNetHelper::Create (Ptr<Node> node) const {  
+  
   Ptr<ahn::RoutingProtocol> agent = 
     this->agent_factory.Create<ahn::RoutingProtocol> ();
   node->AggregateObject(agent);
+  
+  agent->SetConfig(this->config_factory.Create<ahn::AntHocNetConfig>());
   
   return agent;
 }
 
 void AntHocNetHelper::Set (std::string name, 
-  const AttributeValue &value)
+                           const AttributeValue &value)
 {
-  this->agent_factory.Set (name, value);
+  // NOTE: untested
+  this->agent_factory.Set(name, value);
+  
+  
+  this->config_factory.Set(name, value);
+  std::string c = "Config";
+  this->agent_factory.Set(c, 
+     PointerValue(this->config_factory.Create<ahn::AntHocNetConfig>()));
 }
 
 int64_t
