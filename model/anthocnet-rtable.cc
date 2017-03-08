@@ -393,7 +393,7 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   // Update expire time. Make sure, expire time of dst is no
   // lower than the nb expire time
-  nb_it->second.expires_in = this->config->dst_expire;
+  nb_it->second.expires_in = this->config->nb_expire;
   if (dst_it->second.expires_in < nb_it->second.expires_in) {
     dst_it->second.expires_in = this->config->nb_expire;
   }
