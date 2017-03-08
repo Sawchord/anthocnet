@@ -35,14 +35,8 @@ RoutingProtocol::RoutingProtocol ():
   pr_ant_interval(MilliSeconds(1000)),
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
   dcache_expire(MilliSeconds(500000)),
-  nb_expire(MilliSeconds(5000)),
-  dst_expire(Seconds(30)),
-  session_expire(Seconds(10)),
   no_broadcast(MilliSeconds(100)),
   alpha_T_mac(0.7),
-  T_hop(0.2),
-  alpha_pheromone(0.7),
-  gamma_pheromone(0.7),
   eta_value(0.7),
   snr_threshold(20.0),
   bad_snr_cost(4.0),
@@ -53,8 +47,7 @@ RoutingProtocol::RoutingProtocol ():
   avr_T_mac(Seconds(0)),
   last_snr(snr_threshold),
   
-  rtable(RoutingTable(nb_expire, dst_expire, session_expire, 
-					  T_hop, alpha_pheromone, gamma_pheromone)),
+  rtable(RoutingTable(this->config)),
   data_cache(dcache_expire)
   {
     // Initialize the sockets
@@ -68,6 +61,7 @@ RoutingProtocol::~RoutingProtocol() {}
 
 void RoutingProtocol::SetConfig(Ptr<AntHocNetConfig> config) {
   this->config = config;
+  this->rtable.SetConfig(config);
 }
 
 Ptr<AntHocNetConfig> RoutingProtocol::GetConfig() const {
@@ -94,54 +88,11 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakePointerAccessor(&RoutingProtocol::config),
     MakePointerChecker<AntHocNetConfig>()
   )
-  
-  .AddAttribute ("NeighborExpire",
-    "Time without HelloAnt, after which a neighbor is considered offline.",
-    TimeValue (Seconds(5)),
-    MakeTimeAccessor(&RoutingProtocol::nb_expire),
-    MakeTimeChecker()
-  )
   .AddAttribute ("NoBroadcast",
     "Time after broadcast,where no broadcast is allowed to same destination",
     TimeValue (MilliSeconds(100)),
     MakeTimeAccessor(&RoutingProtocol::no_broadcast),
     MakeTimeChecker()
-  )
-  .AddAttribute ("DestinationExpire",
-    "Time without traffic, after which a destination is considered offline.",
-    TimeValue (Seconds(30)),
-    MakeTimeAccessor(&RoutingProtocol::dst_expire),
-    MakeTimeChecker()
-  )
-  .AddAttribute ("SessionExpire",
-    "Time without outbound traffic, after a session is considered over",
-    TimeValue (Seconds(10)),
-    MakeTimeAccessor(&RoutingProtocol::session_expire),
-    MakeTimeChecker()
-  )
-  .AddAttribute("AlphaTMac",
-    "The alpha value of the running average of T_mac.",
-    DoubleValue(0.7),
-    MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("THop",
-    "The THop heuristic used to calculate initial pheromone values",
-    DoubleValue(0.2),
-    MakeDoubleAccessor(&RoutingProtocol::alpha_T_mac),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("AlphaPheromone",
-    "The hop count uses a running average with a decay defined by alpha",
-    DoubleValue(0.7),
-    MakeDoubleAccessor(&RoutingProtocol::alpha_pheromone),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("GammaPheromone",
-    "The pheromone uses a running average with a decay defined by gamma",
-    DoubleValue(0.7),
-    MakeDoubleAccessor(&RoutingProtocol::gamma_pheromone),
-    MakeDoubleChecker<double>()
   )
   .AddAttribute("EtaValue",
     "The Rx Time is a running average with a decay defined by eta",
@@ -943,8 +894,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     }
     
     Ipv4Address this_node = iface.GetLocal();
-    
-    NS_LOG_UNCOND("TTL: " << std::to_string(this->config->initial_ttl));
     
     ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
     if (is_proactive) {

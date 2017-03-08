@@ -44,6 +44,7 @@
 //#include "ns3/log.h"
 
 #include "anthocnet-packet.h"
+#include "anthocnet-config.h"
 
 namespace ns3 {
 namespace ahn {
@@ -133,8 +134,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Time nb_expire, Time dst_expire, Time session_expire,
-               double T_hop, double alpha, double gamma);
+  RoutingTable(Ptr<AntHocNetConfig> config);
   //dtor 
   ~RoutingTable();
   
@@ -311,6 +311,10 @@ public:
   
   void Print(std::ostream& os) const;
   
+  // Added for initialization
+  void SetConfig(Ptr<AntHocNetConfig> config);
+  Ptr<AntHocNetConfig> GetConfig() const;
+  
 private:
   
   // Util functions
@@ -323,11 +327,6 @@ private:
   uint32_t n_dst;
   uint32_t n_nb;
   
-  double T_hop;
-  
-  double alpha_pheromone;
-  double gamma_pheromone;
-  
   map<Ipv4Address, DestinationInfo> dsts;
   
   // For neighbors, it is also important to know the interface
@@ -337,13 +336,20 @@ private:
   bool dst_usemap[MAX_DESTINATIONS];
   bool nb_usemap[MAX_NEIGHBORS];
   
+  Ptr<AntHocNetConfig> config;
+  
+  //double T_hop;
+  
+  //double alpha_pheromone;
+  //double gamma_pheromone;
+  
   // The neighbors and destinations get deleted after a while
   // Neighbors, if there are no HelloAnts incoming for a long time
-  Time initial_lifetime_nb;
+  //Time initial_lifetime_nb;
   // Destinations, if they are unused
-  Time initial_lifetime_dst;
+  //Time initial_lifetime_dst;
   
-  Time session_expire;
+  //Time session_expire;
   
 };
 

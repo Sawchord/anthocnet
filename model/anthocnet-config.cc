@@ -126,7 +126,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute("InitialTTL",
     "The TTL value of a newly generated Ant.",
-    UintegerValue(8),
+    UintegerValue(16),
     MakeUintegerAccessor(&AntHocNetConfig::initial_ttl),
     MakeUintegerChecker<uint8_t>()
   )

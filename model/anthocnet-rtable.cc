@@ -62,16 +62,10 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Time nb_expire, Time dst_expire, Time session_expire,
-                           double T_hop, double alpha, double gamma) :
+RoutingTable::RoutingTable(Ptr<AntHocNetConfig> config) :
   n_dst(0),
   n_nb(0),
-  T_hop(T_hop),
-  alpha_pheromone(alpha),
-  gamma_pheromone(gamma),
-  initial_lifetime_nb(nb_expire),
-  initial_lifetime_dst(dst_expire),
-  session_expire(session_expire)
+  config(config)
 {
   // Initialize the usemaps
   for (uint32_t i = 0; i < MAX_DESTINATIONS; i++) this->dst_usemap[i] = false;
@@ -82,9 +76,18 @@ RoutingTable::~RoutingTable() {
   
 }
 
+void RoutingTable::SetConfig(Ptr<AntHocNetConfig> config) {
+  this->config = config;
+}
+
+Ptr<AntHocNetConfig> RoutingTable::GetConfig() const {
+  return this->config;
+}
+
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
-  return this->AddNeighbor(iface_index, address, this->initial_lifetime_nb);
+  return this->AddNeighbor(iface_index, 
+                           address, this->config->nb_expire);
 }
 
 bool RoutingTable::AddNeighbor(uint32_t iface_index, 
@@ -172,7 +175,7 @@ void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
 
 
 bool RoutingTable::AddDestination(Ipv4Address address) {
-    return this->AddDestination(address, this->initial_lifetime_dst);
+    return this->AddDestination(address, this->config->dst_expire);
 }
 
 bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
@@ -259,7 +262,7 @@ std::list<Ipv4Address> RoutingTable::GetSessions() {
   std::list<Ipv4Address> ret;
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it){
     if (dst_it->second.session_active &&
-        Simulator::Now() - dst_it->second.session_time < this->session_expire){
+        Simulator::Now() - dst_it->second.session_time < this->config->session_expire){
       ret.push_back(dst_it->first);
     }
     else {
@@ -364,8 +367,9 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
 }
 
 void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
-  this->initial_lifetime_nb = nb_expire;
-  this->initial_lifetime_dst = dst_expire;
+  // TODO: Remove this function
+  //this->initial_lifetime_nb = nb_expire;
+  //this->initial_lifetime_dst = dst_expire;
 }
 
 void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
@@ -389,9 +393,9 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
   // Update expire time. Make sure, expire time of dst is no
   // lower than the nb expire time
-  nb_it->second.expires_in = this->initial_lifetime_nb;
+  nb_it->second.expires_in = this->config->dst_expire;
   if (dst_it->second.expires_in < nb_it->second.expires_in) {
-    dst_it->second.expires_in = this->initial_lifetime_nb;
+    dst_it->second.expires_in = this->config->nb_expire;
   }
   
 }
@@ -580,8 +584,9 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
       ra->virtual_pheromone = bootstrap_info;
     }
     else {
-      ra->virtual_pheromone = this->alpha_pheromone*ra->virtual_pheromone +
-        (1.0 - this->alpha_pheromone) * (bootstrap_info);
+      ra->virtual_pheromone = 
+        this->config->alpha_pheromone*ra->virtual_pheromone +
+        (1.0 - this->config->alpha_pheromone) * (bootstrap_info);
     }
     
   }
@@ -616,8 +621,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   
   // Since both, the Neighbor and the Destination are found active,
   // reset their expiration dates.
-  nb_it->second.expires_in = this->initial_lifetime_nb;
-  dst_it->second.expires_in = this->initial_lifetime_dst;
+  nb_it->second.expires_in = this->config->nb_expire;
+  dst_it->second.expires_in = this->config->dst_expire;
   
   
   // Get the indexes into the pheromone of dst and nb table
@@ -628,7 +633,7 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   // One could get crazy here and have some 
   // really cool functions
   
-  double T_id = ((T_sd + hops * this->T_hop) / 2);
+  double T_id = ((T_sd + hops * this->config->T_hop) / 2);
   
   // Update the routing table
   RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
@@ -638,8 +643,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     ra->avr_hops = hops;
   }
   else {
-    ra->avr_hops = this->alpha_pheromone*ra->avr_hops +
-      (1.0 - this->alpha_pheromone) * hops;
+    ra->avr_hops = this->config->alpha_pheromone*ra->avr_hops +
+      (1.0 - this->config->alpha_pheromone) * hops;
   }
   
   // Check if pheromone value is NAN
@@ -647,8 +652,9 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
     ra->pheromone = (1.0 / T_id);
   }
   else {
-    ra->pheromone = this->gamma_pheromone*ra->pheromone +
-      (1.0 - this->gamma_pheromone) * (1.0 / T_id);
+    ra->pheromone = 
+      this->config->gamma_pheromone*ra->pheromone +
+      (1.0 - this->config->gamma_pheromone) * (1.0 / T_id);
   }
   
   NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
@@ -816,7 +822,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
         nb = dst2_it->first;
         
         // Using this destination means it is relevant, update timeout
-        dst2_it->second.expires_in = this->initial_lifetime_dst;
+        dst2_it->second.expires_in = this->config->dst_expire;
         
         NS_LOG_FUNCTION(this << "dst" << dst 
           << "routed nb" << nb << "iface" << iface);

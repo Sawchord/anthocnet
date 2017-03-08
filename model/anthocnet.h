@@ -217,29 +217,12 @@ private:
   // Time until an entry in the datacache expires and the packet is dropped
   Time dcache_expire;
   
-  // Time until a neighbor expires
-  Time nb_expire;
-  
-  // Time until a destination expires
-  Time dst_expire;
-  
-  // Time after a RouteOutput that a session is considered active
-  Time session_expire;
   
   // Drawback time after a broadcast
   Time no_broadcast;
   
   // The alpha value of the runinng average calculation
   double alpha_T_mac;
-  
-  // The T_hop heuristic
-  double T_hop;
-  
-  // The decay factor in the calculation of the avergage hops
-  double alpha_pheromone;
-  
-  // The decay factor for the calculation of the pheromone
-  double gamma_pheromone;
   
   // The decay factor for the average Rx time calculation
   double eta_value;
