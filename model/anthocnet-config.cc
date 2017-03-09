@@ -34,6 +34,13 @@ TypeId AntHocNetConfig::GetTypeId() {
   .SetGroupName("AntHocNet")
   .AddConstructor<AntHocNetConfig>()
   
+  
+  .AddAttribute ("Port",
+    "The port, the protocol uses to exchange control messages.",
+    UintegerValue(5555),
+    MakeUintegerAccessor(&AntHocNetConfig::ant_port),
+    MakeUintegerChecker<uint16_t>()
+  )
   .AddAttribute ("HelloInterval",
     "HELLO messages emission interval.",
     TimeValue (Seconds(1)),

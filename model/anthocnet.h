@@ -52,7 +52,6 @@
 // TODO: Make these settable by GetTypeId()
 //       instead of hardcoding them
 #define MAX_INTERFACES 30
-#define ANTHOCNET_PORT 5555
 
 namespace ns3 {
 namespace ahn {

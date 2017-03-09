@@ -49,13 +49,12 @@ protected:
   virtual void DoInitialize();
   
 public:
-  // TODO: Add descriptions
   // Here go all the config members
+  // These values will be used troughout the whole module
   
   // ---------------------------------
   // General
   uint16_t ant_port;
-  
   
   // ---------------------------------
   // Timings
@@ -87,6 +86,7 @@ public:
   double bad_snr_cost;
   
   // TODO: Consideration values
+  // TODO: Exploraion power
   
   // ---------------------------------
   // Misc

@@ -407,8 +407,8 @@ void RoutingExperiment::Run (double txp) {
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   //wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
-  //wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
-  wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
+  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  //wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   // Add a mac and disable rate control

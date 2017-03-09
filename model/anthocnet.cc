@@ -134,7 +134,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   
   UdpHeader h;
   p->PeekHeader(h);
-  if (h.GetSourcePort() != 5555) {
+  if (h.GetSourcePort() != this->config->ant_port) {
     this->rtable.RegisterSession(dst);
   }
   
@@ -299,7 +299,7 @@ Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr,
   // If RouteOutput() caller specified an outgoing interface, that 
   // further constrains the selection of source address
   //
-  std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j = socket_addresses.begin ();
+  auto j = socket_addresses.begin ();
   if (oif) {
       // Iterate to find an address on the oif device
       for (j = socket_addresses.begin (); j != socket_addresses.end (); ++j)
@@ -396,7 +396,7 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
   NS_ASSERT(socket != 0);
   
   socket->SetRecvCallback(MakeCallback(&RoutingProtocol::Recv, this));
-  socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+  socket->Bind(InetSocketAddress(iface.GetLocal(), this->config->ant_port));
   socket->SetAllowBroadcast(true);
   socket->SetIpRecvTtl(true);
   socket->BindToNetDevice (l3->GetNetDevice(interface));
@@ -515,7 +515,7 @@ void RoutingProtocol::NotifyAddAddress (uint32_t interface,
     
     socket->SetRecvCallback(MakeCallback(
       &RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+    socket->Bind(InetSocketAddress(iface.GetLocal(), this->config->ant_port));
     socket->SetAllowBroadcast(true);
     socket->SetIpRecvTtl(true);
     socket->BindToNetDevice (l3->GetNetDevice (interface));
@@ -568,7 +568,7 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface,
     
     socket->SetRecvCallback(MakeCallback(
       &RoutingProtocol::Recv, this));
-    socket->Bind(InetSocketAddress(iface.GetLocal(), ANTHOCNET_PORT));
+    socket->Bind(InetSocketAddress(iface.GetLocal(), this->config->ant_port));
     socket->BindToNetDevice(l3->GetNetDevice(interface));
     socket->SetAllowBroadcast(true);
     socket->SetIpRecvTtl(true);
@@ -650,7 +650,8 @@ void RoutingProtocol::Start() {
   // Open socket on the loopback
   Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
       UdpSocketFactory::GetTypeId());
-  socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
+  socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), 
+                                 this->config->ant_port));
   
   socket->BindToNetDevice(this->lo);
   socket->SetAllowBroadcast(true);
@@ -817,7 +818,6 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     
     // skip the loopback interface
     if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
-      //NS_LOG_FUNCTION(this << "skip lo");
       continue;
     }
     
@@ -1085,7 +1085,8 @@ void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
   NS_LOG_FUNCTION(this << "packet" << *packet 
     << "destination" << destination << "socket" << socket);
-  socket->SendTo (packet, 0, InetSocketAddress (destination, ANTHOCNET_PORT));
+  socket->SendTo (packet, 0, InetSocketAddress (destination, 
+                                                this->config->ant_port));
 }
 // -------------------------------------------------------
 // Handlers of the different Ants
