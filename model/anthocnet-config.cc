@@ -130,6 +130,18 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeUintegerAccessor(&AntHocNetConfig::initial_ttl),
     MakeUintegerChecker<uint8_t>()
   )
+  .AddAttribute("ReactiveBroadcastTTL",
+    "The number of times, a reactive ant can be broadcasted",
+    UintegerValue(10),
+    MakeUintegerAccessor(&AntHocNetConfig::reactive_bcast_count),
+    MakeUintegerChecker<uint8_t>()
+  )
+  .AddAttribute("ProactiveBroadcastTTL",
+    "The number of times, a proactive ant can be broadcasted",
+    UintegerValue(1),
+    MakeUintegerAccessor(&AntHocNetConfig::proactive_bcast_count),
+    MakeUintegerChecker<uint8_t>()
+  )
   ;
   return tid;
 }

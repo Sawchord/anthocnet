@@ -92,7 +92,8 @@ public:
   // Misc
   uint8_t initial_ttl;
   
-  // TODO: Broadcast ttls
+  uint8_t reactive_bcast_count;
+  uint8_t proactive_bcast_count;
   
 };
 

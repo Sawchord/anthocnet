@@ -218,11 +218,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ptr<Socket> recv_socket = this->sockets[recv_iface];
   Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
   
-  // Check if this Node is the destination and manage behaviour
-  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
-  //Ipv4InterfaceAddress tmp_if = l3->GetAddress(iface, 0);
-  
-  
   NS_LOG_FUNCTION(this << "origin" << origin << "dst" << dst << "local" << recv_sockaddress.GetLocal());
   NS_LOG_FUNCTION(this << "iface_index" << recv_iface << "socket" 
     << recv_socket << "sockaddress" << recv_sockaddress);
@@ -652,10 +647,7 @@ void RoutingProtocol::Start() {
     &RoutingProtocol::RTableTimerExpire, this);
   this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
   
-  // TODO: Start pr ant timer
-  
   // Open socket on the loopback
-  
   Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
       UdpSocketFactory::GetTypeId());
   socket->Bind(InetSocketAddress(Ipv4Address ("127.0.0.1"), ANTHOCNET_PORT));
@@ -740,19 +732,20 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   Ipv4Address this_node = it->second.GetLocal();
   ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
   
-  // TODO: Make max broadcast settable by option
   if (is_proactive) {
-    ant.SetBCount(2); 
+    ant.SetBCount(this->config->proactive_bcast_count); 
   }
   else {
-    ant.SetBCount(10); 
+    ant.SetBCount(this->config->reactive_bcast_count); 
   }
   this->UnicastForwardAnt(iface, nb, ant, is_proactive);
 }
 
 
 void RoutingProtocol::UnicastForwardAnt(uint32_t iface, 
-  Ipv4Address dst, ForwardAntHeader ant, bool is_proactive) {
+                                        Ipv4Address dst,
+                                        ForwardAntHeader ant, 
+                                        bool is_proactive) {
   
   // Get the socket which runs on iface
   Ptr<Socket> socket = this->sockets[iface];
@@ -832,10 +825,10 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     
     ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
     if (is_proactive) {
-      ant.SetBCount(2);
+      ant.SetBCount(this->config->proactive_bcast_count);
     }
     else {
-      ant.SetBCount(10);
+      ant.SetBCount(this->config->reactive_bcast_count);
     }
     
     this->BroadcastForwardAnt(dst, ant, is_proactive);
@@ -944,7 +937,7 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
 }
 
 // -------------------------------------------------------
-// Callback functions used in  timers
+// Callback functions used in timers
 void RoutingProtocol::HelloTimerExpire() {
   
   this->last_hello = Simulator::Now();
@@ -1017,6 +1010,7 @@ void RoutingProtocol::RTableTimerExpire() {
   this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
 }
 
+
 // -----------------------------------------------------
 // Receiving and Sending stuff
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
@@ -1044,8 +1038,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
-    // NOTE: Doing this here is ok, since only AntHocnet Port
-    // comes here, and AnthocNet uses Ipv4 transparently
     this->rtable.UpdateNeighbor(iface, src);
     
     NS_LOG_FUNCTION(this << "socket" << socket 
@@ -1081,13 +1073,12 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       break;
     
     default:
-      NS_LOG_WARN("Unimplemented Handlers.");
+      NS_LOG_WARN("Type not implemented.");
       return;
   }
   
   return;
 }
-
 
 // Callback function to send something in a deffered manner
 void RoutingProtocol::Send(Ptr<Socket> socket,
@@ -1237,9 +1228,6 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
-  // Calculate the T_ind value used to update this ant
-  //uint64_t T_ind = this->avr_T_mac.GetNanoSeconds();
-  
   uint64_t T_ind = this->rtable.GetTSend(orig_src, iface).GetNanoSeconds();
   
   // Update the Ant
@@ -1291,9 +1279,6 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   
   NS_LOG_FUNCTION(this << "dst" << dst);
   
-  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
-  
-  
   bool dst_found = false;
   
   while (this->data_cache.HasEntries(dst)) {
@@ -1303,10 +1288,6 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     // check, if cache entry is expired
     if (cv.first == false) {
       NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
-      
-      //uint32_t iface = this->ipv4->GetInterfaceForAddress(
-      //    cv.second.header.GetSource());
-      //Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
       
       this->data_drop(cv.second.packet, 
                       "Cached and expired", cv.second.header.GetSource());

@@ -233,7 +233,7 @@ private:
   
 };
 
-// 
+// End of namespace
 }
 }
 
