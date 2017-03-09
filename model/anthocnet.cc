@@ -940,8 +940,6 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
                               signalNoiseDbm snr) {
   
   this->last_snr = snr.signal - snr.noise;
-  //NS_LOG_FUNCTION(this << "s and r" << snr.signal 
-    //<< snr.noise << "snr_dbm" << snr.signal - snr.noise);
   
 }
 
@@ -1015,8 +1013,6 @@ void RoutingProtocol::PrAntTimerExpire() {
 }
 
 void RoutingProtocol::RTableTimerExpire() {
-  //NS_LOG_FUNCTION(this);
-  
   this->rtable.Update(this->config->rtable_update_interval);
   this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
 }
@@ -1072,8 +1068,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleHelloMsg(packet, iface);
       break;
     case AHNTYPE_HELLO_ACK:
-      this->rtable.ProcessAck(src, iface, 
-                              this->config->eta_value, this->last_hello);
+      this->rtable.ProcessAck(src, iface, this->last_hello);
       break;
     case AHNTYPE_FW_ANT:
       this->HandleForwardAnt(packet, iface, false);
@@ -1242,22 +1237,10 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
-  
-  //this->avr_T_mac = 
-  // NanoSeconds(this->alpha_T_mac *  this->avr_T_mac.GetNanoSeconds())
-  // + NanoSeconds((1 - this->alpha_T_mac) * MilliSeconds(10).GetNanoSeconds());
-  
-  //this->avr_T_mac 
-  //  = this->alpha_T_mac * this->avr_T_mac + (1 - this->alpha_T_mac) * MilliSeconds(0);
-
-   
   // Calculate the T_ind value used to update this ant
   //uint64_t T_ind = this->avr_T_mac.GetNanoSeconds();
   
   uint64_t T_ind = this->rtable.GetTSend(orig_src, iface).GetNanoSeconds();
-  
-  //NS_LOG_FUNCTION(this << "avr_T_mac" << this->avr_T_mac 
-  //  << "given T_mac" << T_mac << "T_ind" << T_ind);
   
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);

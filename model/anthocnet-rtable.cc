@@ -36,7 +36,6 @@ RoutingTableEntry::RoutingTableEntry() {
 RoutingTableEntry::~RoutingTableEntry() {}
 
 
-
 // ------------------------------------------------------
 DestinationInfo::DestinationInfo(uint32_t index, Time expire) :
   index(index),
@@ -106,7 +105,6 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
   // checks existance for you
   auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
-    //NS_LOG_FUNCTION(this << "create dst");
     this->AddDestination(address);
     it = this->dsts.find(address);
   }
@@ -293,7 +291,7 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address address) {
 }
 
 void RoutingTable::ProcessAck(Ipv4Address address, uint32_t iface, 
-                               double eta_value, Time last_hello) {
+                              Time last_hello) {
   
   // If we get an ack without a Hello, what do do?
   // Be happy or suspicios?
@@ -315,8 +313,9 @@ void RoutingTable::ProcessAck(Ipv4Address address, uint32_t iface,
     nb_it->second.avr_T_send = delta;
   }
   else {
-    nb_it->second.avr_T_send = NanoSeconds(eta_value * avr.GetNanoSeconds()) +
-      NanoSeconds((1.0 - eta_value) * delta.GetNanoSeconds());
+    nb_it->second.avr_T_send = 
+      NanoSeconds(this->config->eta_value * avr.GetNanoSeconds()) +
+      NanoSeconds((1.0 - this->config->eta_value) * delta.GetNanoSeconds());
   }
   
   NS_LOG_FUNCTION(this << "dst" << address << "iface" << iface

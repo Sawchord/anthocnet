@@ -191,7 +191,7 @@ public:
    * @param iface The interfac,on which the ack was received.
    */
   void ProcessAck(Ipv4Address address, uint32_t iface, 
-                   double eta_vlue, Time last_hello);
+                  Time last_hello);
   
   /**
    * @brief Returns average send round trip transmission time.
