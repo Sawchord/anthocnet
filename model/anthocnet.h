@@ -153,10 +153,6 @@ private:
   // Called when there is an error in the Layer 2 link
   void ProcessTxError (WifiMacHeader const& header);
   
-  // Called after receving a packet at layer 2 (Needed as metric)
-  void ProcessPhyRxTrace(Ptr<Packet const> packet);
-  void ProcessMacRxTrace(Ptr<Packet const> packet);
-  
   // Used by RouteInput, is the other side to ProcessRxTrace
   void UpdateAvrTMac();
   
@@ -212,16 +208,8 @@ private:
   //----------------------------------------------
   // All the global state of the protocol go here
   
-  // Used to calculate avr_T_mac
-  Time last_rx_begin;
-  
   // Last time the Hello Timer expired
   Time last_hello;
-  
-  // The running average of the T_mac value
-  // This is calculated by getting the Time difference
-  // between last rx_begin and the start of routeinput
-  Time avr_T_mac;
   
   // The last measured snr
   double last_snr; 

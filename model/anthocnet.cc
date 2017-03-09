@@ -33,9 +33,7 @@ RoutingProtocol::RoutingProtocol ():
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
   
   // These are no configs but rather inital values 
-  last_rx_begin(Seconds(0)),
   last_hello(Seconds(0)),
-  avr_T_mac(Seconds(0)),
   last_snr(0),
   
   rtable(RoutingTable(this->config)),
@@ -430,12 +428,6 @@ void RoutingProtocol::NotifyInterfaceUp (uint32_t interface) {
       mac->TraceConnectWithoutContext ("TxErrHeader",
         MakeCallback(&RoutingProtocol::ProcessTxError, this));
       
-      mac->TraceConnectWithoutContext ("MacRx",
-        MakeCallback(&RoutingProtocol::ProcessMacRxTrace, this));
-      
-      phy->TraceConnectWithoutContext ("PhyRxBegin",
-        MakeCallback(&RoutingProtocol::ProcessPhyRxTrace, this));
-      
       phy->TraceConnectWithoutContext ("MonitorSnifferRx",
         MakeCallback(&RoutingProtocol::ProcessMonitorSnifferRx, this));
       
@@ -478,12 +470,6 @@ void RoutingProtocol::NotifyInterfaceDown (uint32_t interface) {
     if (mac != 0) {
       mac->TraceDisconnectWithoutContext ("TxErrHeader",
         MakeCallback(&RoutingProtocol::ProcessTxError, this));
-        
-        mac->TraceDisconnectWithoutContext ("MacRx",
-        MakeCallback(&RoutingProtocol::ProcessMacRxTrace, this));
-      
-      phy->TraceDisconnectWithoutContext ("PhyRxBegin",
-        MakeCallback(&RoutingProtocol::ProcessPhyRxTrace, this));
       
       phy->TraceDisconnectWithoutContext ("MonitorSnifferRx",
         MakeCallback(&RoutingProtocol::ProcessMonitorSnifferRx, this));
@@ -946,12 +932,6 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
   
 }
 
-void RoutingProtocol::ProcessPhyRxTrace(Ptr<Packet const> packet) {
-  
-  this->last_rx_begin = Simulator::Now();
-  //NS_LOG_FUNCTION(this << "Time: " << Simulator::Now());
-  
-}
   
 void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet, 
                               uint16_t frequency, uint16_t channel, 
@@ -963,23 +943,6 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
   //NS_LOG_FUNCTION(this << "s and r" << snr.signal 
     //<< snr.noise << "snr_dbm" << snr.signal - snr.noise);
   
-}
-
-void RoutingProtocol::ProcessMacRxTrace(Ptr<Packet const> packet) {
-  
-  Time new_T_mac = Simulator::Now() - this->last_rx_begin;
-  
-  if (this->avr_T_mac == Time(0)) {
-    this->avr_T_mac = new_T_mac;
-  }
-  else {
-    this->avr_T_mac = 
-      NanoSeconds((this->config->eta_value) * this->avr_T_mac.GetNanoSeconds())
-      + NanoSeconds((1.0 - this->config->eta_value) * new_T_mac.GetNanoSeconds());
-  }
-  
-  //NS_LOG_FUNCTION(this << "updated avr_T_mac" 
-  //  << this->avr_T_mac.GetNanoSeconds() << " Time" << Simulator::Now());
 }
 
 // -------------------------------------------------------
