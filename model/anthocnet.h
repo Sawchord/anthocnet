@@ -207,18 +207,6 @@ private:
   
   Timer pr_ant_timer;
   
-  // The alpha value of the runinng average calculation
-  double alpha_T_mac;
-  
-  // The decay factor for the average Rx time calculation
-  double eta_value;
-  
-  // These values are used by the snr part of the cost calculation
-  // When snr is considered good or bad
-  double snr_threshold;
-  // The extra cost factor to a bad snr
-  double bad_snr_cost;
-  
   Ptr<UniformRandomVariable> uniform_random;
   
   //----------------------------------------------

@@ -44,9 +44,6 @@ void AntHocNetHelper::Set (std::string name,
 {
   // NOTE: untested
   this->agent_factory.Set(name, value);
-  
-  
-  this->config_factory.Set(name, value);
   std::string c = "Config";
   this->agent_factory.Set(c, 
      PointerValue(this->config_factory.Create<ahn::AntHocNetConfig>()));

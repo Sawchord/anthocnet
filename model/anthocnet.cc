@@ -31,16 +31,12 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
-  alpha_T_mac(0.7),
-  eta_value(0.7),
-  snr_threshold(20.0),
-  bad_snr_cost(4.0),
   
   // These are no configs but rather inital values 
   last_rx_begin(Seconds(0)),
   last_hello(Seconds(0)),
   avr_T_mac(Seconds(0)),
-  last_snr(snr_threshold),
+  last_snr(0),
   
   rtable(RoutingTable(this->config)),
   data_cache(PacketCache(this->config))
@@ -78,30 +74,12 @@ TypeId RoutingProtocol::GetTypeId(void) {
     MakePointerAccessor(&RoutingProtocol::config),
     MakePointerChecker<AntHocNetConfig>()
   )
-  .AddAttribute("EtaValue",
-    "The Rx Time is a running average with a decay defined by eta",
-    DoubleValue(0.7),
-    MakeDoubleAccessor(&RoutingProtocol::eta_value),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("SnrThreshold",
-    "Connections with a SNR below this value are considered bad connections",
-    DoubleValue(20.0),
-    MakeDoubleAccessor(&RoutingProtocol::snr_threshold),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("BadSnrCost",
-    "The cost added to the vost function, if a connection is bad",
-    DoubleValue(4.0),
-    MakeDoubleAccessor(&RoutingProtocol::bad_snr_cost),
-    MakeDoubleChecker<double>()
-  )
+  
   .AddAttribute ("UniformRv",
     "Access to the underlying UniformRandomVariable",
     StringValue ("ns3::UniformRandomVariable"),
     MakePointerAccessor (&RoutingProtocol::uniform_random),
     MakePointerChecker<UniformRandomVariable> ())
-  // TODO: Add other attributes
   .AddTraceSource("AntDrop", "An ant is dropped.",
     MakeTraceSourceAccessor(&RoutingProtocol::ant_drop),
     "ns3::ahn::RoutingProtocol::DropReasonCallback")
@@ -996,8 +974,8 @@ void RoutingProtocol::ProcessMacRxTrace(Ptr<Packet const> packet) {
   }
   else {
     this->avr_T_mac = 
-      NanoSeconds((this->eta_value) * this->avr_T_mac.GetNanoSeconds())
-      + NanoSeconds((1.0 - this->eta_value) * new_T_mac.GetNanoSeconds());
+      NanoSeconds((this->config->eta_value) * this->avr_T_mac.GetNanoSeconds())
+      + NanoSeconds((1.0 - this->config->eta_value) * new_T_mac.GetNanoSeconds());
   }
   
   //NS_LOG_FUNCTION(this << "updated avr_T_mac" 
@@ -1132,7 +1110,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       break;
     case AHNTYPE_HELLO_ACK:
       this->rtable.ProcessAck(src, iface, 
-                              this->eta_value, this->last_hello);
+                              this->config->eta_value, this->last_hello);
       break;
     case AHNTYPE_FW_ANT:
       this->HandleForwardAnt(packet, iface, false);
