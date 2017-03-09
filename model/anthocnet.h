@@ -201,25 +201,11 @@ private:
   // -------------------------------------------------
   // Timers and their intervals
   
-  // The frequency in which to send Hello Ants
-  Time hello_interval;
   Timer hello_timer;
   
-  // Frequency, in which to update the RoutingTable
-  Time rtable_update_interval;
   Timer rtable_update_timer;
   
-  // Frequency, in which proactive ants are sent out
-  Time pr_ant_interval;
   Timer pr_ant_timer;
-  
-  
-  // Time until an entry in the datacache expires and the packet is dropped
-  Time dcache_expire;
-  
-  
-  // Drawback time after a broadcast
-  Time no_broadcast;
   
   // The alpha value of the runinng average calculation
   double alpha_T_mac;

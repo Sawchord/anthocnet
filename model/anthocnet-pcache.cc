@@ -20,11 +20,19 @@
 namespace ns3 {
 namespace ahn {
   
-PacketCache::PacketCache(Time ie):
-  initial_expire(ie)
+PacketCache::PacketCache(Ptr<AntHocNetConfig> config):
+  config(config)
   {}
   
 PacketCache::~PacketCache() {}
+
+void PacketCache::SetConfig(Ptr<AntHocNetConfig> config) {
+  this->config = config;
+}
+
+Ptr<AntHocNetConfig> PacketCache::GetConfig() {
+  return this->config;
+}
 
 void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce, Time expire) {
   
@@ -44,7 +52,7 @@ void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce, Time expire) {
 }
 
 void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce) {
-  this->CachePacket(dst, ce, this->initial_expire);
+  this->CachePacket(dst, ce, this->config->dcache_expire);
 }
 
 

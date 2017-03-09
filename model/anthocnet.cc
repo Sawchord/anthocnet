@@ -28,14 +28,9 @@ namespace ahn {
 
 //ctor
 RoutingProtocol::RoutingProtocol ():
-  hello_interval(Seconds(1)),
   hello_timer(Timer::CANCEL_ON_DESTROY),
-  rtable_update_interval(MilliSeconds(1000)),
   rtable_update_timer(Timer::CANCEL_ON_DESTROY),
-  pr_ant_interval(MilliSeconds(1000)),
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
-  dcache_expire(MilliSeconds(500000)),
-  no_broadcast(MilliSeconds(100)),
   alpha_T_mac(0.7),
   eta_value(0.7),
   snr_threshold(20.0),
@@ -48,7 +43,7 @@ RoutingProtocol::RoutingProtocol ():
   last_snr(snr_threshold),
   
   rtable(RoutingTable(this->config)),
-  data_cache(dcache_expire)
+  data_cache(PacketCache(this->config))
   {
     // Initialize the sockets
     for (uint32_t i = 0; i < MAX_INTERFACES; i++) {
@@ -62,6 +57,7 @@ RoutingProtocol::~RoutingProtocol() {}
 void RoutingProtocol::SetConfig(Ptr<AntHocNetConfig> config) {
   this->config = config;
   this->rtable.SetConfig(config);
+  this->data_cache.SetConfig(config);
 }
 
 Ptr<AntHocNetConfig> RoutingProtocol::GetConfig() const {
@@ -76,23 +72,11 @@ TypeId RoutingProtocol::GetTypeId(void) {
   .SetParent<Ipv4RoutingProtocol> ()
   .SetGroupName("AntHocNet")
   .AddConstructor<RoutingProtocol>()
-  .AddAttribute ("HelloInterval",
-    "HELLO messages emission interval.",
-    TimeValue (Seconds(1)),
-    MakeTimeAccessor(&RoutingProtocol::hello_interval),
-    MakeTimeChecker()
-  )
   .AddAttribute("Config",
     "Pointer to the configuration of this module",
     PointerValue(),
     MakePointerAccessor(&RoutingProtocol::config),
     MakePointerChecker<AntHocNetConfig>()
-  )
-  .AddAttribute ("NoBroadcast",
-    "Time after broadcast,where no broadcast is allowed to same destination",
-    TimeValue (MilliSeconds(100)),
-    MakeTimeAccessor(&RoutingProtocol::no_broadcast),
-    MakeTimeChecker()
   )
   .AddAttribute("EtaValue",
     "The Rx Time is a running average with a decay defined by eta",
@@ -111,24 +95,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
     DoubleValue(4.0),
     MakeDoubleAccessor(&RoutingProtocol::bad_snr_cost),
     MakeDoubleChecker<double>()
-  )
-  .AddAttribute ("DataCacheExpire",
-    "Time data packets wait for route to be found. Dropped if expires",
-    TimeValue (MilliSeconds(5000)),
-    MakeTimeAccessor(&RoutingProtocol::dcache_expire),
-    MakeTimeChecker()
-  )
-  .AddAttribute ("RTableUpdate",
-    "The interval, in which the RoutingTable is updated.",
-    TimeValue (MilliSeconds(1000)),
-    MakeTimeAccessor(&RoutingProtocol::rtable_update_interval),
-    MakeTimeChecker()
-  )
-  .AddAttribute ("ProactiveAntTimer",
-    "The interval, in which an active session sends out proactive ants",
-    TimeValue (MilliSeconds(1000)),
-    MakeTimeAccessor(&RoutingProtocol::pr_ant_interval),
-    MakeTimeChecker()
   )
   .AddAttribute ("UniformRv",
     "Access to the underlying UniformRandomVariable",
@@ -170,7 +136,8 @@ void RoutingProtocol::DoDispose() {
 // Implementation of Ipv4Protocol inherited functions
 Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p, 
                                              const Ipv4Header &header, 
-                                             Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) {
+                                             Ptr<NetDevice> oif, 
+                                             Socket::SocketErrno &sockerr) {
   
   if (!p) {
     NS_LOG_DEBUG("Empty packet");
@@ -220,7 +187,9 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   // this->StartForwardAnt(dst, false);
   
   sockerr = Socket::ERROR_NOTERROR;
-  NS_LOG_FUNCTION(this << "loopback with header" << header << "started FWAnt to " << dst);
+  NS_LOG_FUNCTION(this << "loopback with header" 
+    << header << "started FWAnt to " << dst);
+  
   // TODO: This seems to be buggy and lead to data drop
   return this->LoopbackRoute(header, oif);
 }
@@ -236,7 +205,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
   Ipv4Address this_node = this->ipv4->GetAddress(recv_iface, 0).GetLocal();
   
-  NS_LOG_FUNCTION (this << p->GetUid () << header.GetDestination () << idev->GetAddress ());
+  NS_LOG_FUNCTION (this << p->GetUid () 
+    << header.GetDestination () << idev->GetAddress ());
   
   // TODO: Register activity for destination here
   
@@ -260,7 +230,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   if (dst.IsMulticast()) {
     NS_LOG_LOGIC("AntHocNet does not support multicast");
     
-    this->data_drop(p, "Was mutilcast message, which is not supported", this_node);
+    this->data_drop(p, "Was multicast message, which is not supported", 
+                    this_node);
     
     Socket::SocketErrno sockerr = Socket::ERROR_NOROUTETOHOST;
     ecb(p, header, sockerr);
@@ -706,16 +677,16 @@ void RoutingProtocol::Start() {
   
   // Start the HelloTimer
   this->hello_timer.SetFunction(&RoutingProtocol::HelloTimerExpire, this);
-  this->hello_timer.Schedule(this->hello_interval);
+  this->hello_timer.Schedule(this->config->hello_interval);
   
   // Start the proacrive ant timer
   this->pr_ant_timer.SetFunction(&RoutingProtocol::PrAntTimerExpire, this);
-  this->pr_ant_timer.Schedule(this->pr_ant_interval);
+  this->pr_ant_timer.Schedule(this->config->pr_ant_interval);
   
   // Start the RTableUpdateTimer
   this->rtable_update_timer.SetFunction(
     &RoutingProtocol::RTableTimerExpire, this);
-  this->rtable_update_timer.Schedule(this->rtable_update_interval);
+  this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
   
   // TODO: Start pr ant timer
   
@@ -917,7 +888,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
     return;
   }
   
-  this->rtable.NoBroadcast(dst, this->no_broadcast);
+  this->rtable.NoBroadcast(dst, this->config->no_broadcast);
   
   for (auto sock_it = this->socket_addresses.begin(); 
       sock_it != this->socket_addresses.end(); ++sock_it) {
@@ -989,7 +960,9 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
     for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
       ad_it != addresses.end(); ++ad_it) {
       NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
-      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), *ad_it);
+      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), 
+                                  *ad_it);
+      
     }
   }
   
@@ -1083,7 +1056,7 @@ void RoutingProtocol::HelloTimerExpire() {
       this, socket, packet, destination);
   }
   
-  this->hello_timer.Schedule(this->hello_interval);
+  this->hello_timer.Schedule(this->config->hello_interval);
 }
 
 void RoutingProtocol::PrAntTimerExpire() {
@@ -1097,14 +1070,14 @@ void RoutingProtocol::PrAntTimerExpire() {
   }
   
   
-  this->pr_ant_timer.Schedule(this->pr_ant_interval);
+  this->pr_ant_timer.Schedule(this->config->pr_ant_interval);
 }
 
 void RoutingProtocol::RTableTimerExpire() {
   //NS_LOG_FUNCTION(this);
   
-  this->rtable.Update(this->rtable_update_interval);
-  this->rtable_update_timer.Schedule(this->rtable_update_interval);
+  this->rtable.Update(this->config->rtable_update_interval);
+  this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
 }
 
 // -----------------------------------------------------
@@ -1147,7 +1120,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     dst = Ipv4Address("255.255.255.255");
   }
   
-  NS_LOG_FUNCTION("Found interface with ID " << iface << " on destination " << dst
+  NS_LOG_FUNCTION("Found interface with ID " 
+    << iface << " on destination " << dst
     << "type" << type
   );
   

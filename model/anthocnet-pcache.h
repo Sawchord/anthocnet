@@ -19,6 +19,7 @@
 #define ANTHOCNETPCACHE_H
 
 #include "anthocnet-packet.h"
+#include "anthocnet-config.h"
 
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/ipv4-interface.h"
@@ -51,7 +52,7 @@ struct CacheEntry {
 class PacketCache {
 public:
   //ctor
-  PacketCache(Time ie);
+  PacketCache(Ptr<AntHocNetConfig> config);
   //dtor
   ~PacketCache();
 
@@ -65,10 +66,14 @@ std::vector<Ipv4Address> GetDestinations();
 
 void RemoveCache(Ipv4Address dst);
 
+void SetConfig(Ptr<AntHocNetConfig>);
+Ptr<AntHocNetConfig> GetConfig();
+
 private:
   
-  // Standard expire time if no other specified
-  Time initial_expire;
+  // Configuration of the packet cache
+  Ptr<AntHocNetConfig> config;
+  
   std::map<Ipv4Address, std::list<CacheEntry> > cache;
   
 };
