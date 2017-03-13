@@ -988,7 +988,8 @@ void RoutingProtocol::HelloTimerExpire() {
       this, socket, packet, destination);
   }
   
-  this->hello_timer.Schedule(this->config->hello_interval);
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 30));
+  this->hello_timer.Schedule(this->config->hello_interval + jitter);
 }
 
 void RoutingProtocol::PrAntTimerExpire() {
@@ -1001,8 +1002,8 @@ void RoutingProtocol::PrAntTimerExpire() {
     this->StartForwardAnt(*dst_it, true);
   }
   
-  
-  this->pr_ant_timer.Schedule(this->config->pr_ant_interval);
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 30));
+  this->pr_ant_timer.Schedule(this->config->pr_ant_interval + jitter);
 }
 
 void RoutingProtocol::RTableTimerExpire() {

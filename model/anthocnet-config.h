@@ -59,6 +59,9 @@ public:
   // ---------------------------------
   // Timings
   
+  // TODO: Make jitters settable
+  // TODO: Make hello counter timeout settable
+  
   // Intervals of Timer events
   Time hello_interval;
   Time rtable_update_interval;
