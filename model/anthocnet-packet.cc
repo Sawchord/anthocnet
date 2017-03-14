@@ -79,30 +79,26 @@ void TypeHeader::Print (std::ostream &os) const {
   switch (type)
   {
     case AHNTYPE_FW_ANT:
-    {
       os << "FORWARD_ANT";
       break;
-    }
     case AHNTYPE_PRFW_ANT:
-    {
       os << "PROACTIVE_FORWARD_ANT";
       break;
-    }
     case AHNTYPE_BW_ANT:
-    {
       os << "BACKWARD_ANT";
       break;
-    }
     case AHNTYPE_HELLO_MSG:
-    {
       os << "HELLO_MSG";
       break;
-    }
     case AHNTYPE_HELLO_ACK:
-    {
       os << "HELLO_ACK";
       break;
-    }
+    case AHNTYPE_LINK_FAILURE:
+      os << "LINK_FAILURE";
+      break;
+    case AHNTYPE_WARNING:
+      os << "WARNING";
+      break;
     default:
       os << "UNKNOWN_TYPE";
   }
@@ -118,10 +114,170 @@ operator<< (std::ostream & os, TypeHeader const & h) {
   return os;
 }
 
+// -------------------------------------------------
+// LinkFailure Header
+LinkFailureHeader::LinkFailureHeader() {}
+LinkFailureHeader::~LinkFailureHeader() {}
+
+TypeId LinkFailureHeader::GetTypeId () {
+  static TypeId tid = TypeId ("ns3::ahn::LinkFailureHeader")
+  .SetParent<Header> ()
+  .SetGroupName("AntHocNet")
+  .AddConstructor<LinkFailureHeader> ();
+  return tid;
+}
+
+TypeId LinkFailureHeader::GetInstanceTypeId () const {
+  return GetTypeId ();
+}
+
+uint32_t LinkFailureHeader::GetSerializedSize() const {
+  if (flags != NEW_BEST_VALUE) {
+    return 9;
+  }
+  else {
+    return 17;
+  }
+}
+
+void LinkFailureHeader::Serialize (Buffer::Iterator i) const {
+  
+  WriteTo(i, this->src);
+  WriteTo(i, this->broken_dst);
+  i.WriteU8(this->flags);
+  
+  if (this->flags == NEW_BEST_VALUE) {
+    WriteTo(i, this->best_dst);
+    
+    char buf[sizeof(double)];
+    
+    memcpy(&buf, &this->best_pheromone, sizeof(double));
+    
+    for (uint32_t b = 0; b < sizeof(double); b++) {
+      i.WriteU8(buf[b]);
+    }
+  }
+  
+}
+
+uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
+  
+  Buffer::Iterator i = start;
+  
+  ReadFrom(i, this->src);
+  ReadFrom(i, this->broken_dst);
+  this->flags = (linkfailure_t) i.ReadU8();
+  
+  if (this->flags == NEW_BEST_VALUE) {
+    
+    ReadFrom(i, this->best_dst);
+    
+    char buf[sizeof(double)];
+    for (uint32_t b = 0; b < sizeof(double); b++) {
+      buf[b] = i.ReadU8();
+    }
+    memcpy(&this->best_pheromone, &buf, sizeof(double));
+  }
+  
+  uint32_t dist = i.GetDistanceFrom(start);
+  NS_ASSERT(dist == this->GetSerializedSize());
+  
+  return dist;
+  
+}
+
+void LinkFailureHeader::Print (std::ostream &os) const {
+  os << "Src: " << this->src
+    << "Reporting breakage to: " << this->broken_dst;
+    
+  if (this->flags == VALUE) {
+    os << "Breakage";
+  }
+  else if (this->flags == ONLY_VALUE) {
+    os << "Complete Breakage";
+  }
+  else if (this->flags == NEW_BEST_VALUE){
+    os << "Best Link Breakage"
+      << "New best link: " << this->best_dst << ":" << this->best_pheromone;
+  }
+}
+
+bool LinkFailureHeader::IsValid() const{
+  return true;
+}
+
+bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
+  if (src == o.src && flags == o.flags && broken_dst == o.broken_dst) {
+    if (flags != NEW_BEST_VALUE) {
+      return true;
+    } else {
+      if (best_dst == o.best_dst && best_pheromone == o.best_pheromone) {
+        return true;
+      }
+    }
+  } 
+  return false;
+}
+
+// -------------------------------------------------
+// Unicast warning Header
+UnicastWarningHeader::UnicastWarningHeader() {}
+UnicastWarningHeader::~UnicastWarningHeader() {}
+
+TypeId UnicastWarningHeader::GetTypeId () {
+  static TypeId tid = TypeId ("ns3::ahn::UnicastWarningHeader")
+  .SetParent<Header> ()
+  .SetGroupName("AntHocNet")
+  .AddConstructor<UnicastWarningHeader> ();
+  return tid;
+}
+
+TypeId UnicastWarningHeader::GetInstanceTypeId () const {
+  return GetTypeId ();
+}
+
+uint32_t UnicastWarningHeader::GetSerializedSize() const {
+  return 3 * 4;
+}
+
+
+void UnicastWarningHeader::Serialize(Buffer::Iterator i) const{
+  
+  WriteTo(i, this->node);
+  WriteTo(i, this->sender);
+  WriteTo(i, this->dst);
+}
+
+uint32_t UnicastWarningHeader::Deserialize(Buffer::Iterator start) {
+  
+  Buffer::Iterator i = start;
+  
+  ReadFrom(i, this->node);
+  ReadFrom(i, this->sender);
+  ReadFrom(i, this->dst);
+  
+  uint32_t dist = i.GetDistanceFrom(start);
+  NS_ASSERT (dist == GetSerializedSize());
+  return dist;
+  
+}
+
+void UnicastWarningHeader::Print (std::ostream &os) const {
+  os << "Failure at: " << this->node
+    << "Origin: " << this->sender
+    << "Destination: " << this->dst;
+}
+
+bool UnicastWarningHeader::IsValid() const{
+  return (node != sender && sender != dst && node != dst);
+}
+
+bool UnicastWarningHeader::operator== (UnicastWarningHeader const &o) const {
+  return (node == o.node && sender == o.sender && dst == o.dst);
+}
 
 // -------------------------------------------------
 // HelloMsg header
-
 NS_OBJECT_ENSURE_REGISTERED (HelloMsgHeader);
 
 HelloMsgHeader::HelloMsgHeader() {}
@@ -181,14 +337,13 @@ uint32_t HelloMsgHeader::GetSerializedSize() const {
 
 void HelloMsgHeader::Serialize(Buffer::Iterator i) const {
   
-  char buf[sizeof(double)];
-  
   WriteTo(i, this->src);
   i.WriteU32(this->diffusion.size());
   
   for (uint32_t c = 0; c < this->diffusion.size(); c++) {
     WriteTo(i, this->diffusion[c].first);
     
+    char buf[sizeof(double)];
     memcpy(&buf, &this->diffusion[c].second, sizeof(double));
     
     for (uint32_t b = 0; b < sizeof(double); b++) {
@@ -271,8 +426,6 @@ TypeId AntHeader::GetTypeId () {
 TypeId AntHeader::GetInstanceTypeId () const {
   return GetTypeId ();
 }
-
-// TODO: use auto and sizeof to make code reliable and shorter
 
 // Implementation of functions inherited from Header class
 uint32_t AntHeader::GetSerializedSize () const {

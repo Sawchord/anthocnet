@@ -41,7 +41,9 @@ typedef enum MessageType {
   AHNTYPE_PRFW_ANT= 2, //!< Proactive Forward Ant (reserved)
   AHNTYPE_BW_ANT = 3, //!< Backward Ant
   AHNTYPE_HELLO_MSG = 4, //!< Hello Packet
-  AHNTYPE_HELLO_ACK = 5 //!< Hello Acknowledgement
+  AHNTYPE_HELLO_ACK = 5, //!< Hello Acknowledgement
+  AHNTYPE_LINK_FAILURE = 6, //!< Link failure notification message
+  AHNTYPE_WARNING = 7 //!< Unicast warning message
 } mtype_t;
 
 typedef std::pair<Ipv4Address, double> diffusion_t;
@@ -78,6 +80,78 @@ private:
   bool valid;
 };
 
+typedef enum LinkFailureFlags {
+  VALUE,
+  NEW_BEST_VALUE,
+  ONLY_VALUE
+} linkfailure_t;
+
+class LinkFailureHeader : public Header {
+public:
+  //ctor
+  LinkFailureHeader();
+  //dtor
+  ~LinkFailureHeader();
+  
+  //Header serialization/deserialization
+  static TypeId GetTypeId();
+  TypeId GetInstanceTypeId() const;
+  uint32_t GetSerializedSize() const;
+  void Serialize (Buffer::Iterator i) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+  
+  MessageType Get () const;
+  // Check that type if valid
+  bool IsValid () const;
+  bool operator== (LinkFailureHeader const &o) const;
+  
+private:
+  
+  Ipv4Address src;
+  Ipv4Address broken_dst;
+  linkfailure_t flags;
+  
+  // These are only used, if flags == NEW_BEST_VALUE
+  Ipv4Address best_dst;
+  double best_pheromone;
+  
+};
+
+
+class UnicastWarningHeader : public Header {
+public:
+  //ctor
+  UnicastWarningHeader();
+  //dtor
+  ~UnicastWarningHeader();
+  
+  //Header serialization/deserialization
+  static TypeId GetTypeId();
+  TypeId GetInstanceTypeId() const;
+  uint32_t GetSerializedSize() const;
+  void Serialize (Buffer::Iterator i) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream &os) const;
+  
+  MessageType Get () const;
+  // Check that type if valid
+  bool IsValid () const;
+  bool operator== (UnicastWarningHeader const & o) const;
+  
+private:
+  
+  // The node which failed to resebd the data
+  Ipv4Address node;
+  
+  // The sender of the data
+  Ipv4Address sender;
+  
+  // The destionation of the data, which is unreachable
+  Ipv4Address dst;
+  
+};
+
 
 /**
  * \brief The hello packet. It is used to notify the neigbor 
@@ -106,7 +180,7 @@ public:
   
   uint32_t GetSerializedSize() const;
   
-  void Serialize (Buffer::Iterator start) const;
+  void Serialize (Buffer::Iterator i) const;
   uint32_t Deserialize (Buffer::Iterator start);
   
   void Print (std::ostream&) const;

@@ -160,7 +160,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   
   // NOTE: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
-  // this->StartForwardAnt(dst, false);
+   this->StartForwardAnt(dst, false);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "loopback with header" 
@@ -264,7 +264,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     this->data_cache.CachePacket(dst, ce);
     
     // TODO: Only start FWAnt, if origin not 127.0.0.1
-    this->StartForwardAnt(dst, false);
+    //this->StartForwardAnt(dst, false);
     return true;
   }
   
