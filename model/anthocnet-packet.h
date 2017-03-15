@@ -123,6 +123,7 @@ class UnicastWarningHeader : public Header {
 public:
   //ctor
   UnicastWarningHeader();
+  UnicastWarningHeader(Ipv4Address src, Ipv4Address sender, Ipv4Address dst);
   //dtor
   ~UnicastWarningHeader();
   
@@ -138,6 +139,10 @@ public:
   // Check that type if valid
   bool IsValid () const;
   bool operator== (UnicastWarningHeader const & o) const;
+  
+  Ipv4Address GetNode();
+  Ipv4Address GetSender();
+  Ipv4Address GetDst();
   
 private:
   

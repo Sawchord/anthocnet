@@ -222,6 +222,12 @@ bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
 // -------------------------------------------------
 // Unicast warning Header
 UnicastWarningHeader::UnicastWarningHeader() {}
+UnicastWarningHeader::UnicastWarningHeader(Ipv4Address src, Ipv4Address sender,
+                                           Ipv4Address dst) :
+node(src),
+sender(sender),
+dst(dst)
+{}
 UnicastWarningHeader::~UnicastWarningHeader() {}
 
 TypeId UnicastWarningHeader::GetTypeId () {
@@ -274,6 +280,18 @@ bool UnicastWarningHeader::IsValid() const{
 
 bool UnicastWarningHeader::operator== (UnicastWarningHeader const &o) const {
   return (node == o.node && sender == o.sender && dst == o.dst);
+}
+
+Ipv4Address UnicastWarningHeader::GetNode() {
+  return this->node;
+}
+
+Ipv4Address UnicastWarningHeader::GetSender() {
+  return this->sender;
+}
+
+Ipv4Address UnicastWarningHeader::GetDst() {
+  return this->dst;
 }
 
 // -------------------------------------------------

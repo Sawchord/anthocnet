@@ -226,14 +226,6 @@ public:
   void PurgeInterface(uint32_t interface_index);
   
   /**
-   * \brief Resets the initial expire times of neighbor and
-   *        destination entries.
-   * \param nb_expire The initial ttl of neighbor entries
-   * \param dst_expire The initia ttl of destination entries
-   */
-  void SetExpireTimes(Time nb_expire, Time dst_expire);
-  
-  /**
    * \brief Updates a neighbor entry on receiving a HelloAnt
    *        either by adding the neighbors to the table or
    *        resetting its expire time, if it already exist.

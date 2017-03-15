@@ -92,7 +92,6 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index, Ipv4Address address) {
 bool RoutingTable::AddNeighbor(uint32_t iface_index, 
                                Ipv4Address address, Time expire) {
   
-  //NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
   if (iface_index >= MAX_NEIGHBORS) {
     NS_LOG_ERROR("iface index to large index: " << iface_index);
@@ -138,8 +137,6 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
 }
 
 void RoutingTable::RemoveNeighbor(uint32_t iface_index, Ipv4Address address) {
-  
-  //NS_LOG_FUNCTION(this << "iface_index" << iface_index << "address" << address);
   
   // Search for the destination
   auto it = this->dsts.find(address);
@@ -363,12 +360,6 @@ void RoutingTable::PurgeInterface(uint32_t interface) {
     }
     
   }
-}
-
-void RoutingTable::SetExpireTimes(Time nb_expire, Time dst_expire) {
-  // TODO: Remove this function
-  //this->initial_lifetime_nb = nb_expire;
-  //this->initial_lifetime_dst = dst_expire;
 }
 
 void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
