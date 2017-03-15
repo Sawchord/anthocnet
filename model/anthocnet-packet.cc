@@ -219,6 +219,41 @@ bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
   return false;
 }
 
+void LinkFailureHeader::Set(Ipv4Address src, Ipv4Address broken_dst, 
+                             linkfailure_t flags) {
+  this->src = src;
+  this->broken_dst = broken_dst;
+  this->flags = flags;
+}
+
+void LinkFailureHeader::SetExtended(Ipv4Address best_dst, 
+                                    double best_pheromone) {
+  if (this->flags != NEW_BEST_VALUE) return;
+  this->best_dst = best_dst;
+  this->best_pheromone = best_pheromone;
+}
+
+Ipv4Address LinkFailureHeader::GetSrc() {
+  return this->src;
+}
+
+Ipv4Address LinkFailureHeader::GetBrokenDst() {
+  return this->broken_dst;
+}
+
+linkfailure_t LinkFailureHeader::GetFlags() {
+  return this->flags;
+}
+
+std::pair<Ipv4Address, double> LinkFailureHeader::GetExtended() {
+  if (this->flags != NEW_BEST_VALUE) {
+    return std::make_pair(Ipv4Address("0.0.0.0"), 0.0);
+  }
+  else {
+    return std::make_pair(this->best_dst, best_pheromone);
+  }
+}
+
 // -------------------------------------------------
 // Unicast warning Header
 UnicastWarningHeader::UnicastWarningHeader() {}

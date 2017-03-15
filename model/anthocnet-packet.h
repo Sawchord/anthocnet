@@ -106,6 +106,15 @@ public:
   bool IsValid () const;
   bool operator== (LinkFailureHeader const &o) const;
   
+  void Set(Ipv4Address src, Ipv4Address broken_dst, linkfailure_t flags);
+  void SetExtended(Ipv4Address best_dst, double best_pheromone);
+  
+  Ipv4Address GetSrc();
+  Ipv4Address GetBrokenDst();
+  linkfailure_t GetFlags();
+  
+  std::pair<Ipv4Address, double> GetExtended();
+  
 private:
   
   Ipv4Address src;
