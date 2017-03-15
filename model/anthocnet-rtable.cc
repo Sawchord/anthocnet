@@ -481,19 +481,50 @@ void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg,
   
   // Find out, which of the 3 cases we have here
   if (is_only_value) {
-    msg.SetBroken(address, ONLY_VALUE);
+    msg.SetBroken(iface, address, ONLY_VALUE);
   }
   else if (best_pheromone > this->rtable[ad_index][adif_index].pheromone) {
-    msg.SetBroken(address, VALUE);
+    msg.SetBroken(iface, address, VALUE);
   }
   else {
-    msg.SetBroken(address, NEW_BEST_VALUE);
+    msg.SetBroken(iface, address, NEW_BEST_VALUE);
     msg.SetExtended(best_dst, best_pheromone);
   }
   NS_LOG_FUNCTION(this << "NB Timeout: " << msg);
   
   // Remove the neighbor
   this->RemoveNeighbor(iface, address);
+  
+  return;
+}
+
+void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg){
+  
+  auto brkdst_it = this->dsts.find(msg.GetBrokenDst());
+  uint32_t brkdst_index = brkdst_it->second.index;
+  
+  // Need to check if we really have this neighbor as neighbor
+  // If not just skip
+  
+  auto linknb_it = this->dsts.find(msg.GetSrc());
+  if (linknb_it == this->dsts.end()) {
+    return; 
+  }
+    
+  auto linkif_it = linknb_it->second.nbs.find(msg.GetIface());
+  if (linkif_it == linknb_it->second.nbs.end()) {
+    return; 
+  }
+  
+  uint32_t linkif_index = linkif_it->second.index;
+  
+  
+  // TODO: Use Bootstrap algorithm
+  // TODO: Resend LinkFailure, if you lost your own best or only route
+  
+  // Delete the pheromones for that link (TODO: also virtual)
+  this->rtable[brkdst_index][linkif_index].pheromone = NAN;
+  this->rtable[brkdst_index][linkif_index].avr_hops = 0;
   
   return;
 }

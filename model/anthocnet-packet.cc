@@ -133,16 +133,17 @@ TypeId LinkFailureHeader::GetInstanceTypeId () const {
 
 uint32_t LinkFailureHeader::GetSerializedSize() const {
   if (flags != NEW_BEST_VALUE) {
-    return 9;
+    return 13;
   }
   else {
-    return 17;
+    return 21;
   }
 }
 
 void LinkFailureHeader::Serialize (Buffer::Iterator i) const {
   
   WriteTo(i, this->src);
+  i.WriteU32(this->src_iface);
   WriteTo(i, this->broken_dst);
   i.WriteU8(this->flags);
   
@@ -165,6 +166,7 @@ uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
   Buffer::Iterator i = start;
   
   ReadFrom(i, this->src);
+  this->src_iface = i.ReadU32();
   ReadFrom(i, this->broken_dst);
   this->flags = (linkfailure_t) i.ReadU8();
   
@@ -188,6 +190,7 @@ uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
 
 void LinkFailureHeader::Print (std::ostream &os) const {
   os << "Src: " << this->src
+    << ":" << this->src_iface
     << "Reporting breakage to: " << this->broken_dst;
     
   if (this->flags == VALUE) {
@@ -223,8 +226,10 @@ void LinkFailureHeader::SetSrc(Ipv4Address src) {
     this->src = src;
 }
 
-void LinkFailureHeader::SetBroken(Ipv4Address broken_dst, 
-                             linkfailure_t flags) {
+void LinkFailureHeader::SetBroken(uint32_t src_iface, 
+                                  Ipv4Address broken_dst, 
+                                  linkfailure_t flags) {
+  this->src_iface = src_iface;
   this->broken_dst = broken_dst;
   this->flags = flags;
 }
@@ -238,6 +243,10 @@ void LinkFailureHeader::SetExtended(Ipv4Address best_dst,
 
 Ipv4Address LinkFailureHeader::GetSrc() {
   return this->src;
+}
+
+uint32_t LinkFailureHeader::GetIface() {
+  return this->src_iface;
 }
 
 Ipv4Address LinkFailureHeader::GetBrokenDst() {

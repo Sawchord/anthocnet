@@ -236,6 +236,7 @@ public:
    * \brief Updates the expire times of all neighbors and destinations.
    *        Removes the ones, that are expired.
    * \param interval The time interval, in which this function is called.
+   * \return A list of all neigbor entries, that are outdated
    */
   void Update(Time interval);
   
@@ -249,6 +250,11 @@ public:
   void ProcessNeighborTimeout(LinkFailureHeader& msg, uint32_t iface, 
                               Ipv4Address address);
   
+  /**
+   * \brief Processes a LinkFailure Notification
+   * \param msg The message to Process
+   */ 
+  void ProcessLinkFailureMsg(LinkFailureHeader& msg);
   
   /**
    * \brief Takes a reference to a newly created HelloMsg and fills it
