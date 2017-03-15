@@ -40,8 +40,6 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 
-//#include "ns3/ipv4.h"
-//#include "ns3/log.h"
 
 #include "anthocnet-packet.h"
 #include "anthocnet-config.h"
@@ -242,6 +240,17 @@ public:
   void Update(Time interval);
   
   /**
+   * \brief Called, if a neighbor timed out. Handles updating the routing 
+   *        table and constructs a LinkFailure Notification.
+   * \param msg Reference to the LinkFailureHeader, that will be populated
+   * \param iface Interface index of the brocken connection
+   * \param address Address of the brocken connection
+   */
+  void ProcessNeighborTimeout(LinkFailureHeader& msg, uint32_t iface, 
+                              Ipv4Address address);
+  
+  
+  /**
    * \brief Takes a reference to a newly created HelloMsg and fills it
    *        values according to paper section 4.2.4
    * \param msg The reference to the message
@@ -330,18 +339,6 @@ private:
   
   Ptr<AntHocNetConfig> config;
   
-  //double T_hop;
-  
-  //double alpha_pheromone;
-  //double gamma_pheromone;
-  
-  // The neighbors and destinations get deleted after a while
-  // Neighbors, if there are no HelloAnts incoming for a long time
-  //Time initial_lifetime_nb;
-  // Destinations, if they are unused
-  //Time initial_lifetime_dst;
-  
-  //Time session_expire;
   
 };
 

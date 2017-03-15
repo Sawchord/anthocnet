@@ -14,10 +14,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 #include "anthocnet-rtable.h"
-#include "ns3/ipv4.h"
-#include "ns3/log.h"
 
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingTable");
@@ -407,9 +404,10 @@ void RoutingTable::Update(Time interval) {
     }
     else {
       
-      // Iterate over all the neigbors
+      // Update dsts expire timer
       dst_it->second.expires_in = dst_dt;
       
+      // Iterate over all the neigbors
       for (auto nb_it = dst_it->second.nbs.begin();
       nb_it != dst_it->second.nbs.end(); /* no increment */) {
         
@@ -432,6 +430,72 @@ void RoutingTable::Update(Time interval) {
       ++dst_it;
     }
   }
+}
+
+void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg, 
+                                          uint32_t iface, 
+                                          Ipv4Address address) {
+  
+  // iterators and indices of the address
+  // Needed for evaluation
+  auto ad_it = this->dsts.find(address);
+  uint32_t ad_index = ad_it->second.index;
+  auto adif_it = ad_it->second.nbs.find(iface);
+  uint32_t adif_index = adif_it->second.index;
+  
+  bool is_only_value = true;
+  
+  // Holds the best pheromone that is not the pheromone of address
+  double best_pheromone = 0.0;
+  
+  Ipv4Address best_dst;
+  
+  // Find out wether this is the best or only pheromone value
+  // Iterate over all destinations and neighbors
+  for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
+    
+    // Skip the value itself, which by now is still in rtable
+    if (dst_it->first == address) 
+      continue;
+    
+    for (auto nb_it = dst_it->second.nbs.begin(); 
+         nb_it != dst_it->second.nbs.end(); ++ nb_it) {
+      
+      uint32_t nb_index = nb_it->second.index;
+      
+      // If there is a pheromone, that isnt nan
+      if (this->rtable[ad_index][nb_index].pheromone
+        == this->rtable[ad_index][nb_index].pheromone){
+        
+        // Then there are more than one values
+        is_only_value = false;
+        
+        if (this->rtable[ad_index][nb_index].pheromone > best_pheromone) {
+          best_pheromone = this->rtable[ad_index][nb_index].pheromone;
+          best_dst = dst_it->first;
+        }
+      }
+      
+    }
+  }
+  
+  // Find out, which of the 3 cases we have here
+  if (is_only_value) {
+    msg.SetBroken(address, ONLY_VALUE);
+  }
+  else if (best_pheromone > this->rtable[ad_index][adif_index].pheromone) {
+    msg.SetBroken(address, VALUE);
+  }
+  else {
+    msg.SetBroken(address, NEW_BEST_VALUE);
+    msg.SetExtended(best_dst, best_pheromone);
+  }
+  NS_LOG_FUNCTION(this << "NB Timeout: " << msg);
+  
+  // Remove the neighbor
+  this->RemoveNeighbor(iface, address);
+  
+  return;
 }
 
 void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts, 

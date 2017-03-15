@@ -219,9 +219,12 @@ bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
   return false;
 }
 
-void LinkFailureHeader::Set(Ipv4Address src, Ipv4Address broken_dst, 
+void LinkFailureHeader::SetSrc(Ipv4Address src) {
+    this->src = src;
+}
+
+void LinkFailureHeader::SetBroken(Ipv4Address broken_dst, 
                              linkfailure_t flags) {
-  this->src = src;
   this->broken_dst = broken_dst;
   this->flags = flags;
 }
