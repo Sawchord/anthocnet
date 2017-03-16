@@ -502,9 +502,14 @@ void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg,
   return;
 }
 
-void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg){
+void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
+                                          uint32_t iface){
   
   auto brkdst_it = this->dsts.find(msg.GetBrokenDst());
+  if (brkdst_it == this->dsts.end()) {
+    return; 
+  }
+  
   uint32_t brkdst_index = brkdst_it->second.index;
   
   // Need to check if we really have this neighbor as neighbor
@@ -525,10 +530,11 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg){
   
   // TODO: Use Bootstrap algorithm
   // TODO: Resend LinkFailure, if you lost your own best or only route
-  
-  // Delete the pheromones for that link (TODO: also virtual)
+  NS_LOG_FUNCTION(this << "Link broke at " 
+    << msg.GetSrc() << " To " << msg.GetBrokenDst());
+  // Delete the pheromones for that link (TODO: also virtual???)
   this->rtable[brkdst_index][linkif_index].pheromone = NAN;
-  this->rtable[brkdst_index][linkif_index].avr_hops = 0;
+  this->rtable[brkdst_index][linkif_index].avr_hops = NAN;
   
   return;
 }

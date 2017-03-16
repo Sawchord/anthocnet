@@ -254,7 +254,7 @@ public:
    * \brief Processes a LinkFailure Notification
    * \param msg The message to Process
    */ 
-  void ProcessLinkFailureMsg(LinkFailureHeader& msg);
+  void ProcessLinkFailureMsg(LinkFailureHeader& msg, uint32_t iface);
   
   /**
    * \brief Takes a reference to a newly created HelloMsg and fills it

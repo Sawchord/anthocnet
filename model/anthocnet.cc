@@ -1123,7 +1123,9 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     case AHNTYPE_BW_ANT:
       this->HandleBackwardAnt(packet, src, iface);
       break;
-    
+    case AHNTYPE_LINK_FAILURE:
+      this->HandleLinkFailure(packet, iface);
+      break;
     default:
       NS_LOG_WARN("Type not implemented.");
       return;
@@ -1168,6 +1170,18 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   
   return;
 
+}
+
+void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, uint32_t iface) {
+ 
+  LinkFailureHeader msg;
+  packet->RemoveHeader(msg);
+  
+  this->rtable.ProcessLinkFailureMsg(msg, iface);
+  
+  //NS_LOG_UNCOND(this->rtable);
+  
+  // TODO: Resent LinkFailure if necessary
 }
 
 void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,

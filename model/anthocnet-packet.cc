@@ -64,6 +64,8 @@ uint32_t TypeHeader::Deserialize (Buffer::Iterator start) {
     case AHNTYPE_PRFW_ANT:
     case AHNTYPE_HELLO_MSG:
     case AHNTYPE_HELLO_ACK:
+    case AHNTYPE_LINK_FAILURE:
+    case AHNTYPE_WARNING:
       this->type = (MessageType) type;
       break;
     default:
@@ -191,17 +193,17 @@ uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
 void LinkFailureHeader::Print (std::ostream &os) const {
   os << "Src: " << this->src
     << ":" << this->src_iface
-    << "Reporting breakage to: " << this->broken_dst;
+    << " Reporting breakage to: " << this->broken_dst;
     
   if (this->flags == VALUE) {
-    os << "Breakage";
+    os << " Breakage";
   }
   else if (this->flags == ONLY_VALUE) {
-    os << "Complete Breakage";
+    os << " Complete Breakage";
   }
   else if (this->flags == NEW_BEST_VALUE){
-    os << "Best Link Breakage"
-      << "New best link: " << this->best_dst << ":" << this->best_pheromone;
+    os << " Best Link Breakage"
+      << " New best link: " << this->best_dst << ":" << this->best_pheromone;
   }
 }
 
