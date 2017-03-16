@@ -15,6 +15,8 @@ def build(bld):
         'model/anthocnet-pcache.cc',
         'model/anthocnet-packet.cc',
         'helper/anthocnet-helper.cc',
+        
+        'model/sim-database.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('anthocnet')
@@ -31,6 +33,8 @@ def build(bld):
         'model/anthocnet-pcache.h',
         'model/anthocnet-packet.h',
         'helper/anthocnet-helper.h',
+        
+        'model/sim-database.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

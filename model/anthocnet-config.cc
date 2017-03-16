@@ -161,10 +161,6 @@ void AntHocNetConfig::DoInitialize() {
   
 }
 
-uint32_t AntHocNetConfig::GetN() const {
-  return 1;
-}
-
 // End of namespaces
 }
 }
