@@ -238,7 +238,7 @@ public:
    * \param interval The time interval, in which this function is called.
    * \return A list of all neigbor entries, that are outdated
    */
-  void Update(Time interval);
+  std::list<std::pair<uint32_t, Ipv4Address> > Update(Time interval);
   
   /**
    * \brief Called, if a neighbor timed out. Handles updating the routing 

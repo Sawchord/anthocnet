@@ -136,7 +136,7 @@ uint32_t LinkFailureHeader::GetSerializedSize() const {
     return 13;
   }
   else {
-    return 21;
+    return 25;
   }
 }
 
@@ -222,14 +222,13 @@ bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
   return false;
 }
 
-void LinkFailureHeader::SetSrc(Ipv4Address src) {
-    this->src = src;
+void LinkFailureHeader::SetSrc(uint32_t src_iface, Ipv4Address src) {
+  this->src_iface = src_iface;
+  this->src = src;
 }
 
-void LinkFailureHeader::SetBroken(uint32_t src_iface, 
-                                  Ipv4Address broken_dst, 
+void LinkFailureHeader::SetBroken(Ipv4Address broken_dst, 
                                   linkfailure_t flags) {
-  this->src_iface = src_iface;
   this->broken_dst = broken_dst;
   this->flags = flags;
 }

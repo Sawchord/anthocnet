@@ -387,7 +387,9 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
 }
 
-void RoutingTable::Update(Time interval) {
+std::list<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval) {
+  
+  std::list<std::pair<uint32_t, Ipv4Address> > ret;
   
   // Iterate over the destinations
   for (auto dst_it = this->dsts.begin();
@@ -416,7 +418,8 @@ void RoutingTable::Update(Time interval) {
         if (nb_dt <= Seconds(0)) {
           NS_LOG_FUNCTION(this << "nb" 
             << dst_it->first << ":" << nb_it->first << "timed out");
-          this->RemoveNeighbor((nb_it++)->first , dst_it->first);
+          //this->RemoveNeighbor((nb_it++)->first , dst_it->first);
+          ret.push_back(std::make_pair((nb_it++)->first , dst_it->first));
         }
         else {
           
@@ -430,6 +433,7 @@ void RoutingTable::Update(Time interval) {
       ++dst_it;
     }
   }
+  return ret;
 }
 
 void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg, 
@@ -481,13 +485,13 @@ void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg,
   
   // Find out, which of the 3 cases we have here
   if (is_only_value) {
-    msg.SetBroken(iface, address, ONLY_VALUE);
+    msg.SetBroken(address, ONLY_VALUE);
   }
   else if (best_pheromone > this->rtable[ad_index][adif_index].pheromone) {
-    msg.SetBroken(iface, address, VALUE);
+    msg.SetBroken(address, VALUE);
   }
   else {
-    msg.SetBroken(iface, address, NEW_BEST_VALUE);
+    msg.SetBroken(address, NEW_BEST_VALUE);
     msg.SetExtended(best_dst, best_pheromone);
   }
   NS_LOG_FUNCTION(this << "NB Timeout: " << msg);

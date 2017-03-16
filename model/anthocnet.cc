@@ -1007,7 +1007,58 @@ void RoutingProtocol::PrAntTimerExpire() {
 }
 
 void RoutingProtocol::RTableTimerExpire() {
-  this->rtable.Update(this->config->rtable_update_interval);
+  
+  std::list<std::pair<uint32_t, Ipv4Address> > nbs;
+  
+  // Update the routing table
+  nbs = this->rtable.Update(this->config->rtable_update_interval);
+  
+  
+  // Send for every broken link
+  for (auto nb_it = nbs.begin(); nb_it != nbs.end(); ++nb_it) {
+    
+    // Over every active interface
+    for (auto sock_it = this->socket_addresses.begin(); sock_it != this->socket_addresses.end(); ++sock_it) {
+      
+      Ptr<Socket> socket = sock_it->first;
+      Ipv4InterfaceAddress iface = sock_it->second;
+      
+      if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+        NS_LOG_FUNCTION(this << "skip lo");
+        continue;
+      }
+    
+      
+      LinkFailureHeader msg;
+      msg.SetSrc(this->ipv4->GetInterfaceForAddress(iface.GetLocal()), 
+                 iface.GetLocal());
+      
+      
+      this->rtable.ProcessNeighborTimeout(msg, nb_it->first, nb_it->second);
+      
+      NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
+      
+      TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
+      
+      Ptr<Packet> packet = Create<Packet> ();
+      
+      packet->AddHeader(msg);
+      packet->AddHeader(type_header);
+      
+      Ipv4Address destination;
+      if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+          destination = Ipv4Address ("255.255.255.255");
+      } else { 
+          destination = iface.GetBroadcast ();
+      }
+      
+      Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+      Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+        this, socket, packet, destination);
+    }
+  }
+  
+  
   this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
 }
 

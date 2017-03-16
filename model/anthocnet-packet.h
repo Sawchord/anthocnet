@@ -106,8 +106,8 @@ public:
   bool IsValid () const;
   bool operator== (LinkFailureHeader const &o) const;
   
-  void SetSrc(Ipv4Address src);
-  void SetBroken(uint32_t src_iface, Ipv4Address broken_dst, linkfailure_t flags);
+  void SetSrc(uint32_t src_iface, Ipv4Address src);
+  void SetBroken(Ipv4Address broken_dst, linkfailure_t flags);
   void SetExtended(Ipv4Address best_dst, double best_pheromone);
   
   Ipv4Address GetSrc();
