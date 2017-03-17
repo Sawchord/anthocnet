@@ -18,7 +18,7 @@
 #ifndef SIM_APP_H
 #define SIM_APP_H
 
-
+#include "ns3/simulator.h"
 #include "ns3/address.h"
 #include "ns3/application.h"
 #include "ns3/event-id.h"
@@ -56,8 +56,12 @@ protected:
   
 private:
   
+  bool send_mode;
+  
   void NextTxEvent();
   
+  void Send();
+  void Recv();
   // config
   
   uint16_t send_port;
@@ -66,12 +70,14 @@ private:
   uint32_t packet_size;
   uint32_t packet_rate;
   
-  Ptr<Socket> socket;
   Address remote;
   
   Ptr<SimDatabase> db;
   
+  // state
+  Ptr<Socket> socket;
   Ptr<RandomVariableStream> random;
+  EventId tx_event;
   
 };
 

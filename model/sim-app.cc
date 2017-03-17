@@ -73,7 +73,47 @@ void SimSenderApplication::StartApplication() {
   if (!this->socket) {
     socket = Socket::CreateSocket(GetNode(), this->GetTypeId());
     
+    if (this->send_mode) {
+      // Set socket up to be able to send data out
+      
+      if (!InetSocketAddress::IsMatchingType (this->remote)) {
+        NS_LOG_ERROR("Ipv6 not supported");
+        return;
+      }
+      
+      socket->Bind();
+      socket->Connect(this->remote);
+      socket->SetAllowBroadcast(true);
+      
+      this->tx_event = 
+        Simulator::Schedule(Seconds(1) / this->packet_rate,
+                            &SimSenderApplication::NextTxEvent, this);
+      
+    }
+    else {
+      
+      
+    }
+    
+    
   }
+  
+}
+
+void SimSenderApplication::NextTxEvent() {
+  
+  
+  // Schedule the next next event
+  this->tx_event = 
+    Simulator::Schedule(Seconds(1) / this->packet_rate,
+                        &SimSenderApplication::NextTxEvent, this);
+}
+
+void SimSenderApplication::Send() {
+  
+}
+
+void SimSenderApplication::Recv() {
   
 }
 

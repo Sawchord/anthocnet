@@ -26,6 +26,8 @@
 #include "ns3/attribute.h"
 #include "ns3/log.h"
 
+#include "ns3/header.h"
+
 #include "ns3/double.h"
 #include "ns3/integer.h"
 #include "ns3/uinteger.h"
@@ -36,6 +38,32 @@
 namespace ns3 {
 namespace ahn {
 
+class SimPacketHeader : public Header {
+public:
+  
+  SimPacketHeader();
+  SimPacketHeader(uint64_t seqno, uint64_t size);
+  ~SimPacketHeader();
+  
+  static TypeId GetTypeId();
+  TypeId GetInstanceTypeId() const;
+  
+  uint32_t GetSerializedSize() const;
+  void Serialize (Buffer::Iterator start) const;
+  uint32_t Deserialize (Buffer::Iterator start);
+  void Print (std::ostream& os) const;
+  
+  bool IsValid() const;
+  bool operator== (SimPacketHeader const & o) const;
+  
+private:
+  
+  uint64_t seqno;
+  uint64_t size;
+};
+  
+
+// Database stuff
 typedef enum PacketStatus {
   INIT = 1,
   IN_TRANSMISSION,
