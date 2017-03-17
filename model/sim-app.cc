@@ -32,6 +32,18 @@ TypeId SimSenderApplication::GetTypeId() {
   .SetGroupName("AntHocNet")
   .AddConstructor<SimSenderApplication>()
   
+  .AddAttribute ("SendMode",
+    "Specify, whether this is a sender or a receiver",
+    BooleanValue(false),
+    MakeBooleanAccessor(&SimSenderApplication::send_mode),
+    MakeBooleanChecker()
+  )
+  .AddAttribute ("Port", 
+    "The Port on which to operate",
+    UintegerValue (49192),
+    MakeUintegerAccessor (&SimSenderApplication::packet_size),
+    MakeUintegerChecker<uint16_t> ()
+  )  
   .AddAttribute ("PacketSize", 
     "The size of packets sent",
     UintegerValue (512),
@@ -92,7 +104,10 @@ void SimSenderApplication::StartApplication() {
     }
     else {
       
-      
+      // Make the socket listen
+      socket->Bind(this->local);
+      socket->Listen();
+      socket->SetRecvCallback(MakeCallback(&SimSenderApplication::Recv, this));
     }
     
     
@@ -102,6 +117,22 @@ void SimSenderApplication::StartApplication() {
 
 void SimSenderApplication::NextTxEvent() {
   
+  // Register new packet in database create it and 
+  // build a packet out of it, finally, schedule to send
+  uint64_t seqno = this->db->CreateNewPacket(
+    InetSocketAddress::ConvertFrom(this->local).GetIpv4(),
+    InetSocketAddress::ConvertFrom(this->remote).GetIpv4());
+  
+  SimPacketHeader msg = SimPacketHeader(seqno, this->packet_size);
+  Ptr<Packet> packet = Create<Packet>();
+  
+  packet->AddHeader(msg);
+  
+  Time jitter = MilliSeconds(random->GetInteger(0, 10));
+  Simulator::Schedule(jitter, &SimSenderApplication::Send, this,
+                      socket, packet,
+                      InetSocketAddress::ConvertFrom(this->remote).GetIpv4()
+                     );
   
   // Schedule the next next event
   this->tx_event = 
@@ -109,11 +140,20 @@ void SimSenderApplication::NextTxEvent() {
                         &SimSenderApplication::NextTxEvent, this);
 }
 
-void SimSenderApplication::Send() {
-  
+void SimSenderApplication::Send(Ptr<Socket> socket, Ptr<Packet> packet, 
+                                Ipv4Address dst) {
+  socket->SendTo(packet, 0, InetSocketAddress(dst, this->port));
 }
 
-void SimSenderApplication::Recv() {
+void SimSenderApplication::Recv(Ptr<Socket> socket) {
+  
+  Address src;
+  Ptr<Packet> packet = socket->RecvFrom(src);
+  
+  SimPacketHeader msg;
+  packet->RemoveHeader(msg);
+  
+  this->db->RegisterReceived(msg.GetSeqno());
   
 }
 

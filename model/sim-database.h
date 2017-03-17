@@ -57,6 +57,8 @@ public:
   bool IsValid() const;
   bool operator== (SimPacketHeader const & o) const;
   
+  uint64_t GetSeqno();
+  
 private:
   
   uint64_t seqno;
@@ -110,7 +112,6 @@ public:
   static TypeId GetTypeId();
   
   virtual void DoDispose();
-  
   
   uint64_t CreateNewPacket(Ipv4Address src, Ipv4Address dst);
   void RegisterInTransmission(uint64_t seqno);

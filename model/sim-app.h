@@ -27,7 +27,10 @@
 #include "ns3/traced-callback.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/socket.h"
+#include "ns3/boolean.h"
 #include "ns3/pointer.h"
+#include "ns3/packet.h"
+
 
 #include "sim-database.h"
 
@@ -60,23 +63,24 @@ private:
   
   void NextTxEvent();
   
-  void Send();
-  void Recv();
+  void Send(Ptr<Socket> socket, Ptr<Packet> packet, 
+                                Ipv4Address dst);
+  void Recv(Ptr<Socket> socket);
   // config
   
-  uint16_t send_port;
-  uint16_t recv_port;
+  uint16_t port;
   
   uint32_t packet_size;
   uint32_t packet_rate;
   
+  Address local;
   Address remote;
   
   Ptr<SimDatabase> db;
   
   // state
   Ptr<Socket> socket;
-  Ptr<RandomVariableStream> random;
+  Ptr<UniformRandomVariable> random;
   EventId tx_event;
   
 };

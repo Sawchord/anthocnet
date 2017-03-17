@@ -92,6 +92,13 @@ bool SimPacketHeader::IsValid() const {
 bool SimPacketHeader::operator==(SimPacketHeader const & o) const {
   return (seqno == o.seqno && size == o.size);
 }
+
+
+uint64_t SimPacketHeader::GetSeqno() {
+  return this->seqno;
+}
+
+
 // --------------------------------------------
 // Database 
 SimDatabase::SimDatabase():
