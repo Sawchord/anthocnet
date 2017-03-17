@@ -21,8 +21,10 @@ namespace ns3 {
 //NS_LOG_CONPONENT_DEFINE ("AntHocNetSimDatabase");
 namespace ahn {
 
-SimDatabase::SimDatabase() {
-}
+SimDatabase::SimDatabase():
+packet_seqno(0),
+transmission_seqno(0)
+{}
 
 SimDatabase::~SimDatabase() {
   
