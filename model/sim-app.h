@@ -37,13 +37,13 @@
 namespace ns3 {
 namespace ahn {
 
-class SimSenderApplication : public Application {
+class SimApplication : public Application {
 public:
   
   static TypeId GetTypeId();
   
-  SimSenderApplication();
-  virtual ~SimSenderApplication();
+  SimApplication();
+  virtual ~SimApplication();
   
   Ptr<Socket> GetSocket() const;
   

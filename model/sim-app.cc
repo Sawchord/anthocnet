@@ -18,68 +18,68 @@
 #include "sim-app.h"
 
 namespace ns3 {
-NS_LOG_COMPONENT_DEFINE ("SimSenderApplication");
+NS_LOG_COMPONENT_DEFINE ("SimApplication");
 namespace ahn {
 
-SimSenderApplication::SimSenderApplication(){}
-SimSenderApplication::~SimSenderApplication(){}
+SimApplication::SimApplication(){}
+SimApplication::~SimApplication(){}
 
-NS_OBJECT_ENSURE_REGISTERED(SimSenderApplication);
+NS_OBJECT_ENSURE_REGISTERED(SimApplication);
 
-TypeId SimSenderApplication::GetTypeId() {
-  static TypeId tid = TypeId ("ns3::ahn::SimSenderApplication")
+TypeId SimApplication::GetTypeId() {
+  static TypeId tid = TypeId ("ns3::ahn::SimApplication")
   .SetParent<Application>()
   .SetGroupName("AntHocNet")
-  .AddConstructor<SimSenderApplication>()
+  .AddConstructor<SimApplication>()
   
   .AddAttribute ("SendMode",
     "Specify, whether this is a sender or a receiver",
     BooleanValue(false),
-    MakeBooleanAccessor(&SimSenderApplication::send_mode),
+    MakeBooleanAccessor(&SimApplication::send_mode),
     MakeBooleanChecker()
   )
   .AddAttribute ("Port", 
     "The Port on which to operate",
     UintegerValue (49192),
-    MakeUintegerAccessor (&SimSenderApplication::packet_size),
+    MakeUintegerAccessor (&SimApplication::packet_size),
     MakeUintegerChecker<uint16_t> ()
   )  
   .AddAttribute ("PacketSize", 
     "The size of packets sent",
     UintegerValue (512),
-    MakeUintegerAccessor (&SimSenderApplication::packet_size),
+    MakeUintegerAccessor (&SimApplication::packet_size),
     MakeUintegerChecker<uint32_t> ()
   )  
   .AddAttribute ("PacketRate",
     "The number of packets send out per second",
     UintegerValue (512),
-    MakeUintegerAccessor (&SimSenderApplication::packet_rate),
+    MakeUintegerAccessor (&SimApplication::packet_rate),
     MakeUintegerChecker<uint32_t> ()
   )
   .AddAttribute ("Remote",
     "The address of the destination",
     AddressValue (),
-    MakeAddressAccessor (&SimSenderApplication::remote),
+    MakeAddressAccessor (&SimApplication::remote),
     MakeAddressChecker ()
   )
   .AddAttribute("Database",
     "Pointer to the statistics database",
     PointerValue(),
-    MakePointerAccessor(&SimSenderApplication::db),
+    MakePointerAccessor(&SimApplication::db),
     MakePointerChecker<SimDatabase>()
   )
   ;
   return tid;
 }
 
-int64_t SimSenderApplication::AssignStreams (int64_t stream) {
+int64_t SimApplication::AssignStreams (int64_t stream) {
   NS_LOG_FUNCTION(this << stream);
   
   this->random->SetStream(stream);
   return 1;
 }
 
-void SimSenderApplication::StartApplication() {
+void SimApplication::StartApplication() {
   NS_LOG_FUNCTION(this);
   
   if (!this->socket) {
@@ -99,7 +99,7 @@ void SimSenderApplication::StartApplication() {
       
       this->tx_event = 
         Simulator::Schedule(Seconds(1) / this->packet_rate,
-                            &SimSenderApplication::NextTxEvent, this);
+                            &SimApplication::NextTxEvent, this);
       
     }
     else {
@@ -107,7 +107,7 @@ void SimSenderApplication::StartApplication() {
       // Make the socket listen
       socket->Bind(this->local);
       socket->Listen();
-      socket->SetRecvCallback(MakeCallback(&SimSenderApplication::Recv, this));
+      socket->SetRecvCallback(MakeCallback(&SimApplication::Recv, this));
     }
     
     
@@ -115,7 +115,7 @@ void SimSenderApplication::StartApplication() {
   
 }
 
-void SimSenderApplication::NextTxEvent() {
+void SimApplication::NextTxEvent() {
   
   // Register new packet in database create it and 
   // build a packet out of it, finally, schedule to send
@@ -129,7 +129,7 @@ void SimSenderApplication::NextTxEvent() {
   packet->AddHeader(msg);
   
   Time jitter = MilliSeconds(random->GetInteger(0, 10));
-  Simulator::Schedule(jitter, &SimSenderApplication::Send, this,
+  Simulator::Schedule(jitter, &SimApplication::Send, this,
                       socket, packet,
                       InetSocketAddress::ConvertFrom(this->remote).GetIpv4()
                      );
@@ -137,15 +137,15 @@ void SimSenderApplication::NextTxEvent() {
   // Schedule the next next event
   this->tx_event = 
     Simulator::Schedule(Seconds(1) / this->packet_rate,
-                        &SimSenderApplication::NextTxEvent, this);
+                        &SimApplication::NextTxEvent, this);
 }
 
-void SimSenderApplication::Send(Ptr<Socket> socket, Ptr<Packet> packet, 
+void SimApplication::Send(Ptr<Socket> socket, Ptr<Packet> packet, 
                                 Ipv4Address dst) {
   socket->SendTo(packet, 0, InetSocketAddress(dst, this->port));
 }
 
-void SimSenderApplication::Recv(Ptr<Socket> socket) {
+void SimApplication::Recv(Ptr<Socket> socket) {
   
   Address src;
   Ptr<Packet> packet = socket->RecvFrom(src);
@@ -157,11 +157,11 @@ void SimSenderApplication::Recv(Ptr<Socket> socket) {
   
 }
 
-void SimSenderApplication::StopApplication() {
+void SimApplication::StopApplication() {
   NS_LOG_FUNCTION(this);
 }
 
-void SimSenderApplication::DoDispose() {
+void SimApplication::DoDispose() {
   NS_LOG_FUNCTION (this);
   socket = 0;
   
@@ -169,7 +169,7 @@ void SimSenderApplication::DoDispose() {
   
 }
 
-void SimSenderApplication::DoInitialize() {
+void SimApplication::DoInitialize() {
   
 }
 // End of namespaces
