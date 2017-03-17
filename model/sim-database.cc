@@ -120,6 +120,50 @@ void SimDatabase::DoDispose() {
 void SimDatabase::DoInitialize() {
   
 }
+
+uint64_t SimDatabase::CreateNewPacket(Ipv4Address src, Ipv4Address dst) {
+  
+  packet_track_t track = PacketTrack();
+  
+  //track->seqno = this->seqno++;
+  track.status = INIT;
+  track.src = src;
+  track.dst = dst;
+  
+  uint64_t s = this->packet_seqno;
+  this->packet_seqno++;
+  this->packet_track.insert(std::make_pair(s, track));
+  
+  return s;
+}
+
+void SimDatabase::RegisterInTransmission(uint64_t seqno) {
+  
+  auto track = this->packet_track.find(seqno);
+  
+  track->second.status = IN_TRANSMISSION;
+  track->second.creation = Simulator::Now();
+  
+}
+
+void SimDatabase::RegisterReceived(uint64_t seqno) {
+  
+  auto track = this->packet_track.find(seqno);
+  
+  track->second.status = RECEIVED;
+  track->second.destruction = Simulator::Now();
+  
+}
+
+void SimDatabase::RegisterDropped(uint64_t seqno) {
+  
+  auto track = this->packet_track.find(seqno);
+  
+  track->second.status = DROPPED;
+  track->second.destruction = Simulator::Now();
+  
+}
+
 // End of namespaces
 }
 }

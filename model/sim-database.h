@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <map>
 
+#include "ns3/simulator.h"
 #include "ns3/nstime.h"
 #include "ns3/object.h"
 #include "ns3/attribute.h"
@@ -68,7 +69,7 @@ typedef enum PacketStatus {
   INIT = 1,
   IN_TRANSMISSION,
   RECEIVED,
-  DROPED,
+  DROPPED,
   UNKNOWN
 } packet_status_t;
 
@@ -110,11 +111,14 @@ public:
   
   virtual void DoDispose();
   
+  
+  uint64_t CreateNewPacket(Ipv4Address src, Ipv4Address dst);
+  void RegisterInTransmission(uint64_t seqno);
+  void RegisterReceived(uint64_t seqno);
+  void RegisterDropped(uint64_t seqno);
+  
 protected:
   virtual void DoInitialize();
-  
-  
-public:
   
   
 private:
@@ -122,8 +126,8 @@ private:
   uint64_t packet_seqno;
   uint64_t transmission_seqno;
   
-  std::map<uint64_t, packet_track_t*> packet_track;
-  std::map<uint64_t, transmission_track_t*> transmission_track;
+  std::map<uint64_t, packet_track_t> packet_track;
+  std::map<uint64_t, transmission_track_t> transmission_track;
 };
 
 // End of namespaces
