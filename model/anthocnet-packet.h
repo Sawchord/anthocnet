@@ -67,7 +67,7 @@ public:
   uint32_t GetSerializedSize() const;
   void Serialize (Buffer::Iterator start) const;
   uint32_t Deserialize (Buffer::Iterator start);
-  void Print (std::ostream &os) const;
+  void Print (std::ostream& os) const;
   
   // Return type
   MessageType Get () const { return type; }

@@ -18,6 +18,7 @@ def build(bld):
         
         'model/sim-database.cc',
         'model/sim-app.cc',
+        'helper/sim-helper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('anthocnet')
@@ -37,6 +38,7 @@ def build(bld):
         
         'model/sim-database.h',
         'model/sim-app.h',
+        'helper/sim-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
