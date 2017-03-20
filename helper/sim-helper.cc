@@ -19,7 +19,9 @@
 
 namespace ns3 {
   
-SimHelper::SimHelper() {}
+SimHelper::SimHelper() {
+  this->factory.SetTypeId("ns3::ahn::SimApplication");
+}
 
 void SimHelper::SetAttribute(std::string name, const AttributeValue& value) {
   this->factory.Set(name, value);

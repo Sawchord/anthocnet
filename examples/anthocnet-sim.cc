@@ -54,6 +54,10 @@ private:
   
   // State
   Ptr<SimDatabase> db;
+  std::vector<ApplicationContainer*> apps;
+  
+  Ptr<UniformRandomVariable> random;
+  
   // Config
   
   // Simulation parameters
@@ -87,6 +91,9 @@ private:
   uint32_t packetSize;
   uint32_t packetRate;
   
+  uint32_t appStartBegin;
+  uint32_t appStartEnd;
+  
 };
 
 RoutingExperiment::RoutingExperiment():
@@ -112,7 +119,10 @@ txpEnd(7.5),
 
 protocol(2),
 packetSize(64),
-packetRate(40)
+packetRate(40),
+
+appStartBegin(20),
+appStartEnd(180)
 {}
 
 std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
@@ -170,6 +180,12 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   cmd.AddValue("packetRate", 
                "The rate of the packets", this->packetRate);
   
+  
+  cmd.AddValue("appStartBegin", 
+               "Time at which the first senders start", this->appStartBegin);
+  cmd.AddValue("appStartEnd", 
+               "Time at which the last senders start", this->appStartEnd);
+  
   cmd.Parse(argc, argv);
   return "STUB";
 }
@@ -178,6 +194,8 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
 void RoutingExperiment::Run() {
   
   Packet::EnablePrinting();
+  
+  random = CreateObject<UniformRandomVariable>();
   
   // Create the nodes
   NodeContainer adhocNodes;
@@ -209,6 +227,7 @@ void RoutingExperiment::Run() {
   
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel;
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   
   std::string loss_model_string;
   switch (this->lossModel){
@@ -223,8 +242,8 @@ void RoutingExperiment::Run() {
       break;
   }
   
-  wifiChannel.AddPropagationLoss (loss_model_string);
-  wifiPhy.SetChannel (wifiChannel.Create ());
+  wifiChannel.AddPropagationLoss(loss_model_string);
+  wifiPhy.SetChannel(wifiChannel.Create());
   
   WifiMacHelper wifiMac;
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
@@ -236,7 +255,7 @@ void RoutingExperiment::Run() {
   
   // Install wifi on the nodes
   wifiMac.SetType ("ns3::AdhocWifiMac");
-  NetDeviceContainer adhocDevices = wifi.Install (wifiPhy, wifiMac, adhocNodes);
+  NetDeviceContainer adhocDevices = wifi.Install(wifiPhy, wifiMac, adhocNodes);
   
   
   // Set up plane and mobility
@@ -270,9 +289,9 @@ void RoutingExperiment::Run() {
                                   "Speed", StringValue (ssSpeed.str()),
                                   "Pause", StringValue (ssPause.str()),
                                   "PositionAllocator", PointerValue(taPositionAlloc));
-  mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
-  mobilityAdhoc.Install (adhocNodes);
-  streamIndex += mobilityAdhoc.AssignStreams (adhocNodes, streamIndex);
+  mobilityAdhoc.SetPositionAllocator(taPositionAlloc);
+  mobilityAdhoc.Install(adhocNodes);
+  streamIndex += mobilityAdhoc.AssignStreams(adhocNodes, streamIndex);
   
   
   // Set up the IP layer routing protocol
@@ -294,8 +313,11 @@ void RoutingExperiment::Run() {
       break;
   }
   
+  internet.SetRoutingHelper (list);
+  internet.Install (adhocNodes);
+  
   Ipv4AddressHelper addressAdhoc;
-  addressAdhoc.SetBase ("10.1.1.0", "255.255.255.0");
+  addressAdhoc.SetBase("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer adhocInterfaces;
   adhocInterfaces = addressAdhoc.Assign (adhocDevices);
   
@@ -304,29 +326,68 @@ void RoutingExperiment::Run() {
   this->db = Create<SimDatabase>();
   
   // Set the default for the SimApllication
-  Config::SetDefault("ns3::SimApplication::PacketSize", 
-                     IntegerValue(this->packetSize));
-  Config::SetDefault("ns3::SimApplication::PacketRate", 
-                     IntegerValue(this->packetRate));
+  Config::SetDefault("ns3::ahn::SimApplication::PacketSize", 
+                     UintegerValue(this->packetSize));
+  Config::SetDefault("ns3::ahn::SimApplication::PacketRate", 
+                     UintegerValue(this->packetRate));
   
-  Config::SetDefault("ns3::SimApplication::Database", PointerValue(this->db));
+  Config::SetDefault("ns3::ahn::SimApplication::Database", PointerValue(this->db));
   
   SimHelper apphelper = SimHelper();
   
-  apphelper.SetAttribute("SendMode", BooleanValue(false));
   
   // Install application in recevier mode
+  apphelper.SetAttribute("SendMode", BooleanValue(false));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
+    
+    
+    //ApplicationContainer* temp = new ApplicationContainer();
+    //apps.push_back(temp);
+    
+    //temp->Start(Seconds(20.0));
+    //temp->Stop(Seconds(TotalTime));
+    
+    apphelper.SetAttribute("Local",
+                  AddressValue(
+                    InetSocketAddress(adhocInterfaces.GetAddress(i))));
+    
+    apphelper.SetAttribute("StartTime", TimeValue(Seconds(0)));
+    apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
+    
+    apphelper.Install(adhocNodes.Get(i));
+    
     
   }
   
-  // Intall applicatoin in sender mode
+  // Intall application in sender mode
+  apphelper.SetAttribute("SendMode", BooleanValue(true));
   for (uint32_t i = this->nReceiver;
        i < this->nReceiver + this->nSender; i++) {
     
+    apphelper.SetAttribute("Local",
+                  AddressValue(
+                    InetSocketAddress(adhocInterfaces.GetAddress(i))));
+    
+    apphelper.SetAttribute("Remote",
+                  AddressValue(
+                    InetSocketAddress(
+                      adhocInterfaces.GetAddress(i % this->nReceiver))));
+  
+    Time start_time = Seconds(
+      random->GetValue(this->appStartBegin, appStartEnd));
+    
+    apphelper.SetAttribute("StartTime", TimeValue(start_time));
+    apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
+    
+    apphelper.Install(adhocNodes.Get(i));
     
     
   }
+  
+  
+  Simulator::Stop(this->total_time);
+  Simulator::Run ();
+  Simulator::Destroy ();
 }
 
 
@@ -363,6 +424,7 @@ int main (int argc, char* argv[]) {
   
   std::cout << dir_string << std::endl;
   
+  experiment.Run();
   
   timeval stop;
   gettimeofday(&stop, NULL);
