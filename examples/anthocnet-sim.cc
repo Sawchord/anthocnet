@@ -48,9 +48,9 @@ public:
   void Run();
   std::string CommandSetup(int argc, char** argv);
   
-  
-  
 private:
+  
+  void ProgressUpdate();
   
   // State
   Ptr<SimDatabase> db;
@@ -191,8 +191,20 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
 }
 
 
+void RoutingExperiment::ProgressUpdate() {
+  std::cout << Simulator::Now().GetSeconds()
+    << "s/" << total_time.GetSeconds()
+    << "s passed (" 
+    << ((double)Simulator::Now().GetSeconds() / total_time.GetSeconds()) * 100
+    << "%)" << std::endl; 
+    
+  
+  Simulator::Schedule(Seconds(1), &RoutingExperiment::ProgressUpdate, this);
+}
+
 void RoutingExperiment::Run() {
   
+  std::string tr_name = "anthocnet-sim";
   Packet::EnablePrinting();
   
   random = CreateObject<UniformRandomVariable>();
@@ -384,6 +396,17 @@ void RoutingExperiment::Run() {
     
   }
   
+  if (this->generate_pcap) {
+    
+    // phy level pcap
+    //wifiPhy.EnablePcap((tr_name + ".pcap"), adhocNodes);
+    
+    // IP level pcap
+    internet.EnablePcapIpv4((tr_name + ".pcap"), adhocNodes);
+  }
+  
+  // Schedule initial events
+  Simulator::Schedule(Seconds(1), &RoutingExperiment::ProgressUpdate, this);
   
   Simulator::Stop(this->total_time);
   Simulator::Run ();
