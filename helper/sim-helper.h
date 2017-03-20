@@ -32,7 +32,7 @@
 namespace ns3 {
 
 class SimHelper {
-  
+public:
   SimHelper();
   
   void SetAttribute(std::string name, const AttributeValue& value);

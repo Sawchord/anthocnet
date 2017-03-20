@@ -52,9 +52,15 @@ TypeId SimApplication::GetTypeId() {
   )  
   .AddAttribute ("PacketRate",
     "The number of packets send out per second",
-    UintegerValue (512),
+    UintegerValue (10),
     MakeUintegerAccessor (&SimApplication::packet_rate),
     MakeUintegerChecker<uint32_t> ()
+  )
+  .AddAttribute ("Local",
+    "The address of this node",
+    AddressValue (),
+    MakeAddressAccessor (&SimApplication::local),
+    MakeAddressChecker ()
   )
   .AddAttribute ("Remote",
     "The address of the destination",
