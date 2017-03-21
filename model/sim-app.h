@@ -26,6 +26,7 @@
 #include "ns3/data-rate.h"
 #include "ns3/traced-callback.h"
 #include "ns3/random-variable-stream.h"
+#include "ns3/udp-socket-factory.h"
 #include "ns3/socket.h"
 #include "ns3/boolean.h"
 #include "ns3/pointer.h"
@@ -49,13 +50,13 @@ public:
   
   int64_t AssignStreams (int64_t stream);
   
-  virtual void DoDispose();
+  virtual void DoDispose(void);
   
-  virtual void StartApplication();
-  virtual void StopApplication();
+  virtual void StartApplication(void);
+  virtual void StopApplication(void);
   
 protected:
-  virtual void DoInitialize();
+  //virtual void DoInitialize(void);
   
 private:
   

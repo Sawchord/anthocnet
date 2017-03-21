@@ -33,7 +33,10 @@ namespace ns3 {
 
 class SimHelper {
 public:
+  
   SimHelper();
+  SimHelper(std::string halp);
+  ~SimHelper();
   
   void SetAttribute(std::string name, const AttributeValue& value);
   

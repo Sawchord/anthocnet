@@ -21,7 +21,11 @@ namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("SimApplication");
 namespace ahn {
 
-SimApplication::SimApplication(){}
+SimApplication::SimApplication(){
+  
+  this->random = Create<UniformRandomVariable>();
+  
+}
 SimApplication::~SimApplication(){}
 
 NS_OBJECT_ENSURE_REGISTERED(SimApplication);
@@ -41,7 +45,7 @@ TypeId SimApplication::GetTypeId() {
   .AddAttribute ("Port", 
     "The Port on which to operate",
     UintegerValue (49192),
-    MakeUintegerAccessor (&SimApplication::packet_size),
+    MakeUintegerAccessor (&SimApplication::port),
     MakeUintegerChecker<uint16_t> ()
   )  
   .AddAttribute ("PacketSize", 
@@ -89,7 +93,9 @@ void SimApplication::StartApplication() {
   NS_LOG_FUNCTION(this);
   
   if (!this->socket) {
-    socket = Socket::CreateSocket(GetNode(), this->GetTypeId());
+    //socket = Socket::CreateSocket(GetNode(), this->GetTypeId());
+    socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+    
     
     if (this->send_mode) {
       // Set socket up to be able to send data out
@@ -110,8 +116,12 @@ void SimApplication::StartApplication() {
     }
     else {
       
+      // TODO: Why is source port one higher than dst port? should be same
       // Make the socket listen
-      socket->Bind(this->local);
+      Ipv4Address t = InetSocketAddress::ConvertFrom(this->local).GetIpv4();
+      
+      
+      socket->Bind(InetSocketAddress(t, this->port));
       socket->Listen();
       socket->SetRecvCallback(MakeCallback(&SimApplication::Recv, this));
     }
@@ -175,9 +185,9 @@ void SimApplication::DoDispose() {
   
 }
 
-void SimApplication::DoInitialize() {
+//void SimApplication::DoInitialize() {
   
-}
+//}
 // End of namespaces
 }
 }

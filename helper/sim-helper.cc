@@ -23,6 +23,14 @@ SimHelper::SimHelper() {
   this->factory.SetTypeId("ns3::ahn::SimApplication");
 }
 
+
+SimHelper::SimHelper(std::string halp) {
+  this->factory.SetTypeId("ns3::ahn::SimApplication");
+}
+
+SimHelper::~SimHelper() {
+}
+
 void SimHelper::SetAttribute(std::string name, const AttributeValue& value) {
   this->factory.Set(name, value);
 }

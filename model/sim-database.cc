@@ -133,7 +133,7 @@ uint64_t SimDatabase::CreateNewPacket(Ipv4Address src, Ipv4Address dst) {
   packet_track_t track = PacketTrack();
   
   //track->seqno = this->seqno++;
-  track.status = INIT;
+  track.status = UNKNOWN;
   track.src = src;
   track.dst = dst;
   
@@ -169,6 +169,29 @@ void SimDatabase::RegisterDropped(uint64_t seqno) {
   track->second.status = DROPPED;
   track->second.destruction = Simulator::Now();
   
+}
+
+void SimDatabase::Print(std::ostream& os) const {
+  
+}
+
+results_t SimDatabase::Evaluate(uint32_t granularity) const {
+  
+  results_t result;
+  
+  // Get the packets sorted by creation time
+  std::list<std::pair<Time, uint64_t> > sorter;
+  for (auto p_it = this->packet_track.begin(); 
+       p_it != this->packet_track.end(); ++ p_it) {
+    
+    sorter.push_back(std::make_pair(p_it->second.creation, p_it->first));
+    
+  
+  }
+  //for (auto )
+  //std::cout << sorter;
+  
+  return result;
 }
 
 // End of namespaces

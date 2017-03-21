@@ -54,7 +54,7 @@ private:
   
   // State
   Ptr<SimDatabase> db;
-  std::vector<ApplicationContainer*> apps;
+  //std::vector<ApplicationContainer*> apps;
   
   Ptr<UniformRandomVariable> random;
   
@@ -119,10 +119,10 @@ txpEnd(7.5),
 
 protocol(2),
 packetSize(64),
-packetRate(40),
+packetRate(10),
 
-appStartBegin(20),
-appStartEnd(180)
+appStartBegin(10),
+appStartEnd(15)
 {}
 
 std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
@@ -345,19 +345,13 @@ void RoutingExperiment::Run() {
   
   Config::SetDefault("ns3::ahn::SimApplication::Database", PointerValue(this->db));
   
-  SimHelper apphelper = SimHelper();
+  SimHelper apphelper("halp");
   
   
   // Install application in recevier mode
   apphelper.SetAttribute("SendMode", BooleanValue(false));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
     
-    
-    //ApplicationContainer* temp = new ApplicationContainer();
-    //apps.push_back(temp);
-    
-    //temp->Start(Seconds(20.0));
-    //temp->Stop(Seconds(TotalTime));
     
     apphelper.SetAttribute("Local",
                   AddressValue(
@@ -367,7 +361,6 @@ void RoutingExperiment::Run() {
     apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
     
     apphelper.Install(adhocNodes.Get(i));
-    
     
   }
   
@@ -388,6 +381,8 @@ void RoutingExperiment::Run() {
     Time start_time = Seconds(
       random->GetValue(this->appStartBegin, appStartEnd));
     
+    std::cout << "App starts at " << start_time.GetSeconds() << std::endl;
+    
     apphelper.SetAttribute("StartTime", TimeValue(start_time));
     apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
     
@@ -395,6 +390,9 @@ void RoutingExperiment::Run() {
     
     
   }
+  
+  streamIndex += apphelper.AssignStreams(adhocNodes, streamIndex);
+  
   
   if (this->generate_pcap) {
     
@@ -411,6 +409,11 @@ void RoutingExperiment::Run() {
   Simulator::Stop(this->total_time);
   Simulator::Run ();
   Simulator::Destroy ();
+  
+  // Get the result of the simulation and put them into graphs
+  results_t result = this->db->Evaluate(1);
+  
+  
 }
 
 
