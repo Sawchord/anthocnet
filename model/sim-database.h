@@ -18,6 +18,7 @@
 #ifndef SIM_DATABASE_H
 #define SIM_DATABASE_H
 
+#include <algorithm>
 #include <stdint.h>
 #include <map>
 
@@ -68,11 +69,10 @@ private:
 
 // Database stuff
 typedef enum PacketStatus {
-  INIT = 1,
+  UNKNOWN = 1,
   IN_TRANSMISSION,
   RECEIVED,
-  DROPPED,
-  UNKNOWN
+  DROPPED
 } packet_status_t;
 
 typedef enum TransmissionStatus {
@@ -103,11 +103,11 @@ typedef struct TransmissionTrack {
 } transmission_track_t;
   
 typedef struct Results {
-  std::list<std::pair<uint64_t, double> > droprate;
-  std::list<std::pair<uint64_t, double> > end_to_end_delay;
-  std::list<std::pair<uint64_t, double> > average_delay_jitter;
-  std::list<std::pair<uint64_t, double> > rate_control_package;
-  std::list<std::pair<uint64_t, double> > rate_control_bytes;
+  std::list<double> droprate;
+  std::list<double> end_to_end_delay;
+  std::list<double> average_delay_jitter;
+  std::list<double> rate_control_package;
+  std::list<double> rate_control_bytes;
   
 } results_t;
 
@@ -128,7 +128,7 @@ public:
   void RegisterDropped(uint64_t seqno);
   
   void Print(std::ostream& os) const;
-  results_t Evaluate(uint32_t granularity) const;
+  results_t Evaluate(double granularity) const;
   
 protected:
   virtual void DoInitialize();

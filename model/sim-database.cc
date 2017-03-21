@@ -18,7 +18,7 @@
 #include "sim-database.h"
 
 namespace ns3 {
-//NS_LOG_CONPONENT_DEFINE ("AntHocNetSimDatabase");
+NS_LOG_COMPONENT_DEFINE ("SimDatabase");
 namespace ahn {
 
 SimPacketHeader::SimPacketHeader() {}
@@ -175,24 +175,102 @@ void SimDatabase::Print(std::ostream& os) const {
   
 }
 
-results_t SimDatabase::Evaluate(uint32_t granularity) const {
+results_t SimDatabase::Evaluate(double granularity) const {
   
-  results_t result;
+  results_t results;
   
   // Get the packets sorted by creation time
-  std::list<std::pair<Time, uint64_t> > sorter;
+  std::vector<std::pair<Time, uint64_t> > sorter;
   for (auto p_it = this->packet_track.begin(); 
        p_it != this->packet_track.end(); ++ p_it) {
     
     sorter.push_back(std::make_pair(p_it->second.creation, p_it->first));
-    
-  
+   
   }
-  //for (auto )
-  //std::cout << sorter;
   
-  return result;
+  std::sort(sorter.begin(), sorter.end(),
+    [](const std::pair<Time, uint64_t>& lhs, 
+       const std::pair<Time, uint64_t>& rhs) {
+        return lhs.first.GetNanoSeconds() < rhs.first.GetNanoSeconds();
+      }  
+  );
+  
+  
+  uint64_t index = 0;
+  Time last_step = Seconds(0);
+  Time next_step = last_step + Seconds(granularity);
+  
+  for (auto so_it = sorter.begin(); so_it != sorter.end(); ++so_it) {
+    
+    uint64_t num_packets = 0;
+    uint64_t num_received_packets = 0;
+    uint64_t num_dropped_packets = 0;
+    uint64_t num_unknown_packets = 0;
+    Time delay_acc = Seconds(0);
+    
+    // TODO: Delay jitter
+    
+    // Increase timestep, if necessary
+    if (so_it->first > next_step) {
+      // TODO: write data to result
+      
+      if (num_packets == 0) {
+        results.droprate.push_back(0);
+        results.end_to_end_delay.push_back(0);
+      } else {
+        results.droprate.push_back(num_dropped_packets / num_packets);
+        results.end_to_end_delay.push_back(delay_acc.GetMilliSeconds() 
+                                           / num_packets);
+        
+      }
+      
+      
+      
+      index++;
+      
+      last_step = next_step;
+      next_step += Seconds(granularity);
+      
+      // Reinitialize all accumulators
+      num_packets = 0;
+      num_received_packets = 0;
+      num_dropped_packets = 0;
+      num_unknown_packets = 0;
+      
+      delay_acc = Seconds(0);
+      
+    }
+    
+    num_packets++;
+    auto p_it = this->packet_track.find(so_it->second);
+    
+    switch (p_it->second.status) {
+      case RECEIVED:
+        num_received_packets++;
+        delay_acc += (p_it->second.destruction - p_it->second.creation);
+        break;
+      case DROPPED:
+        num_dropped_packets++;
+        break;
+      case IN_TRANSMISSION:
+        // TODO: ????
+        break;
+      case UNKNOWN:
+        num_unknown_packets++;
+        NS_LOG_WARN("Packet has unknown status");
+        break;
+      default:
+        
+        break;
+    }
+    
+  }
+  
+  // TODO: Evaluate the Transmission related stuff
+  
+  return results;
 }
+
 
 // End of namespaces
 }
