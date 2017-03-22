@@ -132,7 +132,6 @@ uint64_t SimDatabase::CreateNewPacket(Ipv4Address src, Ipv4Address dst) {
   
   packet_track_t track = PacketTrack();
   
-  //track->seqno = this->seqno++;
   track.status = UNKNOWN;
   track.src = src;
   track.dst = dst;
@@ -146,7 +145,13 @@ uint64_t SimDatabase::CreateNewPacket(Ipv4Address src, Ipv4Address dst) {
 
 void SimDatabase::RegisterInTransmission(uint64_t seqno) {
   
+  NS_LOG_FUNCTION(this << seqno);
+  
   auto track = this->packet_track.find(seqno);
+  if (track == this->packet_track.end()) {
+    NS_LOG_WARN("Could not find packet");
+    return;
+  }
   
   track->second.status = IN_TRANSMISSION;
   track->second.creation = Simulator::Now();
@@ -155,7 +160,13 @@ void SimDatabase::RegisterInTransmission(uint64_t seqno) {
 
 void SimDatabase::RegisterReceived(uint64_t seqno) {
   
+  NS_LOG_FUNCTION(this << seqno);
+  
   auto track = this->packet_track.find(seqno);
+  if (track == this->packet_track.end()) {
+    NS_LOG_WARN("Could not find packet");
+    return;
+  }
   
   track->second.status = RECEIVED;
   track->second.destruction = Simulator::Now();
@@ -164,7 +175,13 @@ void SimDatabase::RegisterReceived(uint64_t seqno) {
 
 void SimDatabase::RegisterDropped(uint64_t seqno) {
   
+  NS_LOG_FUNCTION(this << seqno);
+  
   auto track = this->packet_track.find(seqno);
+  if (track == this->packet_track.end()) {
+    NS_LOG_WARN("Could not find packet");
+    return;
+  }
   
   track->second.status = DROPPED;
   track->second.destruction = Simulator::Now();
@@ -200,26 +217,26 @@ results_t SimDatabase::Evaluate(double granularity) const {
   Time last_step = Seconds(0);
   Time next_step = last_step + Seconds(granularity);
   
+  uint64_t num_packets = 0;
+  uint64_t num_received_packets = 0;
+  uint64_t num_dropped_packets = 0;
+  uint64_t num_unknown_packets = 0;
+  Time delay_acc = Seconds(0);
+  
   for (auto so_it = sorter.begin(); so_it != sorter.end(); ++so_it) {
-    
-    uint64_t num_packets = 0;
-    uint64_t num_received_packets = 0;
-    uint64_t num_dropped_packets = 0;
-    uint64_t num_unknown_packets = 0;
-    Time delay_acc = Seconds(0);
     
     // TODO: Delay jitter
     
     // Increase timestep, if necessary
-    if (so_it->first > next_step) {
-      // TODO: write data to result
+    if (so_it->first.GetNanoSeconds() > next_step.GetNanoSeconds()) {
       
       if (num_packets == 0) {
         results.droprate.push_back(0);
         results.end_to_end_delay.push_back(0);
       } else {
-        results.droprate.push_back(num_dropped_packets / num_packets);
-        results.end_to_end_delay.push_back(delay_acc.GetMilliSeconds() 
+        //results.droprate.push_back((double)num_dropped_packets / num_packets);
+        results.droprate.push_back( 1 - ((double)num_received_packets / num_packets));
+        results.end_to_end_delay.push_back((double) delay_acc.GetMilliSeconds() 
                                            / num_packets);
         
       }
@@ -243,6 +260,10 @@ results_t SimDatabase::Evaluate(double granularity) const {
     
     num_packets++;
     auto p_it = this->packet_track.find(so_it->second);
+    if (p_it == this->packet_track.end()) {
+      NS_LOG_WARN("Could not find packet");
+    }
+    
     
     switch (p_it->second.status) {
       case RECEIVED:
@@ -257,7 +278,7 @@ results_t SimDatabase::Evaluate(double granularity) const {
         break;
       case UNKNOWN:
         num_unknown_packets++;
-        NS_LOG_WARN("Packet has unknown status");
+        //NS_LOG_WARN("Packet has unknown status");
         break;
       default:
         

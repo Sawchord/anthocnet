@@ -58,6 +58,12 @@ private:
   
   Ptr<UniformRandomVariable> random;
   
+  void GenGnuplot (std::list<double>& values, 
+                   std::string tr_name, std::string title,
+                   std::string file_ext, 
+                   std::string legendX, std::string legendY,
+                   double gran ) const;
+  
   // Config
   
   // Simulation parameters
@@ -75,6 +81,7 @@ private:
   
   // Output parameters
   bool generate_pcap;
+  double output_granularity;
   
   // Phy Layer parameters
   uint32_t phyMode;
@@ -97,19 +104,20 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(900)),
-nWifis(80),
-nSender(20),
-nReceiver(20),
+total_time(Seconds(20)),
+nWifis(25),
+nSender(10),
+nReceiver(10),
 
 pWidth(800),
-pHeight(2400),
+pHeight(1200),
 
 nodePause(30),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 
 generate_pcap(false),
+output_granularity(1.0),
 
 phyMode(3),
 lossModel(1),
@@ -119,7 +127,7 @@ txpEnd(7.5),
 
 protocol(2),
 packetSize(64),
-packetRate(10),
+packetRate(4),
 
 appStartBegin(10),
 appStartEnd(15)
@@ -157,6 +165,10 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   cmd.AddValue("generatePcap", 
                "Specify, whether Pcap output should be generated", 
                this->generate_pcap);
+  
+  cmd.AddValue("outputGranularity",
+               "How granualar the graphs generated should be (in seconds)",
+               this->output_granularity);
   
   // Phy layer parameters
   cmd.AddValue("phyMode", 
@@ -411,10 +423,55 @@ void RoutingExperiment::Run() {
   Simulator::Destroy ();
   
   // Get the result of the simulation and put them into graphs
-  results_t result = this->db->Evaluate(1);
+  results_t result = this->db->Evaluate(this->output_granularity);
+  
+  this->GenGnuplot(result.droprate, tr_name, "Droprate", 
+                   "droprate", "Time [s]", "Droprate[%]", 
+                   this->output_granularity);
+  
+  this->GenGnuplot(result.end_to_end_delay, tr_name, "End-To-End Delay", 
+                   "delay", "Time [s]", "End-To-End Delay[ms]", 
+                   this->output_granularity);
   
   
 }
+
+void RoutingExperiment::GenGnuplot (std::list<double>& values, 
+                                    std::string tr_name,
+                                    std::string title,
+                                    std::string file_ext,
+                                    std::string legendX,
+                                    std::string legendY,
+                                    double gran
+                                   ) const
+{
+  
+  Time t = Seconds(0);
+  
+  Gnuplot plot (tr_name + "_" + file_ext  + ".eps");
+  plot.SetTitle(title);
+  plot.SetTerminal("eps");
+  plot.SetLegend(legendX, legendY);
+  
+  Gnuplot2dDataset ds;
+  ds.SetTitle (title);
+  ds.SetStyle(Gnuplot2dDataset::LINES);
+  
+  for (auto it = values.begin(); it != values.end(); ++it) {
+    
+    ds.Add(t.GetSeconds(), *it);
+    t += Seconds(gran);
+  }
+        
+  plot.AddDataset(ds);
+  
+  std::ofstream f (tr_name + "_" + file_ext + ".plt");
+  plot.GenerateOutput(f);
+  
+  popen( 
+    ("gnuplot -c " + (tr_name + "_" + file_ext + ".plt")).c_str(), "r");
+}
+
 
 
 int main (int argc, char* argv[]) {
