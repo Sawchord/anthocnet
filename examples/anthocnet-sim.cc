@@ -232,19 +232,18 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   packet->RemoveHeader(ipheader);
   packet->RemoveHeader(udpheader);
   
-  uint64_t seqno = this->db->CreateNewTransmission(ipheader.GetSource(),
-     ipheader.GetDestination() );
   
   // FIXME: Make this work for arbitrary ports
   if (udpheader.GetSourcePort() == 5555 
     || udpheader.GetDestinationPort() == 5555 ) {
     
-    this->db->RegisterTx(seqno, true, 0, packet->GetSize());
+    // TODO: Count le packtes
   }
   else {
     packet->RemoveHeader(simheader);
-    
-    this->db->RegisterTx(seqno, false, simheader.GetSeqno(), packet->GetSize());
+    uint64_t seqno = this->db->CreateNewTransmission(ipheader.GetSource(),
+     ipheader.GetDestination() );
+    this->db->RegisterTx(seqno, simheader.GetSeqno(), packet->GetSize());
     
   }
   

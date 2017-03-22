@@ -81,10 +81,6 @@ typedef enum TransmissionStatus {
   FAIL
 } transmission_status_t;
 
-typedef enum TransmissionType {
-  CONTROL = 1,
-  DATA
-} transmission_type_t;
 
 typedef struct PacketTrack {
   packet_status_t status;
@@ -98,7 +94,6 @@ typedef struct PacketTrack {
 
 typedef struct TransmissionTrack {
   transmission_status_t status;
-  transmission_type_t type;
   Ipv4Address src;
   Ipv4Address dst;
   Time tx_time;
@@ -133,8 +128,7 @@ public:
   void RegisterDropped(uint64_t seqno);
   
   uint64_t CreateNewTransmission(Ipv4Address src, Ipv4Address dst);
-  void RegisterTx(uint64_t seqno, bool control, uint64_t packet_seqno, 
-                  uint32_t size);
+  void RegisterTx(uint64_t seqno, uint64_t packet_seqno, uint32_t size);
   
   void RegisterRx(uint64_t packet_seqno);
   void Print(std::ostream& os) const;

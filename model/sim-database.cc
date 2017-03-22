@@ -206,7 +206,7 @@ uint64_t SimDatabase::CreateNewTransmission(Ipv4Address src, Ipv4Address dst) {
   
 }
 
-void SimDatabase::RegisterTx(uint64_t seqno, bool control, 
+void SimDatabase::RegisterTx(uint64_t seqno,
                              uint64_t packet_seqno, uint32_t size) {
   
   NS_LOG_FUNCTION(this << seqno);
@@ -217,22 +217,15 @@ void SimDatabase::RegisterTx(uint64_t seqno, bool control,
     return;
   }
   
-  if (!control) {
-    auto p_it = this->packet_track.find(packet_seqno);
-    if (p_it == this->packet_track.end()) {
-      NS_LOG_WARN("Could not find packet");
-      return;
-    }
-    p_it->second.last_transmission_seqno = seqno;
+  auto p_it = this->packet_track.find(packet_seqno);
+  if (p_it == this->packet_track.end()) {
+    NS_LOG_WARN("Could not find packet");
+    return;
   }
-  
+    p_it->second.last_transmission_seqno = seqno;
   
   // Just mark them fail and unmark them once received
   t_it->second.status = FAIL;
-  if (control)
-    t_it->second.type = CONTROL;
-  else
-    t_it->second.type = DATA;
   
   t_it->second.size = size;
   t_it->second.tx_time = Simulator::Now();
