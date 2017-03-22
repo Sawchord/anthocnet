@@ -218,17 +218,64 @@ void RoutingExperiment::ProgressUpdate() {
 }
 
 // All the tracers
-void RoutingExperiment::IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, 
+void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4, 
                                    uint32_t interface) {
   
-  //std::cout << "Packet txd: " << *packet << std::endl; 
+  //std::cout << "Packet txd: " << *cpacket << std::endl; 
+  
+  Ptr<Packet> packet = cpacket->CreateFragment(0, cpacket->GetSize());
+  
+  Ipv4Header ipheader;
+  UdpHeader udpheader;
+  SimPacketHeader simheader;
+  
+  packet->RemoveHeader(ipheader);
+  packet->RemoveHeader(udpheader);
+  
+  uint64_t seqno = this->db->CreateNewTransmission(ipheader.GetSource(),
+     ipheader.GetDestination() );
+  
+  // FIXME: Make this work for arbitrary ports
+  if (udpheader.GetSourcePort() == 5555 
+    || udpheader.GetDestinationPort() == 5555 ) {
+    
+    this->db->RegisterTx(seqno, true, 0, packet->GetSize());
+  }
+  else {
+    packet->RemoveHeader(simheader);
+    
+    this->db->RegisterTx(seqno, false, simheader.GetSeqno(), packet->GetSize());
+    
+  }
   
 }
 
-void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, 
+void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4, 
                                    uint32_t interface) {
   
-  //std::cout << "Packet rxd: " << *packet << std::endl; 
+  //std::cout << "Packet rxd: " << *cpacket << std::endl; 
+  Ptr<Packet> packet = cpacket->CreateFragment(0, cpacket->GetSize());
+  
+  Ipv4Header ipheader;
+  UdpHeader udpheader;
+  SimPacketHeader simheader;
+  
+  packet->RemoveHeader(ipheader);
+  packet->RemoveHeader(udpheader);
+  
+  if (udpheader.GetSourcePort() == 5555 
+    || udpheader.GetDestinationPort() == 5555 ) {
+    
+    // How two get this tranmissions back?
+  }
+  else {
+    packet->RemoveHeader(simheader);
+    
+    this->db->RegisterRx(simheader.GetSeqno());
+    
+  }
+  
+  
   
 }
 

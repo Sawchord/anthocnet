@@ -136,7 +136,7 @@ public:
   void RegisterTx(uint64_t seqno, bool control, uint64_t packet_seqno, 
                   uint32_t size);
   
-  void RegisterRx(uint64_t seqno);
+  void RegisterRx(uint64_t packet_seqno);
   void Print(std::ostream& os) const;
   results_t Evaluate(double granularity) const;
   
