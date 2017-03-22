@@ -50,6 +50,8 @@ public:
   
 private:
   
+  void PhyTracer(Ptr<Packet const> packet);
+  
   void IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   
@@ -241,8 +243,8 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   }
   else {
     packet->RemoveHeader(simheader);
-    uint64_t seqno = this->db->CreateNewTransmission(ipheader.GetSource(),
-     ipheader.GetDestination() );
+    uint64_t seqno = this->db->CreateNewTransmission(
+      ipv4->GetAddress(interface, 0).GetLocal());
     this->db->RegisterTx(seqno, simheader.GetSeqno(), packet->GetSize());
     
   }
@@ -270,11 +272,16 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   else {
     packet->RemoveHeader(simheader);
     
-    this->db->RegisterRx(simheader.GetSeqno());
+    this->db->RegisterRx(simheader.GetSeqno(), 
+                         ipv4->GetAddress(interface, 0).GetLocal());
     
   }
   
+}
+
+void RoutingExperiment::PhyTracer(Ptr<Packet const> packet) {
   
+  std::cout << *packet << std::endl;
   
 }
 
@@ -469,8 +476,7 @@ void RoutingExperiment::Run() {
   
   streamIndex += apphelper.AssignStreams(adhocNodes, streamIndex);
   
-  std::string IpTxPath = 
-    "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
   Config::ConnectWithoutContext (IpTxPath,
     MakeCallback(&RoutingExperiment::IpTxTracer, this));
   
@@ -478,6 +484,11 @@ void RoutingExperiment::Run() {
   Config::ConnectWithoutContext (IpRxPath, 
     MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
+  
+  std::string PhyPath = 
+    "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxDrop";
+  Config::ConnectWithoutContext (PhyPath, 
+    MakeCallback(&RoutingExperiment::PhyTracer, this));
   
   if (this->generate_pcap) {
     

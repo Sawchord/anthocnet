@@ -127,10 +127,10 @@ public:
   void RegisterReceived(uint64_t seqno);
   void RegisterDropped(uint64_t seqno);
   
-  uint64_t CreateNewTransmission(Ipv4Address src, Ipv4Address dst);
+  uint64_t CreateNewTransmission(Ipv4Address src);
   void RegisterTx(uint64_t seqno, uint64_t packet_seqno, uint32_t size);
   
-  void RegisterRx(uint64_t packet_seqno);
+  void RegisterRx(uint64_t packet_seqno, Ipv4Address dst);
   void Print(std::ostream& os) const;
   results_t Evaluate(double granularity) const;
   

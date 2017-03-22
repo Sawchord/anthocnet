@@ -188,14 +188,13 @@ void SimDatabase::RegisterDropped(uint64_t seqno) {
   
 }
 
-uint64_t SimDatabase::CreateNewTransmission(Ipv4Address src, Ipv4Address dst) {
+uint64_t SimDatabase::CreateNewTransmission(Ipv4Address src) {
   
-  NS_LOG_FUNCTION(this);
+  //NS_LOG_FUNCTION(this);
   
   transmission_track_t track = TransmissionTrack();
   
   track.src = src;
-  track.dst = dst;
   track.status = T_UNKNOWN;
   
   uint64_t s = this->transmission_seqno;
@@ -209,7 +208,6 @@ uint64_t SimDatabase::CreateNewTransmission(Ipv4Address src, Ipv4Address dst) {
 void SimDatabase::RegisterTx(uint64_t seqno,
                              uint64_t packet_seqno, uint32_t size) {
   
-  NS_LOG_FUNCTION(this << seqno);
   
   auto t_it = this->transmission_track.find(seqno);
   if (t_it == this->transmission_track.end()) {
@@ -222,7 +220,10 @@ void SimDatabase::RegisterTx(uint64_t seqno,
     NS_LOG_WARN("Could not find packet");
     return;
   }
-    p_it->second.last_transmission_seqno = seqno;
+  NS_LOG_FUNCTION(this << seqno << packet_seqno << t_it->second.src);
+  
+  
+  p_it->second.last_transmission_seqno = seqno;
   
   // Just mark them fail and unmark them once received
   t_it->second.status = FAIL;
@@ -232,7 +233,7 @@ void SimDatabase::RegisterTx(uint64_t seqno,
   
 }
 
-void SimDatabase::RegisterRx(uint64_t packet_seqno) {
+void SimDatabase::RegisterRx(uint64_t packet_seqno, Ipv4Address dst) {
   
   auto p_it = this->packet_track.find(packet_seqno);
   if (p_it == this->packet_track.end()) {
@@ -242,16 +243,18 @@ void SimDatabase::RegisterRx(uint64_t packet_seqno) {
   
   uint64_t seqno = p_it->second.last_transmission_seqno;
   
-  NS_LOG_FUNCTION(this << seqno);
-  
   auto t_it = this->transmission_track.find(seqno);
   if (t_it == this->transmission_track.end()) {
     NS_LOG_WARN("Could not find transmission");
     return;
   }
   
+  
   t_it->second.status = SUCCESS;
+  t_it->second.dst = dst;
   t_it->second.rx_time = Simulator::Now();
+  
+  NS_LOG_FUNCTION(this << seqno << packet_seqno << t_it->second.dst);
   
 }
 

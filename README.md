@@ -19,6 +19,9 @@ export 'NS_LOG=AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AodvRo
 or
 export 'NS_LOG=AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AntHocNetRoutingTable=level_all|prefix_func|prefix_time:AodvRoutingProtocol=level_all|prefix_func|prefix_time'
 
+To see what the sim database is doing:
+NS_LOG=SimDatabase=level_all|prefix_func|prefix_time'
+
 To activate insight:
 ./waf --run anthocnet-compare --command-template="insight %s"
 
