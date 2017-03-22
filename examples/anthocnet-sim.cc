@@ -50,6 +50,9 @@ public:
   
 private:
   
+  void IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
+  void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
+  
   void ProgressUpdate();
   
   // State
@@ -214,8 +217,23 @@ void RoutingExperiment::ProgressUpdate() {
   Simulator::Schedule(Seconds(1), &RoutingExperiment::ProgressUpdate, this);
 }
 
-void RoutingExperiment::Run() {
+// All the tracers
+void RoutingExperiment::IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, 
+                                   uint32_t interface) {
   
+  //std::cout << "Packet txd: " << *packet << std::endl; 
+  
+}
+
+void RoutingExperiment::IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, 
+                                   uint32_t interface) {
+  
+  //std::cout << "Packet rxd: " << *packet << std::endl; 
+  
+}
+
+void RoutingExperiment::Run() {
+    
   std::string tr_name = "anthocnet-sim";
   Packet::EnablePrinting();
   
@@ -404,6 +422,15 @@ void RoutingExperiment::Run() {
   }
   
   streamIndex += apphelper.AssignStreams(adhocNodes, streamIndex);
+  
+  std::string IpTxPath = 
+    "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
+  Config::ConnectWithoutContext (IpTxPath,
+    MakeCallback(&RoutingExperiment::IpTxTracer, this));
+  
+  std::string IpRxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Rx";
+  Config::ConnectWithoutContext (IpRxPath, 
+    MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
   
   if (this->generate_pcap) {

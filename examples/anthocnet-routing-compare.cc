@@ -602,10 +602,10 @@ void RoutingExperiment::Run (double txp) {
   std::string IpDropPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Drop";
   Config::ConnectWithoutContext (IpDropPath, MakeCallback(&RoutingExperiment::IpDropTracer, this));
   
-  std::string PhyTxDropPath = "/NodeList/*/DevinceList/*/$ns3::WifiNetDevice/Phy/TxDrop";
+  std::string PhyTxDropPath = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/TxDrop";
   Config::ConnectWithoutContext (PhyTxDropPath, MakeCallback(&RoutingExperiment::PhyTxDropTracer, this));
   
-  std::string PhyRxDropPath = "/NodeList/*/DevinceList/*/$ns3::WifiNetDevice/Phy/RxDrop";
+  std::string PhyRxDropPath = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/RxDrop";
   Config::ConnectWithoutContext (PhyRxDropPath, MakeCallback(&RoutingExperiment::PhyRxDropTracer, this));
   
   if (m_protocol == 2) {

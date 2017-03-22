@@ -76,7 +76,8 @@ typedef enum PacketStatus {
 } packet_status_t;
 
 typedef enum TransmissionStatus {
-  SUCCESS = 1,
+  T_UNKNOWN = 1,
+  SUCCESS,
   FAIL
 } transmission_status_t;
 
@@ -92,6 +93,7 @@ typedef struct PacketTrack {
   Time creation;
   Time destruction;
   uint32_t size;
+  uint64_t last_transmission_seqno;
 } packet_track_t;
 
 typedef struct TransmissionTrack {
@@ -99,6 +101,9 @@ typedef struct TransmissionTrack {
   transmission_type_t type;
   Ipv4Address src;
   Ipv4Address dst;
+  Time tx_time;
+  Time rx_time;
+  uint64_t packet_seqno;
   uint32_t size;
 } transmission_track_t;
   
@@ -127,6 +132,11 @@ public:
   void RegisterReceived(uint64_t seqno);
   void RegisterDropped(uint64_t seqno);
   
+  uint64_t CreateNewTransmission(Ipv4Address src, Ipv4Address dst);
+  void RegisterTx(uint64_t seqno, bool control, uint64_t packet_seqno, 
+                  uint32_t size);
+  
+  void RegisterRx(uint64_t seqno);
   void Print(std::ostream& os) const;
   results_t Evaluate(double granularity) const;
   

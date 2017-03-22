@@ -188,6 +188,68 @@ void SimDatabase::RegisterDropped(uint64_t seqno) {
   
 }
 
+uint64_t SimDatabase::CreateNewTransmission(Ipv4Address src, Ipv4Address dst) {
+  
+  NS_LOG_FUNCTION(this << seqno);
+  
+  transmission_track_t track = TransmissionTrack();
+  
+  track.src = src;
+  track.dst = dst;
+  track.status = T_UNKNOWN;
+  
+  uint64_t s = this->transmission_seqno;
+  this->transmission_seqno++;
+  this->transmission_track.insert(std::make_pair(s, track));
+  
+  return s;
+  
+}
+
+void SimDatabase::RegisterTx(uint64_t seqno, bool control, 
+                             uint64_t packet_seqno, uint32_t size) {
+  
+  NS_LOG_FUNCTION(this << seqno);
+  
+  auto t_it = this->transmission_track.find(seqno);
+  if (t_it == this->transmission_track.end()) {
+    NS_LOG_WARN("Could not find transmission");
+    return;
+  }
+  
+  auto p_it = this->packet_track.find(packet_seqno);
+  if (p_it == this->packet_track.end()) {
+    NS_LOG_WARN("Could not find packet");
+    return;
+  }
+  p_it->second.last_transmission_seqno = seqno;
+  
+  
+  // Just mark them fail and unmark them once received
+  t_it->second.status = FAIL;
+  if (control)
+    t_it->second.type = CONTROL;
+  else
+    t_it->second.type = DATA;
+  
+  t_it->second.size = size;
+  t_it->second.tx_time = Simulator::Now();
+  
+}
+
+void SimDatabase::RegisterRx(uint64_t seqno) {
+  
+  auto t_it = this->transmission_track.find(seqno);
+  if (t_it == this->transmission_track.end()) {
+    NS_LOG_WARN("Could not find transmission");
+    return;
+  }
+  
+  t_it->second.status = SUCCESS;
+  t_it->second.rx_time = Simulator::Now();
+  
+}
+
 void SimDatabase::Print(std::ostream& os) const {
   
 }
