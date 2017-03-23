@@ -55,10 +55,14 @@ private:
   void IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   
+  void DataDropTracer(Ptr<Packet const> packet, std::string reason, 
+                      Ipv4Address address);
+  
   void ProgressUpdate();
   
   // State
   Ptr<SimDatabase> db;
+  std::ofstream data_drop_output;
   //std::vector<ApplicationContainer*> apps;
   
   Ptr<UniformRandomVariable> random;
@@ -109,7 +113,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(20)),
+total_time(Seconds(30)),
 nWifis(25),
 nSender(10),
 nReceiver(10),
@@ -220,6 +224,18 @@ void RoutingExperiment::ProgressUpdate() {
 }
 
 // All the tracers
+
+void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, 
+                                       std::string reason, 
+                                       Ipv4Address address) {
+  
+  
+  data_drop_output << Simulator::Now().GetSeconds() << " Data dropped at address: " << address << std::endl;
+  data_drop_output << "\t Reason: " << reason << std::endl;
+  data_drop_output << "\t Packet: " << packet << std::endl;
+  
+}
+
 void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4, 
                                    uint32_t interface) {
   
@@ -402,6 +418,7 @@ void RoutingExperiment::Run() {
       break;
     case 2:
       list.Add (ahn, 100);
+      data_drop_output = std::ofstream(tr_name + "_data_drops.tr");
       break;
     default:
       NS_FATAL_ERROR ("Loss model not supported");
@@ -428,8 +445,8 @@ void RoutingExperiment::Run() {
   
   Config::SetDefault("ns3::ahn::SimApplication::Database", PointerValue(this->db));
   
-  SimHelper apphelper("halp");
   
+  SimHelper apphelper("halp");
   
   // Install application in recevier mode
   apphelper.SetAttribute("SendMode", BooleanValue(false));
@@ -476,6 +493,8 @@ void RoutingExperiment::Run() {
   
   streamIndex += apphelper.AssignStreams(adhocNodes, streamIndex);
   
+  
+  // Connect the tracers
   std::string IpTxPath = "/NodeList/*/$ns3::Ipv4L3Protocol/Tx";
   Config::ConnectWithoutContext (IpTxPath,
     MakeCallback(&RoutingExperiment::IpTxTracer, this));
@@ -484,11 +503,14 @@ void RoutingExperiment::Run() {
   Config::ConnectWithoutContext (IpRxPath, 
     MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
-  
   std::string PhyPath = 
     "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxDrop";
   Config::ConnectWithoutContext (PhyPath, 
     MakeCallback(&RoutingExperiment::PhyTracer, this));
+  
+  std::string DataDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/DataDrop";
+  Config::ConnectWithoutContext (DataDropPath,
+    MakeCallback(&RoutingExperiment::DataDropTracer, this));
   
   if (this->generate_pcap) {
     
