@@ -18,6 +18,7 @@
 #include "anthocnet-pcache.h"
 
 namespace ns3 {
+NS_LOG_COMPONENT_DEFINE ("AntHocNetPCache");
 namespace ahn {
   
 PacketCache::PacketCache(Ptr<AntHocNetConfig> config):
@@ -45,11 +46,18 @@ void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce, Time expire) {
     std::list<CacheEntry> v;
     v.push_back(ce);
     this->cache.insert(std::make_pair(dst, v));
+    
+    NS_LOG_FUNCTION(this << "to dst" << dst
+      << "expires at:" << ce.expire_in.GetSeconds() << "new size" << 1);
   }
   else {
     it->second.push_back(ce);
+    NS_LOG_FUNCTION(this << "to dst" << dst
+    << "expires at:" << ce.expire_in.GetSeconds() << "new size" << it->second.size());
   }
+  
 }
+
 
 void PacketCache::CachePacket(Ipv4Address dst, CacheEntry ce) {
   this->CachePacket(dst, ce, this->config->dcache_expire);
@@ -67,6 +75,9 @@ bool PacketCache::HasEntries(Ipv4Address dst) {
   if (it->second.size() == 0) {
       return false;
   }
+  
+  NS_LOG_FUNCTION(this << "entries" << it->second.size());
+  
   return true;
 }
 
@@ -87,9 +98,12 @@ std::pair<bool, CacheEntry> PacketCache::GetCacheEntry(Ipv4Address dst) {
   
   // Only include not expired packets.
   if (ce.expire_in < Simulator::Now()) {
+    NS_LOG_FUNCTION(this << "expired packet to" << dst
+      << "expired at" << ce.expire_in.GetSeconds());
     return std::make_pair(false, ce);
   }
   else {
+    NS_LOG_FUNCTION(this << "packet to" << dst);
     return std::make_pair(true, ce);
   }
 }

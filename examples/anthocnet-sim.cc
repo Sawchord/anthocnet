@@ -39,6 +39,8 @@
 #include "ns3/aodv-module.h"
 #include "ns3/anthocnet-module.h"
 
+#include "ns3/netanim-module.h"
+
 using namespace ns3;
 using namespace ahn;
 
@@ -113,15 +115,15 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(30)),
-nWifis(25),
-nSender(10),
-nReceiver(10),
+total_time(Seconds(50)),
+nWifis(15),
+nSender(5),
+nReceiver(5),
 
-pWidth(800),
-pHeight(1200),
+pWidth(300),
+pHeight(600),
 
-nodePause(30),
+nodePause(3),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 
@@ -511,6 +513,15 @@ void RoutingExperiment::Run() {
   std::string DataDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/DataDrop";
   Config::ConnectWithoutContext (DataDropPath,
     MakeCallback(&RoutingExperiment::DataDropTracer, this));
+  
+  // Start the net animator
+  AnimationInterface anim (tr_name + "_animation.xml");
+  
+  //anim.EnablePacketMetadata ();
+  //anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), 
+  //                             Seconds(this->total_time), MilliSeconds(100));
+  
+  anim.SkipPacketTracing();
   
   if (this->generate_pcap) {
     

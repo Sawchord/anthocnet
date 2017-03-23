@@ -988,7 +988,7 @@ void RoutingProtocol::HelloTimerExpire() {
       this, socket, packet, destination);
   }
   
-  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 30));
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 100));
   this->hello_timer.Schedule(this->config->hello_interval + jitter);
 }
 

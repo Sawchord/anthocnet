@@ -220,7 +220,8 @@ void SimDatabase::RegisterTx(uint64_t seqno,
     NS_LOG_WARN("Could not find packet");
     return;
   }
-  NS_LOG_FUNCTION(this << seqno << packet_seqno << t_it->second.src);
+  NS_LOG_FUNCTION(this << "t_seqno" << seqno 
+    << "p_seqno" << packet_seqno << t_it->second.src);
   
   
   p_it->second.last_transmission_seqno = seqno;
@@ -254,7 +255,8 @@ void SimDatabase::RegisterRx(uint64_t packet_seqno, Ipv4Address dst) {
   t_it->second.dst = dst;
   t_it->second.rx_time = Simulator::Now();
   
-  NS_LOG_FUNCTION(this << seqno << packet_seqno << t_it->second.dst);
+  NS_LOG_FUNCTION(this << "t_seqno" << seqno 
+    << "p_seqno" << packet_seqno << t_it->second.dst);
   
 }
 
