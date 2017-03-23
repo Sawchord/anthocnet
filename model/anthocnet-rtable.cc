@@ -728,7 +728,7 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
   // One could get crazy here and have some 
   // really cool functions
   
-  double T_id = ((T_sd + hops * this->config->T_hop) / 2);
+  double T_id = (( ((double)T_sd / 1000000) + hops * this->config->T_hop) / 2);
   
   // Update the routing table
   RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
@@ -824,7 +824,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
     iface = nb_it->first;
     nb = dst_it->first;
     
-    NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb << "iface" << iface);
+    NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
+      << "iface" << iface << "usevirt" << consider_virtual);
     
     return true;
   }
@@ -862,12 +863,18 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
         }
       }
       
+      
     }
   }
   
+  // NOTE: Very low pheromone can lead to the total_pheromone 
+  // beeing rounded down to Zero. (When used with a high power) 
+  // This leads to the system acting as if
+  // there is no pheromone at all. This is most likely not an intended
+  // behaviour and there should be a case to handle that
   
   // Fail, if there are no initialized entries (same as no entires at all)
-  if (initialized == 0) {
+  if (initialized == 0 || total_pheromone == 0.0) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
     return false;
   }
@@ -893,7 +900,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
       double pheromone = this->rtable[dst_index][nb_index].pheromone;
       double virtual_pheromone = 
         this->rtable[dst_index][nb_index].virtual_pheromone;
-    
+      
       if (pheromone == pheromone) {
         if (consider_virtual && virtual_pheromone == virtual_pheromone) {
           

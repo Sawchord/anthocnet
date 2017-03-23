@@ -22,8 +22,12 @@ export 'NS_LOG=AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AntHoc
 To see what the sim database is doing:
 NS_LOG=SimDatabase=level_all|prefix_func|prefix_time'
 
+export 'NS_LOG=AntHocNetPCache=level_all|prefix_func|prefix_time:SimDatabase=level_all|prefix_func|prefix_time:AntHocNetRoutingProtocol=level_all|prefix_func|prefix_time:AntHocNetRoutingTable=level_all|prefix_func|prefix_time'
+
 To activate insight:
 ./waf --run anthocnet-compare --command-template="insight %s"
+
+
 
 To activate callgrind:
 ./waf --run anthocnet-compare --command-template="valgrind --tool=callgrind %s"

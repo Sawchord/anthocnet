@@ -117,6 +117,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   
   if (!p) {
     NS_LOG_DEBUG("Empty packet");
+    NS_LOG_FUNCTION(this << "Empty packet");
     return this->LoopbackRoute(header, oif);
   }
   
@@ -138,7 +139,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
     this->rtable.RegisterSession(dst);
   }
   
-  NS_LOG_FUNCTION(this << "oif" << oif << "dst" << dst);
+  NS_LOG_FUNCTION(this << "dst" << dst);
   
   uint32_t iface;
   Ipv4Address nb;
@@ -163,8 +164,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
    this->StartForwardAnt(dst, false);
   
   sockerr = Socket::ERROR_NOTERROR;
-  NS_LOG_FUNCTION(this << "loopback with header" 
-    << header << "started FWAnt to " << dst);
+  NS_LOG_FUNCTION(this << "started FWAnt to " << dst);
   
   // TODO: This seems to be buggy and lead to data drop
   return this->LoopbackRoute(header, oif);
@@ -1315,12 +1315,16 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     if (ant.PeekThis() == tmp_if.GetLocal()) {
       NS_LOG_FUNCTION(this << "bwant reached its origin.");
       
+      
       // Now the RoutingTable needs an update
       if(this->rtable.ProcessBackwardAnt(src, iface, nb, 
         ant.GetT(),(ant.GetMaxHops() - ant.GetHops()) )) {
         this->SendCachedData(src);
       
       }
+      
+      //NS_LOG_UNCOND(this->rtable);
+      
       return;
     }
     else {
@@ -1344,7 +1348,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
 
 void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   
-  NS_LOG_FUNCTION(this << "dst" << dst);
+  //NS_LOG_FUNCTION(this << "dst" << dst);
   
   bool dst_found = false;
   

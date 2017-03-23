@@ -98,7 +98,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   .AddAttribute("THop",
     "The THop heuristic used to calculate initial pheromone values",
     DoubleValue(0.2),
-    MakeDoubleAccessor(&AntHocNetConfig::alpha_T_mac),
+    MakeDoubleAccessor(&AntHocNetConfig::T_hop),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("AlphaPheromone",
