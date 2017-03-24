@@ -14,6 +14,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#define NS_LOG_APPEND_CONTEXT                                   \
+  if (ipv4) { std::clog << "[node " << std::setfill('0') << std::setw(2) \
+    << ipv4->GetObject<Node> ()->GetId () +1 << "] "; }
+
+
 #include "anthocnet-rtable.h"
 
 namespace ns3 {
@@ -58,7 +64,8 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Ptr<AntHocNetConfig> config) :
+RoutingTable::RoutingTable(Ptr<AntHocNetConfig> config, Ptr<Ipv4> ipv4) :
+  ipv4(ipv4),
   n_dst(0),
   n_nb(0),
   config(config)
@@ -97,8 +104,7 @@ bool RoutingTable::AddNeighbor(uint32_t iface_index,
   
   // Before the neighbor can be added, it needs a destination.
   // Check if destination already exists
-  // TODO: Just add destination since it
-  // checks existance for you
+  // NOTE: One could also simply add dst, since it checks the existance
   auto it = this->dsts.find(address);
   if (it == this->dsts.end()) {
     this->AddDestination(address);
@@ -812,7 +818,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   
   // Fail, if there are no entries to that destination at all
   if (dst_it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "no dsts");
+    NS_LOG_FUNCTION(this << "dst not exists" << dst);
     return false;
   }
   
@@ -880,8 +886,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
   
   double select = vr->GetValue(0.0, 1.0);
   
-  NS_LOG_FUNCTION(this << "total_pheromone" 
-    << total_pheromone << "select" << select);
+  NS_LOG_FUNCTION(this << "total_pheromone");
+    //<< total_pheromone << "select" << select);
   
   double selected = 0.0;
   
@@ -916,7 +922,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
       } 
       
       
-      NS_LOG_FUNCTION(this << "selected" << selected);
+      //NS_LOG_FUNCTION(this << "selected" << selected);
       
       if (selected > select) {
         iface = nb_it->first;

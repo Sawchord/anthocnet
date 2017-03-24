@@ -138,7 +138,7 @@ txpEnd(7.5),
 
 protocol(1),
 packetSize(64),
-packetRate(4),
+packetRate(12),
 
 appStartBegin(10),
 appStartEnd(15)

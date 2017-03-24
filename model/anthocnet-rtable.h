@@ -30,6 +30,7 @@
 
 #include <cmath>
 
+#include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/ipv4.h"
 #include "ns3/ipv4-address.h"
@@ -132,7 +133,7 @@ class RoutingTable {
 public:
   
   //ctor
-  RoutingTable(Ptr<AntHocNetConfig> config);
+  RoutingTable(Ptr<AntHocNetConfig> config, Ptr<Ipv4> ipv4);
   //dtor 
   ~RoutingTable();
   
@@ -316,6 +317,10 @@ public:
     uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
     bool use_virtual, double virtual_malus);
   
+  void SetIpv4(Ptr<Ipv4> ipv4) {
+    this->ipv4 = ipv4;
+  }
+  
   void Print(std::ostream& os) const;
   
   // Added for initialization
@@ -325,7 +330,8 @@ public:
 private:
   
   // Util functions
-  
+  // The IP protocol
+  Ptr<Ipv4> ipv4;
   
   
   // Network configurations affecting the routing table

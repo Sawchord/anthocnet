@@ -20,7 +20,7 @@
     << ipv4->GetObject<Node> ()->GetId () +1 << "] "; }
 
 #include "anthocnet.h"
-#include "ns3/object-ptr-container.h"
+
 
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("AntHocNetRoutingProtocol");
@@ -36,7 +36,7 @@ RoutingProtocol::RoutingProtocol ():
   last_hello(Seconds(0)),
   last_snr(0),
   
-  rtable(RoutingTable(this->config)),
+  rtable(RoutingTable(this->config, this->ipv4)),
   data_cache(PacketCache(this->config))
   {
     // Initialize the sockets
@@ -604,6 +604,7 @@ void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
   NS_ASSERT (this->ipv4 == 0);
   
   this->ipv4 = ipv4;
+  this->rtable.SetIpv4(ipv4);
   
   // Initialize all sockets as null pointers
   for (uint32_t i = 0; i < MAX_INTERFACES; i++) {

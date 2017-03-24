@@ -17,6 +17,7 @@
 #ifndef ANTHOCNET_H
 #define ANTHOCNET_H
 
+
 #include "anthocnet-config.h"
 #include "anthocnet-rtable.h"
 #include "anthocnet-packet.h"
@@ -35,6 +36,8 @@
 #include "ns3/traced-callback.h"
 #include "ns3/wifi-phy.h"
 
+
+#include "ns3/object-ptr-container.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
 #include "ns3/random-variable-stream.h"
