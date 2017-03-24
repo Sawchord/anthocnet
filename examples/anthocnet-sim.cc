@@ -136,7 +136,7 @@ txpStart(7.5),
 txpEnd(7.5),
 
 
-protocol(1),
+protocol(2),
 packetSize(64),
 packetRate(12),
 

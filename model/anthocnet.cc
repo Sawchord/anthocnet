@@ -1021,7 +1021,6 @@ void RoutingProtocol::RTableTimerExpire() {
   // Update the routing table
   nbs = this->rtable.Update(this->config->rtable_update_interval);
   
-  
   // Send for every broken link
   for (auto nb_it = nbs.begin(); nb_it != nbs.end(); ++nb_it) {
     
@@ -1042,9 +1041,12 @@ void RoutingProtocol::RTableTimerExpire() {
                  iface.GetLocal());
       
       
+      //NS_LOG_UNCOND(this->rtable);
+      
       this->rtable.ProcessNeighborTimeout(msg, nb_it->first, nb_it->second);
       
       NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
+      //NS_LOG_UNCOND(this->rtable);
       
       TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
       
@@ -1064,6 +1066,7 @@ void RoutingProtocol::RTableTimerExpire() {
       Simulator::Schedule(jitter, &RoutingProtocol::Send, 
         this, socket, packet, destination);
     }
+    
   }
   
   
@@ -1182,6 +1185,8 @@ void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, uint32_t iface) {
  
   LinkFailureHeader msg;
   packet->RemoveHeader(msg);
+  
+  //NS_LOG_UNCOND(this->rtable);
   
   this->rtable.ProcessLinkFailureMsg(msg, iface);
   

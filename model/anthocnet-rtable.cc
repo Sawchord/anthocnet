@@ -198,13 +198,11 @@ bool RoutingTable::AddDestination(Ipv4Address address, Time expire) {
       this->dsts.insert(std::make_pair(address, DestinationInfo(i, expire)));
       
       // Reset the row in the array
-      //uint32_t delete_index = it->second.index;
-      //NS_LOG_FUNCTION(this << "index" << delete_index);
       for (uint32_t j = 0; j < MAX_NEIGHBORS; j++) {
         this->rtable[i][j] = RoutingTableEntry();
       }
       
-      //NS_LOG_FUNCTION(this << "index" << i);
+      
       break;
     }
   }
@@ -225,9 +223,6 @@ void RoutingTable::RemoveDestination(Ipv4Address address) {
     NS_LOG_FUNCTION(this << "dst does not exist");
     return;
   }
-  
-  // TODO: Delete the neighbors if any, before deleting the destination
-  //it->second.nbs.erase(it->second.nbs.begin(), it->second.nbs.end());
   
   for (auto nb_it = it->second.nbs.begin();
     nb_it != it->second.nbs.end(); /* no increment*/) {
@@ -423,7 +418,7 @@ std::list<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval)
         
         if (nb_dt <= Seconds(0)) {
           NS_LOG_FUNCTION(this << "nb" 
-            << dst_it->first << ":" << nb_it->first << "timed out");
+            << dst_it->first << nb_it->first << "timed out");
           //this->RemoveNeighbor((nb_it++)->first , dst_it->first);
           ret.push_back(std::make_pair((nb_it++)->first , dst_it->first));
         }
@@ -513,6 +508,7 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
   
   auto brkdst_it = this->dsts.find(msg.GetBrokenDst());
   if (brkdst_it == this->dsts.end()) {
+    //NS_LOG_FUNCTION(this << msg.GetSrc() << "not known dst");
     return; 
   }
   
@@ -523,16 +519,17 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
   
   auto linknb_it = this->dsts.find(msg.GetSrc());
   if (linknb_it == this->dsts.end()) {
+    //NS_LOG_FUNCTION(this << msg.GetSrc() << "not neighbor");
     return; 
   }
     
   auto linkif_it = linknb_it->second.nbs.find(msg.GetIface());
   if (linkif_it == linknb_it->second.nbs.end()) {
+    //NS_LOG_FUNCTION(this << msg.GetIface() << "iface not registered");
     return; 
   }
   
   uint32_t linkif_index = linkif_it->second.index;
-  
   
   // TODO: Use Bootstrap algorithm
   // TODO: Resend LinkFailure, if you lost your own best or only route
