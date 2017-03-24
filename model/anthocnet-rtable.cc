@@ -662,7 +662,7 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
       pos_dst.second *= -1.0;
     }
     
-    double T_id = this->GetTSend(pos_dst.first, iface).GetNanoSeconds();
+    double T_id = this->GetTSend(pos_dst.first, iface).GetMilliSeconds();
     
     double bootstrap_info = (1.0/ (1.0/(pos_dst.second) + T_id));
     NS_LOG_FUNCTION(this << "bootstapped" 
@@ -806,7 +806,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double power,
                                bool consider_virtual, double virtual_malus){
   
   
-  NS_LOG_FUNCTION(this << "dst" << dst);
   
   //Get the destination index:
   auto dst_it = this->dsts.find(dst);

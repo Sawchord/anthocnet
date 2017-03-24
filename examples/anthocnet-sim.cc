@@ -116,12 +116,12 @@ private:
 
 RoutingExperiment::RoutingExperiment():
 total_time(Seconds(50)),
-nWifis(15),
+nWifis(20),
 nSender(5),
 nReceiver(5),
 
-pWidth(300),
-pHeight(600),
+pWidth(400),
+pHeight(1200),
 
 nodePause(3),
 nodeMinSpeed(5),
@@ -130,13 +130,13 @@ nodeMaxSpeed(20),
 generate_pcap(false),
 output_granularity(1.0),
 
-phyMode(3),
+phyMode(2),
 lossModel(1),
 txpStart(7.5),
 txpEnd(7.5),
 
 
-protocol(2),
+protocol(1),
 packetSize(64),
 packetRate(4),
 
@@ -252,12 +252,9 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   packet->RemoveHeader(ipheader);
   packet->RemoveHeader(udpheader);
   
-  
-  // FIXME: Make this work for arbitrary ports
-  if (udpheader.GetSourcePort() == 5555 
-    || udpheader.GetDestinationPort() == 5555 ) {
+  if (udpheader.GetSourcePort() != 49153) {
     
-    // TODO: Count le packtes
+    // TODO: Count packets
   }
   else {
     packet->RemoveHeader(simheader);
@@ -282,8 +279,8 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   packet->RemoveHeader(ipheader);
   packet->RemoveHeader(udpheader);
   
-  if (udpheader.GetSourcePort() == 5555 
-    || udpheader.GetDestinationPort() == 5555 ) {
+  
+  if (udpheader.GetSourcePort() != 49153) {
     
     // How two get this tranmissions back?
   }
@@ -550,6 +547,9 @@ void RoutingExperiment::Run() {
                    "delay", "Time [s]", "End-To-End Delay[ms]", 
                    this->output_granularity);
   
+  
+  std::ofstream packet_log(tr_name +"_packets.log");
+  this->db->Print(packet_log);
   
 }
 

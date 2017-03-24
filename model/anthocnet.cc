@@ -145,6 +145,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   Ipv4Address nb;
   
   //NS_LOG_UNCOND(this->rtable);
+  // TODO: Maybe route with 2.0
   if (this->rtable.SelectRoute(dst, 20.0, iface, nb, this->uniform_random)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
@@ -159,7 +160,6 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
     return route;
   }
   
-  // NOTE: Starting forward ant is unnecessary
   // If not found, send it to loopback to handle it in the packet cache.
    this->StartForwardAnt(dst, false);
   
@@ -250,10 +250,14 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   }
   else {
     // If there is no route, cache the data to wait for a route
-    // Also start a forward ant towards the destination
+    
+    // Also start a forward ant towards the destination 
+    // NOTE: Repair forward ants are unimplemented
+    // Reactive forward ants are started by routeoutput at this point already
     
     CacheEntry ce;
     //ce.type = AHNTYPE_DATA;
+    // Why 0 here
     ce.iface = 0;
     ce.header = header;
     ce.packet = p;
@@ -317,13 +321,16 @@ Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr,
       rt->SetSource (j->second.GetLocal ());
     }
   NS_ASSERT_MSG (rt->GetSource () != Ipv4Address (),
-  "Valid AntHocNet source address not found");
+    "Valid AntHocNet source address not found");
+  
   rt->SetGateway (Ipv4Address ("127.0.0.1"));
   rt->SetOutputDevice (lo);
   return rt;
   
 }
 
+
+// This stuff is needed for handling link layer failures
 void RoutingProtocol::AddArpCache(Ptr<ArpCache> a) {
   this->arp_cache.push_back (a);
 }
@@ -331,7 +338,7 @@ void RoutingProtocol::AddArpCache(Ptr<ArpCache> a) {
 void RoutingProtocol::DelArpCache(Ptr<ArpCache> a) {
   this->arp_cache.erase (std::remove (arp_cache.begin(), 
                                       arp_cache.end() , a), 
-                         arp_cache.end() );
+                                      arp_cache.end() );
 }
 
 std::vector<Ipv4Address> RoutingProtocol::LookupMacAddress(Mac48Address addr) {
@@ -691,7 +698,7 @@ uint32_t RoutingProtocol::FindSocketIndex(Ptr<Socket> s) const{
   uint32_t s_index = 0;
   for (s_index = 0; s_index < MAX_INTERFACES; s_index++) {
     if (this->sockets[s_index] == s) {
-      NS_LOG_FUNCTION(this << "index" << s_index << "socket" << s);
+      
       return s_index;
     }
   }
@@ -1092,9 +1099,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     
     this->rtable.UpdateNeighbor(iface, src);
     
-    NS_LOG_FUNCTION(this << "socket" << socket 
-    << "source_address" << source_address 
-    << "src" << src << "dst" << dst);  
+    NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
     
   }
   else {
@@ -1138,7 +1143,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
 void RoutingProtocol::Send(Ptr<Socket> socket,
   Ptr<Packet> packet, Ipv4Address destination) {
   NS_LOG_FUNCTION(this << "packet" << *packet 
-    << "destination" << destination << "socket" << socket);
+    << "destination" << destination);
   socket->SendTo (packet, 0, InetSocketAddress (destination, 
                                                 this->config->ant_port));
 }
@@ -1210,7 +1215,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     return;
   }
   
-  NS_LOG_FUNCTION(this << "Before update" << ant);
+  // NS_LOG_FUNCTION(this << "Before update" << ant);
   ant.Update(this_node);
   NS_LOG_FUNCTION(this << "After update" << ant);
   
@@ -1279,7 +1284,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     
   }
   
-  this->UnicastForwardAnt(next_iface, next_nb, ant, false);
+  this->UnicastForwardAnt(next_iface, next_nb, ant, is_proactive);
   return;
 }
 

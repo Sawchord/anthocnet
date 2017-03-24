@@ -225,7 +225,7 @@ void SimDatabase::RegisterTx(uint64_t seqno,
   
   
   p_it->second.last_transmission_seqno = seqno;
-  
+  p_it->second.transmission_list.push_back(seqno);
   // Just mark them fail and unmark them once received
   t_it->second.status = FAIL;
   
@@ -261,6 +261,60 @@ void SimDatabase::RegisterRx(uint64_t packet_seqno, Ipv4Address dst) {
 }
 
 void SimDatabase::Print(std::ostream& os) const {
+  
+  results_t results;
+  
+  // Get the packets sorted by creation time
+  std::vector<std::pair<Time, uint64_t> > sorter;
+  for (auto p_it = this->packet_track.begin(); 
+       p_it != this->packet_track.end(); ++ p_it) {
+    
+    sorter.push_back(std::make_pair(p_it->second.creation, p_it->first));
+   
+  }
+  
+  std::sort(sorter.begin(), sorter.end(),
+    [](const std::pair<Time, uint64_t>& lhs, 
+       const std::pair<Time, uint64_t>& rhs) {
+        return lhs.first.GetNanoSeconds() < rhs.first.GetNanoSeconds();
+      }  
+  );
+  
+  
+  for (auto so_it = sorter.begin(); so_it != sorter.end(); so_it++) {
+    
+    auto p_it = this->packet_track.find(so_it->second);
+    
+    os << "(" << p_it->second.creation.GetSeconds() << "s): ";
+    
+      switch (p_it->second.status) {
+        case RECEIVED:
+          os << "RECEIVED: ";
+          break;
+        case IN_TRANSMISSION:
+          os << "FAILURE: ";
+          break;
+        default:
+          os << "FAILURE: ";
+          break;
+      }
+    
+    os << "Packet: " << p_it->first << " Start: " << p_it->second.src
+      << " Dst: " << p_it->second.dst;
+    
+    os << std::endl;
+    os << "\tTransmissions: " << std::endl;
+    
+    for (uint32_t i = 0; i < p_it->second.transmission_list.size(); i++) {
+      uint32_t t_seq = p_it->second.transmission_list[i];
+      
+      auto t_it = this->transmission_track.find(t_seq);
+      
+      os << "\t From: " << t_it->second.src << " To: "
+        << t_it->second.dst << std::endl;
+    }
+    
+  }
   
 }
 

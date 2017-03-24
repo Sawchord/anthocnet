@@ -90,6 +90,7 @@ typedef struct PacketTrack {
   Time destruction;
   uint32_t size;
   uint64_t last_transmission_seqno;
+  std::vector<uint64_t> transmission_list;
 } packet_track_t;
 
 typedef struct TransmissionTrack {
