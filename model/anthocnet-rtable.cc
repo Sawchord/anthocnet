@@ -1114,18 +1114,27 @@ void RoutingTable::UpdatePheromone(
                       std::map<Ipv4Address, DestinationInfo>::iterator dst_it, 
                       std::map<Ipv4Address, DestinationInfo>::iterator nb_it, 
                       uint32_t iface,
-                      double pheromone, uint32_t avr_hops) {
+                      double pheromone, uint32_t hops) {
   
   RoutingTableEntry* ra = this->GetRa(dst_it, nb_it, iface);
   
   if (!ra) return;
   
-  if (ra->avr_hops != ra->avr_hops) {
-    ra->avr_hops = avr_hops;
+  // If pheromone == NAN reset both values
+  if (pheromone != pheromone) {
+    ra->pheromone = NAN;
+    ra->avr_hops = NAN;
   }
-  else {
-    ra->avr_hops = this->config->alpha_pheromone*ra->avr_hops +
-      (1.0 - this->config->alpha_pheromone) * avr_hops;
+  
+  // If only hops == NAN just ignore it
+  if (hops == hops) {
+    if (ra->avr_hops != ra->avr_hops) {
+      ra->avr_hops = hops;
+    }
+    else {
+      ra->avr_hops = this->config->alpha_pheromone*ra->avr_hops +
+        (1.0 - this->config->alpha_pheromone) * hops;
+    }
   }
   
   // Check if pheromone value is NAN
@@ -1163,6 +1172,10 @@ void RoutingTable::UpdateVirtPheromone(
   RoutingTableEntry* ra = this->GetRa(dst_it, nb_it, iface);
   
   if (!ra) return;
+  
+  if (pheromone != pheromone) {
+    ra->virtual_pheromone = NAN;
+  }
   
   if (ra->virtual_pheromone != ra->virtual_pheromone) {
     ra->virtual_pheromone = pheromone;
