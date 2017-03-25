@@ -187,7 +187,8 @@ private:
   void HandleHelloMsg(Ptr<Packet> packet, uint32_t iface);
   
   // Handles receiving of a LinkFailure Message
-  void HandleLinkFailure(Ptr<Packet> packet, uint32_t iface);
+  void HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src, 
+                         uint32_t iface);
   
   // Handles receiving of a ForwardAnt
   void HandleForwardAnt(Ptr<Packet> packet, uint32_t iface, bool is_proactive);

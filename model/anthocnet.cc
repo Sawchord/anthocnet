@@ -1025,7 +1025,8 @@ void RoutingProtocol::RTableTimerExpire() {
   for (auto nb_it = nbs.begin(); nb_it != nbs.end(); ++nb_it) {
     
     // Over every active interface
-    for (auto sock_it = this->socket_addresses.begin(); sock_it != this->socket_addresses.end(); ++sock_it) {
+    for (auto sock_it = this->socket_addresses.begin(); 
+         sock_it != this->socket_addresses.end(); ++sock_it) {
       
       Ptr<Socket> socket = sock_it->first;
       Ipv4InterfaceAddress iface = sock_it->second;
@@ -1037,9 +1038,8 @@ void RoutingProtocol::RTableTimerExpire() {
     
       
       LinkFailureHeader msg;
-      msg.SetSrc(this->ipv4->GetInterfaceForAddress(iface.GetLocal()), 
-                 iface.GetLocal());
       
+      msg.SetSrc(iface.GetLocal());
       
       //NS_LOG_UNCOND(this->rtable);
       
@@ -1048,23 +1048,25 @@ void RoutingProtocol::RTableTimerExpire() {
       NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
       //NS_LOG_UNCOND(this->rtable);
       
-      TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
-      
-      Ptr<Packet> packet = Create<Packet> ();
-      
-      packet->AddHeader(msg);
-      packet->AddHeader(type_header);
-      
-      Ipv4Address destination;
-      if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
-          destination = Ipv4Address ("255.255.255.255");
-      } else { 
-          destination = iface.GetBroadcast ();
+      if (msg.HasUpdates()) {
+        TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
+        
+        Ptr<Packet> packet = Create<Packet> ();
+        
+        packet->AddHeader(msg);
+        packet->AddHeader(type_header);
+        
+        Ipv4Address destination;
+        if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+            destination = Ipv4Address ("255.255.255.255");
+        } else { 
+            destination = iface.GetBroadcast ();
+        }
+        
+        Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+        Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+          this, socket, packet, destination);
       }
-      
-      Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-      Simulator::Schedule(jitter, &RoutingProtocol::Send, 
-        this, socket, packet, destination);
     }
     
   }
@@ -1133,7 +1135,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
       this->HandleBackwardAnt(packet, src, iface);
       break;
     case AHNTYPE_LINK_FAILURE:
-      this->HandleLinkFailure(packet, iface);
+      this->HandleLinkFailure(packet, src, iface);
       break;
     default:
       NS_LOG_WARN("Type not implemented.");
@@ -1181,18 +1183,49 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
 
 }
 
-void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, uint32_t iface) {
+void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src,
+                                        uint32_t iface) {
  
   LinkFailureHeader msg;
   packet->RemoveHeader(msg);
   
-  //NS_LOG_UNCOND(this->rtable);
   
-  this->rtable.ProcessLinkFailureMsg(msg, iface);
+  Ptr<Socket> socket = this->sockets[iface];
+  std::map< Ptr<Socket>, Ipv4InterfaceAddress>::iterator sock_it
+    = this->socket_addresses.find(socket);
+  Ipv4Address this_node = sock_it->second.GetLocal();
   
-  //NS_LOG_UNCOND(this->rtable);
+  LinkFailureHeader response;
+  response.SetSrc(this_node);
   
-  // TODO: Resent LinkFailure if necessary
+  NS_LOG_UNCOND(this->rtable);
+  
+  this->rtable.ProcessLinkFailureMsg(msg, response, src, iface);
+  
+  NS_LOG_UNCOND(this->rtable);
+  
+  if (response.HasUpdates()) {
+    
+    Ipv4InterfaceAddress iface = sock_it->second;
+    
+    TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
+    Ptr<Packet> packet = Create<Packet> ();
+      
+    packet->AddHeader(response);
+    packet->AddHeader(type_header);
+    
+    Ipv4Address destination;
+    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+        destination = Ipv4Address ("255.255.255.255");
+    } else { 
+        destination = iface.GetBroadcast ();
+    }
+    
+    Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+      this, socket, packet, destination);
+    
+  }
 }
 
 void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,

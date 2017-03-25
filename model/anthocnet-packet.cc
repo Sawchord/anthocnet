@@ -134,33 +134,39 @@ TypeId LinkFailureHeader::GetInstanceTypeId () const {
 }
 
 uint32_t LinkFailureHeader::GetSerializedSize() const {
-  if (flags != NEW_BEST_VALUE) {
-    return 13;
+  
+  // For src, link and iface as well as the size
+  uint32_t size = 6;
+  for (auto it = this->updates.begin(); it != this->updates.end(); ++it) {
+    
+    // Every entry has the destination and status
+    // Some have an extra double value
+    size += 5;
+    if (it->status == NEW_BEST_VALUE) {
+      size += 8;
+    }
   }
-  else {
-    return 25;
-  }
+  
+  return size;
 }
 
 void LinkFailureHeader::Serialize (Buffer::Iterator i) const {
   
   WriteTo(i, this->src);
-  i.WriteU32(this->src_iface);
-  WriteTo(i, this->broken_dst);
-  i.WriteU8(this->flags);
+  i.WriteU16(this->updates.size());
   
-  if (this->flags == NEW_BEST_VALUE) {
-    WriteTo(i, this->best_dst);
+  for (auto it = this->updates.begin(); it != this->updates.end(); ++it) {
+    WriteTo(i, it->dst);
+    i.WriteU8(it->status);
     
-    char buf[sizeof(double)];
-    
-    memcpy(&buf, &this->best_pheromone, sizeof(double));
-    
-    for (uint32_t b = 0; b < sizeof(double); b++) {
-      i.WriteU8(buf[b]);
+    if (it->status == NEW_BEST_VALUE) {
+      char buf[sizeof(double)];
+      memcpy(&buf, &it->new_pheromone, sizeof(double));
+      for (uint32_t b = 0; b < sizeof(double); b++) {
+        i.WriteU8(buf[b]);
+      }
     }
   }
-  
 }
 
 uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
@@ -168,42 +174,59 @@ uint32_t LinkFailureHeader::Deserialize(Buffer::Iterator start) {
   Buffer::Iterator i = start;
   
   ReadFrom(i, this->src);
-  this->src_iface = i.ReadU32();
-  ReadFrom(i, this->broken_dst);
-  this->flags = (linkfailure_t) i.ReadU8();
+  uint32_t size = i.ReadU16();
   
-  if (this->flags == NEW_BEST_VALUE) {
+  for (uint32_t c = 0; c < size; c++) {
+    linkfailure_list_t l;
+    ReadFrom(i, l.dst);
+    l.status = (linkfailure_status_t) i.ReadU8();
     
-    ReadFrom(i, this->best_dst);
-    
-    char buf[sizeof(double)];
-    for (uint32_t b = 0; b < sizeof(double); b++) {
-      buf[b] = i.ReadU8();
+    if (l.status == NEW_BEST_VALUE) {
+      
+      char buf[sizeof(double)];
+      for (uint32_t b = 0; b < sizeof(double); b++) {
+        buf[b] = i.ReadU8();
+      }
+      memcpy(&(l.new_pheromone), &buf, sizeof(double));
+      
     }
-    memcpy(&this->best_pheromone, &buf, sizeof(double));
+    
+    this->updates.push_back(l);
   }
   
   uint32_t dist = i.GetDistanceFrom(start);
-  NS_ASSERT(dist == this->GetSerializedSize());
+  NS_ASSERT (dist == GetSerializedSize());
   
   return dist;
   
 }
 
 void LinkFailureHeader::Print (std::ostream &os) const {
-  os << "Src: " << this->src
-    << ":" << this->src_iface
-    << " Reporting breakage to: " << this->broken_dst;
-    
-  if (this->flags == VALUE) {
-    os << " Breakage";
+  os << "Src: " << this->src;
+  
+  if (this->updates.size() != 0) {
+    os << "\tDestinations broken: ";
+    for (auto it = this->updates.begin(); it != this->updates.end(); ++it) {
+      os << " " << it->dst << " Status: ";
+      
+      switch (it->status) {
+        case VALUE:
+          os << "Normal value";
+          break;
+        case ONLY_VALUE:
+          os << "Only value";
+          break;
+        case NEW_BEST_VALUE:
+          os << "New best value: " << it->new_pheromone;
+            break;
+        default:
+          os << "Status unknown";
+          break;
+      }
+    }
   }
-  else if (this->flags == ONLY_VALUE) {
-    os << " Complete Breakage";
-  }
-  else if (this->flags == NEW_BEST_VALUE){
-    os << " Best Link Breakage"
-      << " New best link: " << this->best_dst << ":" << this->best_pheromone;
+  else {
+    os << " No destinations broken";
   }
 }
 
@@ -212,60 +235,43 @@ bool LinkFailureHeader::IsValid() const{
 }
 
 bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
-  if (src == o.src && flags == o.flags && broken_dst == o.broken_dst) {
-    if (flags != NEW_BEST_VALUE) {
-      return true;
-    } else {
-      if (best_dst == o.best_dst && best_pheromone == o.best_pheromone) {
-        return true;
-      }
-    }
+  if (src == o.src) {
+    // TODO: Compare the other stuff as well
   } 
   return false;
 }
 
-void LinkFailureHeader::SetSrc(uint32_t src_iface, Ipv4Address src) {
-  this->src_iface = src_iface;
+void LinkFailureHeader::SetSrc(Ipv4Address src) {
   this->src = src;
 }
 
-void LinkFailureHeader::SetBroken(Ipv4Address broken_dst, 
-                                  linkfailure_t flags) {
-  this->broken_dst = broken_dst;
-  this->flags = flags;
+void LinkFailureHeader::AppendUpdate(Ipv4Address dst, 
+                                     linkfailure_status_t status,
+                                     double new_pheromone) {
+  
+  linkfailure_list_t l;
+  l.dst = dst;
+  l.status = status;
+  l.new_pheromone  = new_pheromone;
+  
+  this->updates.push_back(l);
+  
 }
 
-void LinkFailureHeader::SetExtended(Ipv4Address best_dst, 
-                                    double best_pheromone) {
-  if (this->flags != NEW_BEST_VALUE) return;
-  this->best_dst = best_dst;
-  this->best_pheromone = best_pheromone;
+bool LinkFailureHeader::HasUpdates() {
+  return this->updates.size() != 0;
+}
+
+linkfailure_list_t LinkFailureHeader::GetNextUpdate() {
+  linkfailure_list_t l = this->updates[this->updates.size() - 1];
+  this->updates.pop_back();
+  return l;
 }
 
 Ipv4Address LinkFailureHeader::GetSrc() {
   return this->src;
 }
 
-uint32_t LinkFailureHeader::GetIface() {
-  return this->src_iface;
-}
-
-Ipv4Address LinkFailureHeader::GetBrokenDst() {
-  return this->broken_dst;
-}
-
-linkfailure_t LinkFailureHeader::GetFlags() {
-  return this->flags;
-}
-
-std::pair<Ipv4Address, double> LinkFailureHeader::GetExtended() {
-  if (this->flags != NEW_BEST_VALUE) {
-    return std::make_pair(Ipv4Address("0.0.0.0"), 0.0);
-  }
-  else {
-    return std::make_pair(this->best_dst, best_pheromone);
-  }
-}
 
 // -------------------------------------------------
 // Unicast warning Header

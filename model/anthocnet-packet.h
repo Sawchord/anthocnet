@@ -28,7 +28,6 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/nstime.h"
 #include "ns3/log.h"
-#include "anthocnet-packet.h"
 #include "ns3/address-utils.h"
 #include "ns3/packet.h"
 
@@ -84,7 +83,13 @@ typedef enum LinkFailureFlags {
   VALUE,
   NEW_BEST_VALUE,
   ONLY_VALUE
-} linkfailure_t;
+} linkfailure_status_t;
+
+typedef struct LinkFailureList {
+  Ipv4Address dst;
+  linkfailure_status_t status;
+  double new_pheromone;
+} linkfailure_list_t;
 
 class LinkFailureHeader : public Header {
 public:
@@ -106,27 +111,23 @@ public:
   bool IsValid () const;
   bool operator== (LinkFailureHeader const &o) const;
   
-  void SetSrc(uint32_t src_iface, Ipv4Address src);
-  void SetBroken(Ipv4Address broken_dst, linkfailure_t flags);
-  void SetExtended(Ipv4Address best_dst, double best_pheromone);
+  void SetSrc(Ipv4Address src);
+  
+  void AppendUpdate(Ipv4Address dst, linkfailure_status_t status,
+                    double new_pheromone);
+  
+  bool HasUpdates(); 
+  linkfailure_list_t GetNextUpdate();
   
   Ipv4Address GetSrc();
-  uint32_t GetIface();
-  Ipv4Address GetBrokenDst();
-  linkfailure_t GetFlags();
   
-  std::pair<Ipv4Address, double> GetExtended();
+  
   
 private:
   
   Ipv4Address src;
-  uint32_t src_iface;
-  Ipv4Address broken_dst;
-  linkfailure_t flags;
   
-  // These are only used, if flags == NEW_BEST_VALUE
-  Ipv4Address best_dst;
-  double best_pheromone;
+  std::vector<linkfailure_list_t> updates;
   
 };
 

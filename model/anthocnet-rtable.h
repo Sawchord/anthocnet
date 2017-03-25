@@ -255,7 +255,9 @@ public:
    * \brief Processes a LinkFailure Notification
    * \param msg The message to Process
    */ 
-  void ProcessLinkFailureMsg(LinkFailureHeader& msg, uint32_t iface);
+  void ProcessLinkFailureMsg(LinkFailureHeader& msg, 
+                             LinkFailureHeader& response,
+                             Ipv4Address origin, uint32_t iface);
   
   /**
    * \brief Takes a reference to a newly created HelloMsg and fills it
@@ -330,6 +332,12 @@ public:
 private:
   
   // Util functions
+  double Bootstrap(Ipv4Address dst, Ipv4Address nb, uint32_t iface,
+                 double pheromone, bool use_virtual);
+  
+  std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb, 
+                                 uint32_t iface);
+  
   // The IP protocol
   Ptr<Ipv4> ipv4;
   
