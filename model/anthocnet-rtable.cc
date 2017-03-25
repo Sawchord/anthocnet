@@ -525,6 +525,8 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
     
     uint32_t dst_index = dst_it->second.index;
     auto other_inits = this->IsOnly(dst_it->first, origin, iface);
+    
+    double old_pheromone = 0.0;
     double new_pheromone = 0.0;
     
     switch (l.status) {
@@ -570,8 +572,17 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
           continue;
         }
         
+        old_pheromone = this->rtable[dst_index][linkif_index].pheromone;
+        
         // Use Bootstrap algorithm
         new_pheromone = this->Bootstrap(l.dst, origin, iface, l.new_pheromone, false);
+        
+        // If the updates pheromone was not the best to begin with, there is no need to 
+        // inform the other nodes
+        if (old_pheromone < other_inits.second) {
+          continue;
+        }
+        
         if (new_pheromone < other_inits.second) {
           response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
         }

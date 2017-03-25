@@ -115,7 +115,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(50)),
+total_time(Seconds(200)),
 nWifis(20),
 nSender(5),
 nReceiver(5),
@@ -123,7 +123,7 @@ nReceiver(5),
 pWidth(400),
 pHeight(1200),
 
-nodePause(3),
+nodePause(30),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 

@@ -249,6 +249,11 @@ void LinkFailureHeader::AppendUpdate(Ipv4Address dst,
                                      linkfailure_status_t status,
                                      double new_pheromone) {
   
+  // Cant make yourself broken
+  if (dst == this->src) {
+    return;
+  }
+  
   linkfailure_list_t l;
   l.dst = dst;
   l.status = status;

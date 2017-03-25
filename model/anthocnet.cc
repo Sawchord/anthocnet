@@ -1198,11 +1198,9 @@ void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src,
   LinkFailureHeader response;
   response.SetSrc(this_node);
   
-  NS_LOG_UNCOND(this->rtable);
-  
   this->rtable.ProcessLinkFailureMsg(msg, response, src, iface);
   
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   
   if (response.HasUpdates()) {
     
