@@ -802,6 +802,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
       (1.0 - this->config->gamma_pheromone) * (1.0 / T_id);
   }
   
+  //this->UpdatePheromone(dst, nb, iface, T_id, hops);
+  
   NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
     << "average hops" << ra->avr_hops
     << "for" << dst_it->first << nb_it->first);
@@ -1092,6 +1094,105 @@ std::pair<bool, double> RoutingTable::IsOnly(Ipv4Address dst,
   NS_ASSERT((other_inits && best_pheromone != 0) || (!other_inits));
   
   return std::make_pair(other_inits, best_pheromone);
+}
+
+
+void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
+                      uint32_t iface,
+                      double pheromone, uint32_t avr_hops) {
+  //if (dst == nb) {
+  //  return;
+  //}
+  
+  auto dst_it = this->dsts.find(dst);
+  auto nb_it = this->dsts.find(nb);
+  
+  this->UpdatePheromone(dst_it, nb_it, iface, pheromone, avr_hops);
+}
+
+void RoutingTable::UpdatePheromone(
+                      std::map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                      std::map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                      uint32_t iface,
+                      double pheromone, uint32_t avr_hops) {
+  
+  RoutingTableEntry* ra = this->GetRa(dst_it, nb_it, iface);
+  
+  if (!ra) return;
+  
+  if (ra->avr_hops != ra->avr_hops) {
+    ra->avr_hops = avr_hops;
+  }
+  else {
+    ra->avr_hops = this->config->alpha_pheromone*ra->avr_hops +
+      (1.0 - this->config->alpha_pheromone) * avr_hops;
+  }
+  
+  // Check if pheromone value is NAN
+  if (ra->pheromone != ra->pheromone) {
+    ra->pheromone = (1.0 / pheromone);
+  }
+  else {
+    ra->pheromone = 
+      this->config->gamma_pheromone*ra->pheromone +
+      (1.0 - this->config->gamma_pheromone) * (1.0 / pheromone);
+  }
+  
+}
+
+
+void RoutingTable::UpdateVirtPheromone(Ipv4Address dst, Ipv4Address nb, 
+                      uint32_t iface,
+                      double pheromone) {
+  //if (dst == nb) {
+  //  return;
+  //}
+  
+  auto dst_it = this->dsts.find(dst);
+  auto nb_it = this->dsts.find(nb);
+  
+  this->UpdateVirtPheromone(dst_it, nb_it, iface, pheromone);
+}
+
+
+void RoutingTable::UpdateVirtPheromone(
+                      std::map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                      std::map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                      uint32_t iface,
+                      double pheromone) {
+  RoutingTableEntry* ra = this->GetRa(dst_it, nb_it, iface);
+  
+  if (!ra) return;
+  
+  if (ra->virtual_pheromone != ra->virtual_pheromone) {
+    ra->virtual_pheromone = pheromone;
+  }
+  else {
+    ra->virtual_pheromone = 
+      this->config->alpha_pheromone*ra->virtual_pheromone +
+      (1.0 - this->config->alpha_pheromone) * (pheromone);
+  }
+
+}
+
+RoutingTableEntry* RoutingTable::GetRa(
+                       std::map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                       std::map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                       uint32_t iface) {
+  // TODO: Add in later
+  //if (dst_it->first == nb_it->first) {
+  //  return 0;
+  //}
+  
+  auto nb2_it = nb_it->second.nbs.find(iface);
+  if (nb2_it == nb_it->second.nbs.end()) {
+    return 0;
+  }
+  
+  uint32_t dst_index = dst_it->second.index;
+  uint32_t nb_index = nb2_it->second.index;
+  
+  return &(this->rtable[dst_index][nb_index]);
 }
 
 

@@ -338,6 +338,30 @@ private:
   std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb, 
                                  uint32_t iface);
   
+  
+  void UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
+                       uint32_t iface,
+                       double pheromone, uint32_t avr_hops);
+  
+  void UpdatePheromone(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                       uint32_t iface,
+                       double pheromone, uint32_t avr_hops);
+  
+  void UpdateVirtPheromone(Ipv4Address dst, Ipv4Address nb, 
+                       uint32_t iface,
+                       double pheromone);
+  
+  void UpdateVirtPheromone(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                       uint32_t iface,
+                       double pheromone);
+  
+  RoutingTableEntry* GetRa(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
+                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
+                       uint32_t iface);
+  
+  
   // The IP protocol
   Ptr<Ipv4> ipv4;
   
