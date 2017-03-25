@@ -464,11 +464,13 @@ void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg,
     // in the updates list
     double brk_pheromone = this->rtable[dst_index][brknb_index].pheromone;
     
+    //NS_LOG_FUNCTION(this << "second" << other_inits.second << "broken" << brk_pheromone);
+    
     // Now report our findings into the message
     if (!other_inits.first) {
       msg.AppendUpdate(dst_it->first, ONLY_VALUE, 0.0);
     }
-    else if (other_inits.second > brk_pheromone) {
+    else if (other_inits.second < brk_pheromone) {
       msg.AppendUpdate(dst_it->first, NEW_BEST_VALUE, other_inits.second);
     }
     else {
