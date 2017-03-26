@@ -181,8 +181,10 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
   Ipv4Address this_node = this->ipv4->GetAddress(recv_iface, 0).GetLocal();
   
-  NS_LOG_FUNCTION (this << p->GetUid () 
-    << header.GetDestination () << idev->GetAddress ());
+  //NS_LOG_FUNCTION (this << p->GetUid () 
+  //  << header.GetDestination () << idev->GetAddress ());
+  
+  NS_LOG_FUNCTION(this << "called");
   
   // TODO: Register activity for destination here
   
@@ -243,7 +245,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
     rt->SetGateway(nb);
     
-    NS_LOG_FUNCTION(this << "route to " << rt);
+    NS_LOG_FUNCTION(this << "route to " << *rt);
     ucb(rt, p, header);
     return true;
     
@@ -272,7 +274,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
   }
   
-  this->data_drop(p, "Unknow reason", this_node);
+  this->data_drop(p, "Unknown reason", this_node);
   NS_LOG_FUNCTION(this << "packet dropped");
   return false;
 }
@@ -925,8 +927,8 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
     for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
       ad_it != addresses.end(); ++ad_it) {
       NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
-      this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), 
-                                  *ad_it);
+      //this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), 
+      //                            *ad_it);
       
     }
   }
@@ -1306,7 +1308,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     // counted amount of broadcasr
     if (ant.DecBCount()) {
       this->BroadcastForwardAnt(final_dst, ant, is_proactive);
-      NS_LOG_FUNCTION(this << "nonrandom select");
+      NS_LOG_FUNCTION(this << "broadcasting");
       return;
     }
     else {
@@ -1422,7 +1424,8 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
       rt->SetGateway(nb);
       
-      NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "send");
+      NS_LOG_FUNCTION(this << "route to" << *rt
+        << "Data " << cv.second.packet << "send");
       cv.second.ucb(rt, cv.second.packet, cv.second.header);
       
       // If there was a route found, the destination must exist
@@ -1431,11 +1434,12 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       dst_found = true;
     }
   
-    // If this destination exists, all the data 
-    // is routed out by now and can be discarded
-    if (dst_found) {
-        this->data_cache.RemoveCache(dst);
-    }
+  }
+  
+  // If this destination exists, all the data 
+  // is routed out by now and can be discarded
+  if (dst_found) {
+      this->data_cache.RemoveCache(dst);
   }
 }
 

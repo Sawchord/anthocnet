@@ -115,7 +115,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(900)),
+total_time(Seconds(25)),
 nWifis(80),
 nSender(20),
 nReceiver(20),
@@ -130,7 +130,7 @@ nodeMaxSpeed(20),
 generate_pcap(false),
 output_granularity(1.0),
 
-phyMode(2),
+phyMode(1),
 lossModel(1),
 txpStart(7.5),
 txpEnd(7.5),
