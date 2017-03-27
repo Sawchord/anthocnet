@@ -173,6 +173,41 @@ void AntHocNetConfig::DoInitialize() {
   
 }
 
+void AntHocNetConfig::Print(std::ostream& os) const {
+  
+  //os << "value: " << value << std::endl;
+  
+  os << "hello_interval: " << hello_interval << std::endl;
+  os << "rtable_update_interval: " << rtable_update_interval << std::endl;
+  os << "pr_ant_interval: " << pr_ant_interval << std::endl;
+  
+  os << "dst_expire: " << dst_expire << std::endl;
+  os << "nb_expire: " << nb_expire << std::endl;
+  os << "session_expire: " << session_expire << std::endl;
+  os << "dcache_expire: " << dcache_expire << std::endl;
+  
+  os << "no_broadcast: " << no_broadcast << std::endl;
+  
+  os << "alpha_T_mac: " << alpha_T_mac << std::endl;
+  os << "T_hop: " << T_hop << std::endl;
+  os << "alpha_pheromone: " << alpha_pheromone << std::endl;
+  os << "gamma_pheromone: " << gamma_pheromone << std::endl;
+  os << "eta_value: " << eta_value << std::endl;
+  
+  os << "evaporation: " << evaporation << std::endl;
+  os << "evap_threshold: " << evap_threshold << std::endl;
+  
+  os << "initial_ttl: " << initial_ttl << std::endl;
+  
+  os << "reactive_bcast_count: " << reactive_bcast_count << std::endl;
+  os << "proactive_bcast_count: " << proactive_bcast_count << std::endl;
+  
+}
+
+
+
+
+
 // End of namespaces
 }
 }

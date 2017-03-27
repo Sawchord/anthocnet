@@ -107,8 +107,10 @@ typedef struct Results {
   std::list<double> droprate;
   std::list<double> end_to_end_delay;
   std::list<double> average_delay_jitter;
-  std::list<double> rate_control_package;
-  std::list<double> rate_control_bytes;
+  //std::list<double> rate_control_package;
+  //std::list<double> rate_control_bytes;
+  double droprate_total_avr;
+  double end_to_end_delay_total_avr;
   
 } results_t;
 

@@ -41,6 +41,7 @@ public:
   
   
   static TypeId GetTypeId();
+  void Print(std::ostream& os) const;
   
   virtual void DoDispose();
 protected:
@@ -83,14 +84,17 @@ public:
   double gamma_pheromone;
   double eta_value;
   
+  // TODO: Exploration power (settable)
+  
   double evaporation;
   double evap_threshold;
   
+  
+  // DEPRECATED
   double snr_threshold;
   double bad_snr_cost;
   
   // TODO: Consideration values
-  // TODO: Exploraion power
   
   // ---------------------------------
   // Misc

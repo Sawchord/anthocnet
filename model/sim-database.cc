@@ -347,7 +347,14 @@ results_t SimDatabase::Evaluate(double granularity) const {
   uint64_t num_received_packets = 0;
   uint64_t num_dropped_packets = 0;
   uint64_t num_unknown_packets = 0;
+  
+  uint64_t total_num_packets = 0;
+  uint64_t total_received_packets = 0;
+  uint64_t total_dropped_packets = 0;
+  
   Time delay_acc = Seconds(0);
+  
+  Time total_delay = Seconds(0);
   
   for (auto so_it = sorter.begin(); so_it != sorter.end(); ++so_it) {
     
@@ -361,7 +368,8 @@ results_t SimDatabase::Evaluate(double granularity) const {
         results.end_to_end_delay.push_back(0);
       } else {
         //results.droprate.push_back((double)num_dropped_packets / num_packets);
-        results.droprate.push_back( 1 - ((double)num_received_packets / num_packets));
+        results.droprate.push_back(
+          1 - ((double)num_received_packets / num_packets));
         results.end_to_end_delay.push_back((double) delay_acc.GetMilliSeconds() 
                                            / num_packets);
         
@@ -380,11 +388,14 @@ results_t SimDatabase::Evaluate(double granularity) const {
       num_dropped_packets = 0;
       num_unknown_packets = 0;
       
+      total_delay += delay_acc;
       delay_acc = Seconds(0);
       
     }
     
     num_packets++;
+    total_num_packets++;
+    
     auto p_it = this->packet_track.find(so_it->second);
     if (p_it == this->packet_track.end()) {
       NS_LOG_WARN("Could not find packet");
@@ -394,10 +405,12 @@ results_t SimDatabase::Evaluate(double granularity) const {
     switch (p_it->second.status) {
       case RECEIVED:
         num_received_packets++;
+        total_received_packets++;
         delay_acc += (p_it->second.destruction - p_it->second.creation);
         break;
       case DROPPED:
         num_dropped_packets++;
+        total_dropped_packets++;
         break;
       case IN_TRANSMISSION:
         // TODO: ????
@@ -412,6 +425,12 @@ results_t SimDatabase::Evaluate(double granularity) const {
     }
     
   }
+  
+  results.droprate_total_avr =  1 - ((double)total_received_packets
+                                      / total_num_packets);
+  
+  results.end_to_end_delay_total_avr = (double)total_delay.GetMilliSeconds()/
+                                          total_num_packets;
   
   // TODO: Evaluate the Transmission related stuff
   

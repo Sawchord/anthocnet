@@ -62,10 +62,19 @@ private:
   
   void ProgressUpdate();
   
+  void PrintSummary(std::ostream& os);
+  
   // State
   Ptr<SimDatabase> db;
   std::ofstream data_drop_output;
   //std::vector<ApplicationContainer*> apps;
+  
+  uint64_t control_packets;
+  uint64_t control_bytes;
+  uint64_t data_packets;
+  uint64_t data_bytes;
+  
+  results_t result;
   
   Ptr<UniformRandomVariable> random;
   
@@ -75,6 +84,8 @@ private:
                    std::string legendX, std::string legendY,
                    double gran ) const;
   
+              
+                   
   // Config
   
   // Simulation parameters
@@ -112,18 +123,21 @@ private:
   uint32_t appStartBegin;
   uint32_t appStartEnd;
   
+  
+  std::string comment;
+  
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(40)),
-nWifis(20),
-nSender(5),
-nReceiver(5),
+total_time(Seconds(80)),
+nWifis(80),
+nSender(20),
+nReceiver(20),
 
-pWidth(400),
-pHeight(1200),
+pWidth(800),
+pHeight(2400),
 
-nodePause(30),
+nodePause(80),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 
@@ -138,7 +152,7 @@ txpEnd(7.5),
 
 protocol(2),
 packetSize(64),
-packetRate(12),
+packetRate(4),
 
 appStartBegin(10),
 appStartEnd(15)
@@ -208,11 +222,29 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
                "Time at which the first senders start", this->appStartBegin);
   cmd.AddValue("appStartEnd", 
                "Time at which the last senders start", this->appStartEnd);
+  cmd.AddValue("Comment", 
+               "Give a short description of this simulation", this->comment);
   
   cmd.Parse(argc, argv);
   return "STUB";
 }
 
+
+void RoutingExperiment::PrintSummary(std::ostream& os) {
+  
+  os << "Simulations summary: " << std::endl;
+  os << "Comment: " << this->comment << std::endl;
+  os << "Total average droprate: " 
+    << this->result.droprate_total_avr << std::endl;
+  os << "Total average delay: " 
+    << this->result.end_to_end_delay_total_avr << "ms" << std::endl;
+  
+  os << "Data Packet rate: " << ((double)data_packets 
+                / (data_packets+control_packets)) << std::endl;
+  os << "Data Byte rate: " << ((double)data_bytes
+                / (data_bytes+control_bytes)) << std::endl;
+  
+}
 
 void RoutingExperiment::ProgressUpdate() {
   std::cout << Simulator::Now().GetSeconds()
@@ -254,7 +286,9 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
   if (udpheader.GetSourcePort() != 49153) {
     
-    // TODO: Count packets
+    data_packets++;
+    data_bytes += cpacket->GetSize();
+    
   }
   else {
     packet->RemoveHeader(simheader);
@@ -263,6 +297,9 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
     this->db->RegisterTx(seqno, simheader.GetSeqno(), packet->GetSize());
     
   }
+  
+  control_packets++;
+  control_bytes += cpacket->GetSize();
   
 }
 
@@ -511,6 +548,11 @@ void RoutingExperiment::Run() {
   Config::ConnectWithoutContext (DataDropPath,
     MakeCallback(&RoutingExperiment::DataDropTracer, this));
   
+  this->data_packets = 0;
+  this->data_bytes = 0;
+  this->control_packets = 0;
+  this->control_bytes = 0;
+  
   // Start the net animator
   AnimationInterface anim (tr_name + "_animation.xml");
   
@@ -537,7 +579,7 @@ void RoutingExperiment::Run() {
   Simulator::Destroy ();
   
   // Get the result of the simulation and put them into graphs
-  results_t result = this->db->Evaluate(this->output_granularity);
+  this->result = this->db->Evaluate(this->output_granularity);
   
   this->GenGnuplot(result.droprate, tr_name, "Droprate", 
                    "droprate", "Time [s]", "Droprate[%]", 
@@ -548,8 +590,11 @@ void RoutingExperiment::Run() {
                    this->output_granularity);
   
   
-  std::ofstream packet_log(tr_name +"_packets.log");
+  std::ofstream packet_log(tr_name + "_packets.log");
   this->db->Print(packet_log);
+  
+  std::ofstream summary(tr_name + "_summary.txt");
+  this->PrintSummary(summary);
   
 }
 

@@ -433,7 +433,7 @@ std::set<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval) 
         uint32_t dst_index = dst_it->second.index;
         
         RoutingTableEntry* ra = &(this->rtable[dst_index][nb_index]);
-        ra->pheromone = ra->pheromone * (1.0 - this->config->evaporation);
+        /*ra->pheromone = ra->pheromone * (1.0 - this->config->evaporation);
         if (ra->pheromone < this->config->evap_threshold) {
           NS_LOG_FUNCTION(this << "pheromone evaporated" 
             << dst_it->first << nb1_it->first << nb2_it->first);
@@ -442,7 +442,7 @@ std::set<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval) 
           
           ret.insert(std::make_pair(nb2_it->first , nb1_it->first));
           
-        }
+        }*/
       
         // FIXME: Also evaporate virtual pheromone?
         ra->virtual_pheromone = ra->virtual_pheromone 
