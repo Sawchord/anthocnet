@@ -591,6 +591,9 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         this->rtable[dst_index][linkif_index].pheromone = NAN;
         this->rtable[dst_index][linkif_index].avr_hops = NAN;
         
+        // TODO: set virt pheromone nan
+        // Happens to be worse
+        //this->rtable[dst_index][linkif_index].virtual_pheromone = NAN;
         break;
         
       case NEW_BEST_VALUE:
