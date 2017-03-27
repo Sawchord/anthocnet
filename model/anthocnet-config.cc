@@ -55,7 +55,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute ("ProactiveAntTimer",
     "The interval, in which an active session sends out proactive ants",
-    TimeValue (MilliSeconds(1000)),
+    TimeValue (MilliSeconds(2000)),
     MakeTimeAccessor(&AntHocNetConfig::pr_ant_interval),
     MakeTimeChecker()
   )
@@ -114,9 +114,21 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeDoubleChecker<double>()
   )
   .AddAttribute("EtaValue",
-    "The Rx Time is a running average with a decay defined by eta",
+    "The Avr Rx Time (used in bootstrap algorithm) is a running average with a decay defined by eta",
     DoubleValue(0.7),
     MakeDoubleAccessor(&AntHocNetConfig::eta_value),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("Evaporation",
+    "On every RTable update, all pheromones evaporate a bit",
+    DoubleValue(0.2),
+    MakeDoubleAccessor(&AntHocNetConfig::evaporation),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("EvaporationThreshold",
+    "If a pheromone evaporates below this value, it is considered vanished",
+    DoubleValue(0.05),
+    MakeDoubleAccessor(&AntHocNetConfig::evap_threshold),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("SnrThreshold",

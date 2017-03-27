@@ -28,6 +28,8 @@
 #include <list>
 #include <iomanip>
 
+#include <set>
+
 #include <cmath>
 
 #include "ns3/node.h"
@@ -239,7 +241,7 @@ public:
    * \param interval The time interval, in which this function is called.
    * \return A list of all neigbor entries, that are outdated
    */
-  std::list<std::pair<uint32_t, Ipv4Address> > Update(Time interval);
+  std::set<std::pair<uint32_t, Ipv4Address> > Update(Time interval);
   
   /**
    * \brief Called, if a neighbor timed out. Handles updating the routing 
@@ -299,7 +301,7 @@ public:
    */
   bool SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
     Ptr<UniformRandomVariable> vr);
-  
+//   
   /**
    * \brief Stocastically selects an interface and a neighbor from
    *        the routing table to route the packet towards the destination to.

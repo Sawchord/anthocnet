@@ -1018,7 +1018,7 @@ void RoutingProtocol::PrAntTimerExpire() {
 
 void RoutingProtocol::RTableTimerExpire() {
   
-  std::list<std::pair<uint32_t, Ipv4Address> > nbs;
+  std::set<std::pair<uint32_t, Ipv4Address> > nbs;
   
   // Update the routing table
   nbs = this->rtable.Update(this->config->rtable_update_interval);

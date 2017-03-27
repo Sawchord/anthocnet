@@ -83,6 +83,9 @@ public:
   double gamma_pheromone;
   double eta_value;
   
+  double evaporation;
+  double evap_threshold;
+  
   double snr_threshold;
   double bad_snr_cost;
   

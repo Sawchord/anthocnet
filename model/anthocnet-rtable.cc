@@ -388,51 +388,81 @@ void RoutingTable::UpdateNeighbor(uint32_t iface_index, Ipv4Address address) {
   
 }
 
-std::list<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval) {
+std::set<std::pair<uint32_t, Ipv4Address> > RoutingTable::Update(Time interval) {
   
-  std::list<std::pair<uint32_t, Ipv4Address> > ret;
+  std::set<std::pair<uint32_t, Ipv4Address> > ret;
   
   // Iterate over the destinations
-  for (auto dst_it = this->dsts.begin();
-    dst_it != this->dsts.end(); /* no increment */) {
+  for (auto nb1_it = this->dsts.begin();
+    nb1_it != this->dsts.end(); /* no increment */) {
     
     
     // Calculate the time that ticked since the last occurence of update
-    Time dst_dt = dst_it->second.expires_in - interval;
+    Time dst_dt = nb1_it->second.expires_in - interval;
     
     // Remove outdated destinations
     if (dst_dt <= Seconds(0)) {
-      NS_LOG_FUNCTION(this << "dst" << dst_it->first << "timed out");
-      this->RemoveDestination((dst_it++)->first);
+      NS_LOG_FUNCTION(this << "dst" << nb1_it->first << "timed out");
+      this->RemoveDestination((nb1_it++)->first);
+      continue;
     }
-    else {
       
-      // Update dsts expire timer
-      dst_it->second.expires_in = dst_dt;
+    // Update dsts expire timer
+    nb1_it->second.expires_in = dst_dt;
+    
+    // Iterate over all the neigbors
+    for (auto nb2_it = nb1_it->second.nbs.begin();
+    nb2_it != nb1_it->second.nbs.end(); ++nb2_it/* no increment */) {
       
-      // Iterate over all the neigbors
-      for (auto nb_it = dst_it->second.nbs.begin();
-      nb_it != dst_it->second.nbs.end(); /* no increment */) {
+      Time nb_dt = nb2_it->second.expires_in - interval;
+      
+      if (nb_dt <= Seconds(0)) {
+        NS_LOG_FUNCTION(this << "nb" 
+          << nb1_it->first << nb2_it->first << "timed out");
         
-        Time nb_dt = nb_it->second.expires_in - interval;
+        ret.insert(std::make_pair(nb2_it->first , nb1_it->first));
+        continue;
         
-        if (nb_dt <= Seconds(0)) {
-          NS_LOG_FUNCTION(this << "nb" 
-            << dst_it->first << nb_it->first << "timed out");
-          //this->RemoveNeighbor((nb_it++)->first , dst_it->first);
-          ret.push_back(std::make_pair((nb_it++)->first , dst_it->first));
-        }
-        else {
-          
-          nb_it->second.expires_in = nb_dt;
-          if (dst_dt < nb_dt) {
-            dst_it->second.expires_in = nb_dt;
-          }
-          ++nb_it;
-        }
       }
-      ++dst_it;
+      
+      // Calculate the evaporation
+      uint32_t nb_index = nb2_it->second.index;
+      for (auto dst_it = this->dsts.begin(); 
+           dst_it != this->dsts.end(); ++dst_it) {
+        
+        uint32_t dst_index = dst_it->second.index;
+        
+        RoutingTableEntry* ra = &(this->rtable[dst_index][nb_index]);
+        ra->pheromone = ra->pheromone * (1.0 - this->config->evaporation);
+        if (ra->pheromone < this->config->evap_threshold) {
+          NS_LOG_FUNCTION(this << "pheromone evaporated" 
+            << dst_it->first << nb1_it->first << nb2_it->first);
+          //ra->pheromone = NAN;
+          //ra->avr_hops = NAN;
+          
+          ret.insert(std::make_pair(nb2_it->first , nb1_it->first));
+          
+        }
+      
+        // FIXME: Also evaporate virtual pheromone?
+        ra->virtual_pheromone = ra->virtual_pheromone 
+          * (1.0 - this->config->evaporation);
+        if (ra->virtual_pheromone < this->config->evap_threshold) {
+          NS_LOG_FUNCTION(this << "virtual pheromone evaporated" 
+            << dst_it->first << nb1_it->first << nb2_it->first);
+          ra->virtual_pheromone = NAN;
+        }
+      
+      }
+       
+      nb2_it->second.expires_in = nb_dt;
+      if (dst_dt < nb_dt) {
+        nb1_it->second.expires_in = nb_dt;
+      }
+      //++nb2_it;
+      
     }
+    ++nb1_it;
   }
   return ret;
 }
