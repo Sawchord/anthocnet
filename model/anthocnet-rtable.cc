@@ -405,6 +405,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     return false;
   }
   
+  NS_LOG_UNCOND(*this);
+  
   double total_pheromone = this->SumPropability(dst, beta, virt);
   
   // NOTE: Very low pheromone can lead to the total_pheromone 
@@ -444,7 +446,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     
     if (selected > select) {
       nb = nb_it->first;
-      break;
+      return true;
     }
     
   }

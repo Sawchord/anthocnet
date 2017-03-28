@@ -143,7 +143,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   uint32_t iface = 1;
   Ipv4Address nb;
   
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, 20.0, nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
