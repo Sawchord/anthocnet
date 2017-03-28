@@ -105,7 +105,7 @@ class RoutingTable {
 public:
   
   
-  RoutingTable(Ptr<AntHocNetConfig> config, Ptr<Ipv4> ipv4);
+  RoutingTable();
   ~RoutingTable();
   
   void AddNeighbor(Ipv4Address nb);

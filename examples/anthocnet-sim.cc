@@ -129,13 +129,13 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(50)),
-nWifis(80),
-nSender(20),
-nReceiver(20),
+total_time(Seconds(30)),
+nWifis(20),
+nSender(5),
+nReceiver(5),
 
-pWidth(800),
-pHeight(2400),
+pWidth(400),
+pHeight(1200),
 
 nodePause(25),
 nodeMinSpeed(5),

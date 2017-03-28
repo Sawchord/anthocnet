@@ -48,7 +48,7 @@ DestinationInfo::~DestinationInfo() {
 }
 
 
-// --------------------------------------------------------
+// ---------------F-----------------------------------------
 NeighborInfo::NeighborInfo() :
   last_active(Simulator::Now()),
   avr_T_send(Seconds(0))
@@ -59,17 +59,12 @@ NeighborInfo::~NeighborInfo() {
 
 
 
-RoutingTable::RoutingTable(Ptr<AntHocNetConfig> config, Ptr<Ipv4> ipv4) :
-  ipv4(ipv4),
-
-  config(config)
-  {}
+RoutingTable::RoutingTable(){}
   
-RoutingTable::~RoutingTable() {
-  
-}
+RoutingTable::~RoutingTable() {}
 
 void RoutingTable::SetConfig(Ptr<AntHocNetConfig> config) {
+  NS_LOG_FUNCTION(this << "config set");
   this->config = config;
 }
 
@@ -124,6 +119,7 @@ void RoutingTable::RemoveDestination(Ipv4Address dst) {
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     this->RemovePheromone(dst, nb_it->first);
   }
+  this->RemoveNeighbor(dst);
   this->dsts.erase(dst);
   
   // TODO: Remove also as neighbor
@@ -142,8 +138,8 @@ void RoutingTable::AddPheromone(Ipv4Address dst, Ipv4Address nb,
     if (!this->IsDestination(dst) || !this->IsNeighbor(nb))
       return;
     
-    p_it = this->rtable.insert(std::make_pair(key, RoutingTableEntry()));
-    
+    this->rtable.insert(std::make_pair(key, RoutingTableEntry()));
+    p_it = this->rtable.find(key);
   }
   
   p_it->second.pheromone = pher;
@@ -278,7 +274,7 @@ bool RoutingTable::IsBroadcastAllowed(Ipv4Address dst) {
   auto dst_it = this->dsts.find(dst);
   if (!this->IsDestination(dst_it)) {
     this->AddDestination(dst);
-    return false;
+    return true;
   }
   
   if (Simulator::Now() <= dst_it->second.no_broadcast_time) {
@@ -361,7 +357,7 @@ std::set<Ipv4Address> RoutingTable::Update(Time interval) {
   std::set<Ipv4Address> ret;
   
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
-    if (dst_it->second.last_active + interval < Simulator::Now()) {
+    if (dst_it->second.last_active + this->config->dst_expire < Simulator::Now()) {
       NS_LOG_FUNCTION(this << "dst" << dst_it->first << "timed out");
       this->RemoveDestination(dst_it->first);
     }
@@ -370,7 +366,7 @@ std::set<Ipv4Address> RoutingTable::Update(Time interval) {
   
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
-    if (nb_it->second.last_active + interval < Simulator::Now()) {
+    if (nb_it->second.last_active + this->config->nb_expire < Simulator::Now()) {
       NS_LOG_FUNCTION(this << "nb" << nb_it->first << "timed out");
       
       ret.insert(nb_it->first);
@@ -393,6 +389,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   // Check if destination is a neighbor
   auto temp_nb_it = this->nbs.find(dst);
   if (temp_nb_it != this->nbs.end()) {
+    nb = temp_nb_it->first;
     NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
      << "usevirt" << virt);
     return true;
@@ -568,7 +565,8 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
           response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
         }
         
-        this->RemovePheromone(l.dst, origin, false);
+        // TODO: Also delete virtual
+        this->SetPheromone(l.dst, origin, 0, false);
         
         break;
         
@@ -676,11 +674,11 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     if (!this->IsDestination(diff_val.first))
       this->AddDestination(diff_val.first);
     
-    bool is_virt = false;
+    //bool is_virt = false;
     double bs_phero = diff_val.second;
     if (bs_phero < 0) {
       bs_phero *= -1;
-      is_virt = true;
+      //is_virt = true;
     }
     
     double T_id = this->GetTSend(diff_val.first).GetMilliSeconds();
@@ -768,6 +766,7 @@ double RoutingTable::SumPropability(Ipv4Address dst, double beta, bool virt) {
     
     if (p_it == this->rtable.end())
       continue;
+    
     
     // TODO: Add consideration value
     if (virt) {
