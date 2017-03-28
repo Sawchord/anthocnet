@@ -569,32 +569,12 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         
       case NEW_BEST_VALUE:
         
-        /*
-        // If the route reported to have a new best value did not have any value
-        // before, can bootstrap it, but we must not publish our 
-        // found, since it leads
-        // to an infinite message loop
-        if (this->rtable[dst_index][linkif_index].pheromone !=
-          this->rtable[dst_index][linkif_index].pheromone) {
-          new_phero = this->Bootstrap(l.dst, origin, iface, l.new_phero, false);
-          continue;
-        }
+        double bs_phero = l.new_phero;
+        double T_id = this->GetTSend(origin);
         
-        old_phero = this->rtable[dst_index][linkif_index].pheromone;
+        double new_phero = this->Bootstrap(bs_phero, T_id);
+        this->UpdatePheromone(l.dst, origin, new_phero, true);
         
-        // Use Bootstrap algorithm
-        new_phero = this->Bootstrap(l.dst, origin, iface, l.new_phero, false);
-        
-        // If the updates pheromone was not the best to begin with, there is no need to 
-        // inform the other nodes
-        if (old_phero < other_inits.second) {
-          continue;
-        }
-        
-        if (new_phero < other_inits.second) {
-          response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
-        }
-        */
         break;
       default:
         break;
@@ -707,83 +687,36 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, true);
   }
 }
-/*
 
-bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
-  Ipv4Address nb, uint64_t T_sd, uint32_t hops) {
+// TODO: Make signature uniform with the others 
+bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb, 
+                                      uint64_t T_sd, uint32_t hops) {
     
   
-  NS_LOG_FUNCTION(this << "dst" << dst << "iface" 
-    << iface << "nb" << nb << "T_sd" << T_sd << "hops" << hops);
-  // First search the destination and add it if it did not exist.
-   // Check if destination already exists
-  auto dst_it = this->dsts.find(dst);
-  if (dst_it == this->dsts.end()) {
+  NS_LOG_FUNCTION(this << "dst" << dst 
+    << "nb" << nb << "T_sd" << T_sd << "hops" << hops);
+  
+  if (!this->IsDestination(dst))
     this->AddDestination(dst);
-    dst_it = this->dsts.find(dst);
-  }
   
-  // Find the neighbors iterators
-  auto nb_it = this->dsts.find(nb);
-  if (nb_it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "nb not in reach -> Ant dropped");
-    return false;
-  }
-  
-  auto nbif_it = nb_it->second.nbs.find(iface);
-  if (nbif_it == nb_it->second.nbs.end()) {
-    NS_LOG_FUNCTION(this << "interface not found -> Ant dropped");
-    return false;
-  }
-  
-  // Since both, the Neighbor and the Destination are found active,
-  // reset their expiration dates.
-  nb_it->second.expires_in = this->config->nb_expire;
-  dst_it->second.expires_in = this->config->dst_expire;
-  
-  
-  // Get the indexes into the pheromone of dst and nb table
-  uint32_t nb_index = nbif_it->second.index;
-  uint32_t dst_index = dst_it->second.index;
+  // TODO: necessary? dangerous?
+  if (!this->IsNeighbor(nb)
+    this->AddNeighbor(nb);
   
   // NOTE: This is the cost function.
   // One could get crazy here and have some 
   // really cool functions
-  
   double T_id = (( ((double)T_sd / 1000000) + hops * this->config->T_hop) / 2);
   
   // Update the routing table
-  RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
+  this->UpdatePheromone(dst, nb, 1.0/T_id, false);
   
-  // Check if hop count value is NAN
-  if (ra->avr_hops != ra->avr_hops) {
-    ra->avr_hops = hops;
-  }
-  else {
-    ra->avr_hops = this->config->alpha_pheromone*ra->avr_hops +
-      (1.0 - this->config->alpha_pheromone) * hops;
-  }
   
-  // Check if pheromone value is NAN
-  if (ra->pheromone != ra->pheromone) {
-    ra->pheromone = (1.0 / T_id);
-  }
-  else {
-    ra->pheromone = 
-      this->config->gamma_pheromone*ra->pheromone +
-      (1.0 - this->config->gamma_pheromone) * (1.0 / T_id);
-  }
-  
-  //this->UpdatePheromone(dst, nb, iface, T_id, hops);
-  
-  NS_LOG_FUNCTION(this << "updated pheromone" << ra->pheromone 
-    << "average hops" << ra->avr_hops
+  NS_LOG_FUNCTION(this <<
     << "for" << dst_it->first << nb_it->first);
   
   return true;
 }
-*/
-
 
 
 double RoutingTable::Bootstrap(double ph_value, double update) {
@@ -859,71 +792,35 @@ double RoutingTable::IncressPheromone(double ph_value, double update) {
   return (this->config->gamma * ph_value + (1 - this->config->gamma) + update);
 }
 
-/*void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
+void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
   this->Print(*stream->GetStream());
 }
 
 // FIXME: This function causes program to crash (when used in NS_LOG_FUNCTION)
 void RoutingTable::Print(std::ostream& os) const{
   
-  for (auto dst_it1 = this->dsts.begin();
-       dst_it1 != this->dsts.end(); ++dst_it1) {
+  for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
+    os << " DST:[" << dst_it->first;
     
-    // Output the destination info 
-    //os << " DST:[" << dst_it1->first << " : " << dst_it1->second.index ;
-    os << " DST:[" << dst_it1->first;
-    
-    
-    if (dst_it1->second.nbs.size() != 0) {
+    for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+      os << " NB:(" << nb_it->first << " ";
       
-      os << " NB:( ";
+      p_it = this->rtable.find(std::make_pair(dst_it->first, nb_it->first));
+      if (p_it != this->rtable.end())
+        os << p_it->second.pheromone << "|" << p_it->second.virtual_pheromone;
+      else 
+        os << "None";
       
-      for (auto nb_it = dst_it1->second.nbs.begin();
-           nb_it != dst_it1->second.nbs.end(); ++nb_it) {
-      
-        os << nb_it->first << " ";
-      }
       os << ")";
     }
-    os << "]";
+    os << "]" << std::endl;
   }
-  
-  os << std::endl;
-  
-  // Print the pheromone table
-  for (auto dst_it1 = this->dsts.begin();
-       dst_it1 != this->dsts.end(); ++dst_it1) {
-    
-    os << dst_it1->first << ":";
-    
-    // Iterate over all neigbors
-    for (auto dst_it2 = this->dsts.begin();
-         dst_it2 != this->dsts.end(); ++dst_it2) {
-      
-      for (auto nb_it = dst_it2->second.nbs.begin();
-           nb_it != dst_it2->second.nbs.end(); ++nb_it) {
-        
-        uint32_t dst_idx = dst_it1->second.index;
-        uint32_t nb_idx = nb_it->second.index;
-        
-        os << "(" << dst_it2->first << ":" << nb_it->first << "):";
-        os << this->rtable[dst_idx][nb_idx].pheromone << "|";  
-        os << this->rtable[dst_idx][nb_idx].avr_hops << "|";
-        os << this->rtable[dst_idx][nb_idx].virtual_pheromone;
-        os << "->(" << dst_idx << ":" << nb_idx << ")\t";
-        }
-    }
-    
-    os << std::endl;
-    
-  }
-  
 }
 
 std::ostream& operator<< (std::ostream& os, RoutingTable const& t) {
   t.Print(os);
   return os;
-}*/
+}
 
 }
 }

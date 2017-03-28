@@ -113,6 +113,18 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeDoubleAccessor(&AntHocNetConfig::gamma),
     MakeDoubleChecker<double>()
   )
+  .AddAttribute("ProgressiveBeta",
+    "Beta value used by proactive ants",
+    DoubleValue(2),
+    MakeDoubleAccessor(&AntHocNetConfig::prog_beta),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("ConservativeBeta",
+    "BetaValue used by data and reactive ants",
+    DoubleValue(20),
+    MakeDoubleAccessor(&AntHocNetConfig::cons_beta),
+    MakeDoubleChecker<double>()
+  )
   .AddAttribute("MinPheroone",
     "The pheromone below this value are consiered zero",
     DoubleValue(0.0001),
@@ -123,18 +135,6 @@ TypeId AntHocNetConfig::GetTypeId() {
     "The Avr Rx Time (used in bootstrap algorithm) is a running average with a decay defined by eta",
     DoubleValue(0.7),
     MakeDoubleAccessor(&AntHocNetConfig::eta_value),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("Evaporation",
-    "On every RTable update, all pheromones evaporate a bit",
-    DoubleValue(0.2),
-    MakeDoubleAccessor(&AntHocNetConfig::evaporation),
-    MakeDoubleChecker<double>()
-  )
-  .AddAttribute("EvaporationThreshold",
-    "If a pheromone evaporates below this value, it is considered vanished",
-    DoubleValue(0.05),
-    MakeDoubleAccessor(&AntHocNetConfig::evap_threshold),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("SnrThreshold",
@@ -196,12 +196,16 @@ void AntHocNetConfig::Print(std::ostream& os) const {
   
   os << "alpha_T_mac: " << alpha_T_mac << std::endl;
   os << "T_hop: " << T_hop << std::endl;
-  os << "alpha_pheromone: " << alpha_pheromone << std::endl;
-  os << "gamma_pheromone: " << gamma_pheromone << std::endl;
-  os << "eta_value: " << eta_value << std::endl;
   
-  os << "evaporation: " << evaporation << std::endl;
-  os << "evap_threshold: " << evap_threshold << std::endl;
+  os << "alpha: " << alpha << std::endl;
+  os << "gamma: " << gamma << std::endl;
+  
+  os << "prog_beta: " << prog_beta << std::endl;
+  os << "cons_beta: " << cons_beta << std::endl;
+  
+  os << "min_pheromone: " << min_pheromone << std::endl;
+  
+  os << "eta_value: " << eta_value << std::endl;
   
   os << "initial_ttl: " << initial_ttl << std::endl;
   

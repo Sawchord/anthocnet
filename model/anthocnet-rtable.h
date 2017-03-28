@@ -167,7 +167,6 @@ public:
   
   void HandleHelloMsg(HelloMsgHeader& msg);
   
-  
   bool ProcessBackwardAnt(Ipv4Address dst
     Ipv4Address nb, double pheromone, uint32_t hops);
   
@@ -178,8 +177,8 @@ public:
   }
   
   
-  //void Print(Ptr<OutputStreamWrapper> stream) const;
-  //void Print(std::ostream& os) const;
+  void Print(Ptr<OutputStreamWrapper> stream) const;
+  void Print(std::ostream& os) const;
   
   // Added for initialization
   void SetConfig(Ptr<AntHocNetConfig> config);
@@ -210,7 +209,7 @@ private:
   
 };
 
-//std::ostream& operator<< (std::ostream& os, RoutingTable const& t);
+std::ostream& operator<< (std::ostream& os, RoutingTable const& t);
 
 }
 }

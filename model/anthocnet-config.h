@@ -85,15 +85,14 @@ public:
   double alpha;
   double gamma;
   
+  double prog_beta;
+  double cons_beta;
+  
   double min_pheromone;
   
   double eta_value;
   
   // TODO: Exploration power (settable)
-  
-  double evaporation;
-  double evap_threshold;
-  
   
   // DEPRECATED
   double snr_threshold;
