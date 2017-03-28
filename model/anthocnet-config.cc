@@ -101,16 +101,22 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeDoubleAccessor(&AntHocNetConfig::T_hop),
     MakeDoubleChecker<double>()
   )
-  .AddAttribute("AlphaPheromone",
+  .AddAttribute("Alpha",
     "The hop count uses a running average with a decay defined by alpha",
     DoubleValue(0.7),
-    MakeDoubleAccessor(&AntHocNetConfig::alpha_pheromone),
+    MakeDoubleAccessor(&AntHocNetConfig::alpha),
     MakeDoubleChecker<double>()
   )
-  .AddAttribute("GammaPheromone",
+  .AddAttribute("Gamma",
     "The pheromone uses a running average with a decay defined by gamma",
     DoubleValue(0.7),
-    MakeDoubleAccessor(&AntHocNetConfig::gamma_pheromone),
+    MakeDoubleAccessor(&AntHocNetConfig::gamma),
+    MakeDoubleChecker<double>()
+  )
+  .AddAttribute("MinPheroone",
+    "The pheromone below this value are consiered zero",
+    DoubleValue(0.0001),
+    MakeDoubleAccessor(&AntHocNetConfig::min_pheromone),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("EtaValue",

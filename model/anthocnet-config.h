@@ -79,9 +79,14 @@ public:
   // ---------------------------------
   // Pheromone calculation
   double alpha_T_mac;
+  
   double T_hop;
-  double alpha_pheromone;
-  double gamma_pheromone;
+  
+  double alpha;
+  double gamma;
+  
+  double min_pheromone;
+  
   double eta_value;
   
   // TODO: Exploration power (settable)

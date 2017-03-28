@@ -18,11 +18,6 @@
 #ifndef ANTHOCNETRTABLE_H
 #define ANTHOCNETRTABLE_H
 
-// TODO: Make these settable by GetTypeId()
-//       instead of hardcoding them
-#define MAX_NEIGHBORS 300
-#define MAX_DESTINATIONS 1000
-
 
 #include <map>
 #include <list>
@@ -51,47 +46,28 @@ namespace ns3 {
 namespace ahn {
 using namespace std;
   
-typedef pair<uint32_t, Ipv4Address> nb_t;
+
 
 class RoutingTableEntry {
 public:
   
-  // ctor
   RoutingTableEntry();
-  // dtor
   ~RoutingTableEntry();
   
   // The pheromone value of a connection
   double pheromone;
   
-  // The average hop count
-  double avr_hops;
-  
   // The virtual pheromone value aquired trough the dissimination part
   double virtual_pheromone;
-  
-  // Additional information is collected about active sending and receiving
-  // Increases, whenever a packet is send trought this connection
-  double send_pheromone;
-  
-  // Increases, whenever a packet is received throught this connection
-  double recv_pheromone;
   
 };
 
 class NeighborInfo {
 public:
-  
-  // ctor
-  NeighborInfo (uint32_t index, Time expire);
-  //dtor
+  NeighborInfo ();
   ~NeighborInfo();
   
-  // The index into the rtable array
-  uint32_t index;
-  
-  // Neighbors are considered offline, after a certain amount of time without a lifesign and deleted
-  Time expires_in;
+  Time last_active;
   
   // Average time to send data to this neighbor
   Time avr_T_send;
@@ -102,17 +78,11 @@ public:
 class DestinationInfo {
 public:
   
-  //ctor
-  DestinationInfo(uint32_t index, Time expire);
-  //dtor
+  DestinationInfo();
+  
   ~DestinationInfo();
   
-  // The index into the rtable array
-  uint32_t index;
-  
-  // After a certain amount of time without usage
-  // the node consideres the destination useless and deletes it
-  Time expires_in;
+  Time last_active;
   
   // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
   Time no_broadcast_time;
@@ -122,14 +92,16 @@ public:
   Time session_time;
   bool session_active;
   
-  // A map of all interfaces on this node, trough that the 
-  // Destination can be reached. If this map is not empty, it means the 
-  // destination is a neigbor
-  std::map<uint32_t, NeighborInfo> nbs;
-  
 };
 
+typedef std::map<Ipv4Address, DestinationInfo> DstMap;
+typedef DstMap::iterator DstIt;
 
+typedef std::map<Ipv4Address, NeighborInfo> NbMap;
+typedef NbMap::iterator NbIt;
+
+typedef std::map<std::pair<Ipv4Address, Ipv4Address> > PheromoneTable;
+typedef PheromoneTable::iterator PheromoneIt;
 
 class RoutingTable {
 public:
@@ -139,193 +111,75 @@ public:
   //dtor 
   ~RoutingTable();
   
-  /**
-   * @brief Adds a neighbor to the routing table
-   * @param iface_index The index of the interface on which to
-   *  reach this neighbor
-   * @param address The address of the neighbor
-   * @param now The time when this addition was made
-   * @returns True if neighbor was added, false if neighbor was already present
-   */
-  bool AddNeighbor(uint32_t iface_index, Ipv4Address address);
-  bool AddNeighbor(uint32_t iface_index, Ipv4Address address, Time expire);
+  void AddNeighbor(Ipv4Address nb);
+  bool IsNeighbor(Ipv4Address nb);
+  bool IsNeighbor(NbIt nb_it);
+  void RemoveNeighbor(Ipv4Address nb);
   
-  /**
-   * \brief Removes a neighbor from the routing table
-   * \param iface_index The interface index of the neighbor to be removed
-   * \param address The address of the neighbor to be removed
-   */
-  void RemoveNeighbor(uint32_t iface_index, Ipv4Address address);
+  void AddDestination(Ipv4Address dst);
+  bool IsDestination(Ipv4Address dst);
+  bool IsDestination(DstIt dst_it);
+  void RemoveDestination(Ipv4Address dst);
   
+  void AddPheromone(Ipv4Address dst, Ipv4Address nb, double pher, double virt_pher);
+  void RemovePheromone(Ipv4Address dst, Ipv4Address nb);
   
-  /**
-   * @brief Adds a destination to the routing table
-   * @param address The address of the destination
-   * @returns True if neighbor was added, false if neighbor already present.
-   */
-  bool AddDestination(Ipv4Address address);
-  bool AddDestination(Ipv4Address address, Time expire);
+  void SetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
+  double GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
   
-  /**
-   * @brief Marks, that this node has traffic for a destiation.
-   *        I.e there is a session running
-   * @param dst The destination to which the session is running
-   */
+  void UpdatePheromone(Ipv4Address dst, Ipv4Address nb, double update, bool virt);
+  
+  std::pair<bool, bool> HasPheromone(Ipv4Address dst, Ipv4Address nb);
+  std::pair<bool, bool> HasPheromone(DstIt dst_it, NbIt nb_it);
+  
   void RegisterSession(Ipv4Address dst);
-  
-  /**
-   * @brief Used to get all destintions with active sessions.
-   * @return List of destinations
-   */
   std::list<Ipv4Address> GetSessions();
   
-  /**
-   * @brief Checks, if it is allowed to broadcast to that destination.
-   * @arg address The address to check.
-   * @returns True, if it is allowed to broadcast, false otherwise.
-   */
+  void ProcessAck(Ipv4Address nb, Time last_hello);
+  Time GetTSend(Ipv4Address nb);
+  
   bool IsBroadcastAllowed(Ipv4Address address);
-  
-  /**
-   * @brief Called, whenever an ACK packet is received.
-   * @param address The address of the node sending the ack.
-   * @param iface The interfac,on which the ack was received.
-   */
-  void ProcessAck(Ipv4Address address, uint32_t iface, 
-                  Time last_hello);
-  
-  /**
-   * @brief Returns average send round trip transmission time.
-   * @param address The address of the neighbor.
-   * @param iface The interface of the neighbor.
-   * @return The round trip time or 0 if there is no such neighbor.
-   */
-  Time GetTSend(Ipv4Address address, uint32_t iface);
-  
-  /**
-   * @brief Disables broadcast to a destination for a certain amount of time.
-   * @param address The address to disallow the broadcast to
-   * @param duration The time, until broadcast is allowed again
-   */
   void NoBroadcast(Ipv4Address address, Time duration);
   
-  /**
-   * \brief Removes a destination from the routing table
-   * \param address The address o fthe destination to be removed.
-   */
-  void RemoveDestination(Ipv4Address addess);
+  bool SelectRandomRoute(Ipv4Address& nb,
+    Ptr<UniformRandomVariable> vr);
   
-  /**
-   * \brief Outputs a string representation of this RoutingTable.
-   */
-  void Print(Ptr<OutputStreamWrapper> stream) const;
+  bool SelectRoute(Ipv4Address dst, double beta,
+    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+    bool virt);
   
-  /**
-   * \brief Removes all neighbors that are reachable via the interface specified.
-   * \param interface_index The interface to purge
-   */
-  void PurgeInterface(uint32_t interface_index);
   
-  /**
-   * \brief Updates a neighbor entry on receiving a HelloAnt
-   *        either by adding the neighbors to the table or
-   *        resetting its expire time, if it already exist.
-   * \param iface_index The interface on which to reach the neighbor/
-   * \param address The address of the neighbor.
-   */
-  void UpdateNeighbor(uint32_t iface_index, Ipv4Address address);
+  std::set<Ipv4Address> Update(Time interval);
   
-  /**
-   * \brief Updates the expire times of all neighbors and destinations.
-   *        Removes the ones, that are expired.
-   * \param interval The time interval, in which this function is called.
-   * \return A list of all neigbor entries, that are outdated
-   */
-  std::set<std::pair<uint32_t, Ipv4Address> > Update(Time interval);
+  /*void ProcessNeighborTimeout(LinkFailureHeader& msg 
+                              Ipv4Address nb);
   
-  /**
-   * \brief Called, if a neighbor timed out. Handles updating the routing 
-   *        table and constructs a LinkFailure Notification.
-   * \param msg Reference to the LinkFailureHeader, that will be populated
-   * \param iface Interface index of the brocken connection
-   * \param address Address of the brocken connection
-   */
-  void ProcessNeighborTimeout(LinkFailureHeader& msg, uint32_t iface, 
-                              Ipv4Address address);
   
-  /**
-   * \brief Processes a LinkFailure Notification
-   * \param msg The message to Process
-   */ 
   void ProcessLinkFailureMsg(LinkFailureHeader& msg, 
-                             LinkFailureHeader& response,
-                             Ipv4Address origin, uint32_t iface);
+//                              LinkFailureHeader& response,
+                             Ipv4Address origin);
   
-  /**
-   * \brief Takes a reference to a newly created HelloMsg and fills it
-   *        values according to paper section 4.2.4
-   * \param msg The reference to the message
-   * \param num_dsts The maximum number of destinations to
-   *        include informatuion for
-   * \param vr Give rtable access to a uniform_random variable
-   */
+  
   void ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
                          Ptr<UniformRandomVariable> vr);
   
-  /**
-   * \brief Takes reference to a HelloMsg and updates values accordingly
-   * \param msg The refence to the Msg to handle
-   * \param iface The interface this message was received on
-   */
-  void HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface);
   
-  /**
-   * \brief Handles the RoutingTable side of receiving a Backward ant.
-   * \param dst The destination of the path that is set up. 
-   * \note The destination of the path is the source of the backward ant.
-   * \param iface The interface index on which the neigbor sending this ant is.
-   * \param nb The neighbor which send the ant to this node.
-   * \param T_sd The time value of the and
-   * \param hops The hop count of this ant
-   * \returns true, if processing was successfull, fail otherwise
-   */
-  bool ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
-    Ipv4Address nb, uint64_t T_sd, uint32_t hops);
+  void HandleHelloMsg(HelloMsgHeader& msg);
   
-  /**
-   * \brief Returns a random route to a valid neighbor of this node.
-   * \param iface Returns the interface index of this node.
-   * \param nb The address of the neighbor
-   * \param vr Give access to the uniform random variable
-   * \returns true, if a random route was selected, false if no interfaces
-   */
-  bool SelectRandomRoute(uint32_t& iface, Ipv4Address& nb,
-    Ptr<UniformRandomVariable> vr);
-//   
-  /**
-   * \brief Stocastically selects an interface and a neighbor from
-   *        the routing table to route the packet towards the destination to.
-   * \param dst The destination to route the packet to.
-   * \param proactive Selects, whether proactive routing is done.
-   *        This effects how the probabilities are chosen
-   * \param iface References the interface index, to which to route the packet.
-   * \param ns Gives the selected neighbor to route the packet towards.
-   * \param vr Give the rtable access to the uniform random variable.
-   * \return true, if a route was selcted, false, if no route could be 
-   *         selected, since there where no enrties for dst.
-   */
-  bool SelectRoute(Ipv4Address dst, double power,
-    uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr);
   
-  bool SelectRoute(Ipv4Address dst, double power,
-    uint32_t& iface, Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
-    bool use_virtual, double virtual_malus);
+  bool ProcessBackwardAnt(Ipv4Address dst
+    Ipv4Address nb, double pheromone, uint32_t hops);
+  
+  
+  */
   
   void SetIpv4(Ptr<Ipv4> ipv4) {
     this->ipv4 = ipv4;
   }
   
-  void Print(std::ostream& os) const;
+  
+  //void Print(Ptr<OutputStreamWrapper> stream) const;
+  //void Print(std::ostream& os) const;
   
   // Added for initialization
   void SetConfig(Ptr<AntHocNetConfig> config);
@@ -334,61 +188,30 @@ public:
 private:
   
   // Util functions
-  double Bootstrap(Ipv4Address dst, Ipv4Address nb, uint32_t iface,
-                 double pheromone, bool use_virtual);
+  //double Bootstrap(Ipv4Address dst, Ipv4Address nb, double pheromone, 
+  //                 bool use_virtual);
   
-  std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb, 
-                                 uint32_t iface);
+  //std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb);
   
+  double SumPropability(Ipv4Address dst, double beta, bool virt);
   
-  void UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
-                       uint32_t iface,
-                       double pheromone, uint32_t avr_hops);
+  double EvaporatePheromone(doube ph_value);
+  double IncressPheromone(double ph_value, double update);
   
-  void UpdatePheromone(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
-                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
-                       uint32_t iface,
-                       double pheromone, uint32_t avr_hops);
+  DstMap dsts;
+  NbMap nbs;
   
-  void UpdateVirtPheromone(Ipv4Address dst, Ipv4Address nb, 
-                       uint32_t iface,
-                       double pheromone);
-  
-  void UpdateVirtPheromone(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
-                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
-                       uint32_t iface,
-                       double pheromone);
-  
-  RoutingTableEntry* GetRa(map<Ipv4Address, DestinationInfo>::iterator dst_it, 
-                       map<Ipv4Address, DestinationInfo>::iterator nb_it, 
-                       uint32_t iface);
+  PheromoneTable rtable;
   
   
   // The IP protocol
   Ptr<Ipv4> ipv4;
-  
-  
-  // Network configurations affecting the routing table
-  
-  // Stores the number of destinations and neighbors
-  uint32_t n_dst;
-  uint32_t n_nb;
-  
-  map<Ipv4Address, DestinationInfo> dsts;
-  
-  // For neighbors, it is also important to know the interface
-  //map<nb_t, NeighborInfo> nbs;
-  
-  RoutingTableEntry rtable [MAX_DESTINATIONS][MAX_NEIGHBORS];
-  bool dst_usemap[MAX_DESTINATIONS];
-  bool nb_usemap[MAX_NEIGHBORS];
-  
   Ptr<AntHocNetConfig> config;
   
   
 };
 
-std::ostream& operator<< (std::ostream& os, RoutingTable const& t);
+//std::ostream& operator<< (std::ostream& os, RoutingTable const& t);
 
 }
 }

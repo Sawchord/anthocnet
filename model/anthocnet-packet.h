@@ -47,11 +47,6 @@ typedef enum MessageType {
 
 typedef std::pair<Ipv4Address, double> diffusion_t;
 
-/**
- * \brief This is a class used to read 
- *        out any Header Type that the AntHocNet 
- *        protocol knows.
- */
 class TypeHeader : public Header {
 public:
   
@@ -264,10 +259,6 @@ public:
   // Checks, wether this Ant is valid
   virtual bool IsValid();
   
-  /**
-   * \brief
-   * \returns Hops count of this Ant.
-   */
   uint8_t GetHops();
   uint64_t GetT();
   
@@ -283,7 +274,6 @@ public:
   
 protected:
   
-  // Not used for now, set 0 on send, ignored on recv
   uint8_t flags;
   
   // This field inidicates the time to life on a fwd ant
@@ -305,20 +295,6 @@ protected:
 };
 
 
-/**
- * \brief The ForwardAnt is created to find a new route to
- *        a destination. Every node including the originator
- *        push their address on the stack. The next node can
- *        peek at the top element on the stack if it needs to.
- * \note  Strictly, the originator does not need to push its address
- *        on the Stack, and the receiving nodes do not need to be
- *        able to peek on the stack, since all of this information 
- *        can be retrieved by looking at the IP header.
- *        However beeing implemented on top of IP, AntHocNet cannot
- *        make the general assumption of beeing implemented on top
- *        of an IP protocol. It can also be implemented directly on top
- *        of a MAC layer.
- */
 class ForwardAntHeader : public AntHeader {
   friend class BackwardAntHeader;
 public:
@@ -330,53 +306,21 @@ public:
   //dtor
   ~ForwardAntHeader();
   
-  /**
-   * \brief Checks, wether this Ant is well formed.
-   * \returns True, if ant is well formed, false otherwise.
-   */
   virtual bool IsValid();
   
-  /**
-   * \brief Does all the processing on the ant, that is required
-   *        to forward it. Updates Stack, hop count and ttl.
-   * \note The Ant should be updated, after all important information for
-   *       this node is retrieved. (Contrary to the BackwardAnt)
-   * \param this_node The Address of this node.
-   * \returns true if the Ant was updated sucessfully, and can be resend.
-   *          false if the Ant cannot be resend. (Reached end of life or 
-   *          this node is the destination)
-   */
   bool Update(Ipv4Address this_node);
   
-  /**
-   * \brief Looks at the address on top of stack.
-   * \returns The address on top of the stack
-   */
   Ipv4Address PeekSrc();
   
-  /**
-   * \brief
-   * \returns TTL of this Ant.
-   */
   uint8_t GetTTL();
   
 private:
-  /**
-   * \brief Checks the AntStack for cyclic routes and removes them, such that
-   *        the backward ants go the direct way
-   */
+  
   void CleanAntStack();
   
 };
   
 
-
-/**
- * \brief The BackwardAnt. It can only be created out of a ForwardAnt.
- * \note If a node wants to generate a Backward and, it has to Update the Forward,
- *       then generate the BackwardAnt. It does not need to be updated
- *       again after that.
- */
 class BackwardAntHeader : public AntHeader {
   friend class ForwardAntHeader;
 public:
@@ -386,33 +330,15 @@ public:
   //dtor
   ~BackwardAntHeader();
   
-  /**
-   * \brief Checks, whether this Ant is well formed.
-   * \returns True, if ant is well formed, false otherwise.
-   */
   virtual bool IsValid();
   
-  /** 
-   * \brief Updates the node to be used by this node.
-   *        Updates stack, hop count and T_ind value.
-   * \note Update must occur before using this node, but src address
-   *       must be retrieved before. (Contrary to the ForwardAnt)
-   * \param T_ind The T_mac value of this node. (See paper)
-   * \returns The neighbor, which send the ant.
-   */
+  
   Ipv4Address Update (uint64_t T_ind);
   
   Ipv4Address PeekThis();
-  /**
-   * \brief
-   * \returns The address to which to send this Ant along its path
-   */
+  
   Ipv4Address PeekDst();
   
-  /**
-   * \brief
-   * \returns MaxHops of this Ant.
-   */
   uint8_t GetMaxHops();
   
 };
