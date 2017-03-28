@@ -44,7 +44,6 @@
 
 namespace ns3 {
 namespace ahn {
-using namespace std;
   
 
 
@@ -79,7 +78,6 @@ class DestinationInfo {
 public:
   
   DestinationInfo();
-  
   ~DestinationInfo();
   
   Time last_active;
@@ -100,15 +98,14 @@ typedef DstMap::iterator DstIt;
 typedef std::map<Ipv4Address, NeighborInfo> NbMap;
 typedef NbMap::iterator NbIt;
 
-typedef std::map<std::pair<Ipv4Address, Ipv4Address> > PheromoneTable;
+typedef std::map<std::pair<Ipv4Address, Ipv4Address>, RoutingTableEntry> PheromoneTable;
 typedef PheromoneTable::iterator PheromoneIt;
 
 class RoutingTable {
 public:
   
-  //ctor
+  
   RoutingTable(Ptr<AntHocNetConfig> config, Ptr<Ipv4> ipv4);
-  //dtor 
   ~RoutingTable();
   
   void AddNeighbor(Ipv4Address nb);
@@ -124,14 +121,12 @@ public:
   void AddPheromone(Ipv4Address dst, Ipv4Address nb, double pher, double virt_pher);
   void RemovePheromone(Ipv4Address dst, Ipv4Address nb);
   
-  void SetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
+  void SetPheromone(Ipv4Address dst, Ipv4Address nb, double pher, bool virt);
   double GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
   bool HasPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
   
+  void UpdateNeighbor(Ipv4Address nb);
   void UpdatePheromone(Ipv4Address dst, Ipv4Address nb, double update, bool virt);
-  
-  std::pair<bool, bool> HasPheromone(Ipv4Address dst, Ipv4Address nb);
-  std::pair<bool, bool> HasPheromone(DstIt dst_it, NbIt nb_it);
   
   void RegisterSession(Ipv4Address dst);
   std::list<Ipv4Address> GetSessions();
@@ -142,18 +137,16 @@ public:
   bool IsBroadcastAllowed(Ipv4Address address);
   void NoBroadcast(Ipv4Address address, Time duration);
   
-  bool SelectRandomRoute(Ipv4Address& nb,
-    Ptr<UniformRandomVariable> vr);
-  
   bool SelectRoute(Ipv4Address dst, double beta,
     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
     bool virt);
   
+  bool SelectRandomRoute(Ipv4Address& nb,
+                                     Ptr<UniformRandomVariable> vr);
   
   std::set<Ipv4Address> Update(Time interval);
   
-  void ProcessNeighborTimeout(LinkFailureHeader& msg 
-                              Ipv4Address nb);
+  void ProcessNeighborTimeout(LinkFailureHeader& msg, Ipv4Address nb);
   
   
   void ProcessLinkFailureMsg(LinkFailureHeader& msg, 
@@ -167,8 +160,8 @@ public:
   
   void HandleHelloMsg(HelloMsgHeader& msg);
   
-  bool ProcessBackwardAnt(Ipv4Address dst
-    Ipv4Address nb, double pheromone, uint32_t hops);
+  bool ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb, 
+                           uint64_t T_sd, uint32_t hops);
   
   
   
@@ -193,7 +186,7 @@ private:
   
   double SumPropability(Ipv4Address dst, double beta, bool virt);
   
-  double EvaporatePheromone(doube ph_value);
+  double EvaporatePheromone(double ph_value);
   double IncressPheromone(double ph_value, double update);
   
   DstMap dsts;
