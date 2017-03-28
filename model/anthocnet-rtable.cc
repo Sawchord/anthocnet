@@ -130,7 +130,6 @@ void RoutingTable::RemoveDestination(Ipv4Address dst) {
   
 }
 
-
 void RoutingTable::AddPheromone(Ipv4Address dst, Ipv4Address nb, 
                                 double pher, double virt_pher) {
   
@@ -153,13 +152,32 @@ void RoutingTable::RemovePheromone(Ipv4Address dst, Ipv4Address nb) {
   this->rtable.erase(std::make_pair(dst, nb));
 }
 
+bool RoutingTable::HasPheromone(Ipv4Address dst, Ipv4Address nb bool virt) {
+  auto p_it = this->rtable.find(std::make_pair(dst, nb));
+  if (p_it == this->rtable.end())
+    return false;
+  
+  if (!virt) {
+    if (p_it->second.pheromone > this->config->min_pheromone)
+      return true;
+    else
+      return false;
+  } else {
+    if (p_it->second.virtual_pheromone > this->config->min_pheromone)
+      return true;
+    else
+      return false;
+  }
+  
+}
 
 void RoutingTable::SetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
   
   auto p_it = this->rtable.find(std::make_pair(dst, nb));
   
-  if (p_it == this->rtable.end())
-    return;
+  
+  if (p_it == this->rtable.end()) {
+    this->AddPheromone(dst, nb, 0, 0);
   
   if (!virt)
     p_it->second.pheromone = pher;
@@ -172,7 +190,7 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
   auto p_it = this->rtable.find(std::make_pair(dst, nb));
   
   if (p_it == this->rtable.end())
-    return;
+    return 0;
   
   if (!virt)
     return p_it->second.pheromone;
@@ -184,9 +202,41 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
 void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
                                    double update, bool virt) {
   
+  auto target_nb_it = this->nbs.find(nb);
+  if (target_nb_it == this->nbs.end()) {
+    NS_LOG_FUNCTION(this << "nb not found" << nb);
+    return;
+  }
   
+  // If destination not exists, create new
+  // and set initial pheromone
+  auto dst_it = this->dsts.find(dst);
+  if (dst_it == this->dsts.end()) {
+      this->AddDestination(dst);
+      this->AddPheromone(dst, 0, 0);
+  }
   
+  // Check if dst exists but now valid entry for the pair
+  auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
+  if (p_it == this->rtable.end()) {
+    this->AddPheromone(dst, 0, 0);
+  }
   
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
+    double old_phero = this->GetPheromone(dst, nb_it->first, virt);
+    // This is the neigbor we are processing our data for
+    if (nb_it == target_nb_it) {
+      
+      double new_phero = this->IncressPheromone(old_phero, update);
+      this->SetPheromone(dst, nb_it->first, new_phero, virt);
+    } else {
+      
+      // Evaporate the value
+      double new_phero = this->EvaporatePheromone(old_phero);
+      this->SetPheromone(dst, nb_it->first, new_phero, virt);
+    } 
+  }
 }
 
 void RoutingTable::RegisterSession(Ipv4Address dst) {
@@ -429,36 +479,17 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
   return false;
 }
 
-/*void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg, 
-                                          uint32_t iface, 
-                                          Ipv4Address address) {
+void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg, 
+                                          Ipv4Address nb) {
   
-  auto brklink_it = this->dsts.find(address);
-  auto brknb_it = brklink_it->second.nbs.find(iface);
-  uint32_t brknb_index = brknb_it->second.index;
-  
-  // Iterate over all destinations
-  for (auto dst_it = this->dsts.begin();
-       dst_it != this->dsts.end(); ++ dst_it) {
+  for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
     
-    uint32_t dst_index = dst_it->second.index;
-    
-    // Find those with non nan pheromones over the broken link
-    if (this->rtable[dst_index][brknb_index].pheromone !=
-      this->rtable[dst_index][brknb_index].pheromone ) {
+    auto p_it = this->rtable.find(std::make_pair(dst_it->first, nb));
+    if (p_it == this->rtable.end())
       continue;
-    }
     
-    // See, wether address iface was the only or the best route to dst
     auto other_inits = this->IsOnly(dst_it->first, address, iface);
     
-    // If a connection over the broken link is found, it needs to be included
-    // in the updates list
-    double brk_pheromone = this->rtable[dst_index][brknb_index].pheromone;
-    
-    //NS_LOG_FUNCTION(this << "second" << other_inits.second << "broken" << brk_pheromone);
-    
-    // Now report our findings into the message
     if (!other_inits.first) {
       msg.AppendUpdate(dst_it->first, ONLY_VALUE, 0.0);
     }
@@ -469,19 +500,17 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
      msg.AppendUpdate(dst_it->first, VALUE, 0.0); 
     }
   }
-  
   NS_LOG_FUNCTION(this << "NB Timeout: " << msg);
   
   // After constructing the message, we can remove the neighbor
   this->RemoveNeighbor(iface, address);
   
-  return;
-}*/
+  return;*/
+}
 
-/*void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
+void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
                                           LinkFailureHeader& response,
-                                          Ipv4Address origin,
-                                          uint32_t iface){
+                                          Ipv4Address origin){
   
   NS_ASSERT(msg.GetSrc() == origin);
   NS_ASSERT(msg.HasUpdates());
@@ -491,37 +520,26 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
   // Need to check if we really have this neighbor as neighbor
   // If not just skip, since we do not have routes over this
   // node anyway
-  auto linknb_it = this->dsts.find(origin);
-  if (linknb_it == this->dsts.end()) {
+  if (!this->IsDestination(origin)) {
     NS_LOG_FUNCTION(this << origin << "not neighbor");
     return; 
   }
-    
-  auto linkif_it = linknb_it->second.nbs.find(iface);
-  if (linkif_it == linknb_it->second.nbs.end()) {
-    NS_LOG_FUNCTION(this << iface << "iface not registered");
-    return; 
-  }
-  
-  uint32_t linkif_index = linkif_it->second.index;
-  
   
   // Now we evaluate the update list from this message
   while (msg.HasUpdates()) {
     
     linkfailure_list_t l = msg.GetNextUpdate();
-    auto dst_it = this->dsts.find(l.dst);
-    if (dst_it == this->dsts.end()) {
-      // Skip the destinations, we do not know about
-      // since we do not have information that could be outdated anyway
+    
+    // Skip the destinations, we do not know about
+    // since we do not have information that could be outdated anyway
+    if (!this->IsDestination(l.dst))
       continue;
-    }
     
-    uint32_t dst_index = dst_it->second.index;
-    auto other_inits = this->IsOnly(dst_it->first, origin, iface);
+    // Check for alternatives
+    auto other_inits = this->IsOnly(dst_it->first, origin);
     
-    double old_pheromone = 0.0;
-    double new_pheromone = 0.0;
+    double old_phero = 0.0;
+    double new_phero = 0.0;
     
     switch (l.status) {
       case VALUE:
@@ -533,57 +551,50 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
         
         // The route via linknb to dst is now broken
         // If it was broken before, no need to update
-        if (this->rtable[dst_index][linkif_index].pheromone !=
-          this->rtable[dst_index][linkif_index].pheromone) {
+        if (!this->HasPheromone(l.dst, origin, false))
           continue;
-        }
         
-        
-        // Check for alternatives
         if (!other_inits.first) {
           // No alternatives, full breakage
           response.AppendUpdate(l.dst, ONLY_VALUE, 0.0);
         }
-        else if (this->rtable[dst_index][linkif_index].pheromone 
-          > other_inits.second){
+        else if (this->GetPheromone(l.dst, nb, false) > other_inits.second){
           // Best pheromone become invalid, send new one
           response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
         }
         
-        this->rtable[dst_index][linkif_index].pheromone = NAN;
-        this->rtable[dst_index][linkif_index].avr_hops = NAN;
+        this->RemovePheromone(l.dst, origin, false);
         
-        // TODO: set virt pheromone nan
-        // Happens to be worse
-        //this->rtable[dst_index][linkif_index].virtual_pheromone = NAN;
         break;
         
       case NEW_BEST_VALUE:
         
+        /*
         // If the route reported to have a new best value did not have any value
-        // before, can bootstrap it, but we must not publish our found, since it leads
+        // before, can bootstrap it, but we must not publish our 
+        // found, since it leads
         // to an infinite message loop
         if (this->rtable[dst_index][linkif_index].pheromone !=
           this->rtable[dst_index][linkif_index].pheromone) {
-          new_pheromone = this->Bootstrap(l.dst, origin, iface, l.new_pheromone, false);
+          new_phero = this->Bootstrap(l.dst, origin, iface, l.new_phero, false);
           continue;
         }
         
-        old_pheromone = this->rtable[dst_index][linkif_index].pheromone;
+        old_phero = this->rtable[dst_index][linkif_index].pheromone;
         
         // Use Bootstrap algorithm
-        new_pheromone = this->Bootstrap(l.dst, origin, iface, l.new_pheromone, false);
+        new_phero = this->Bootstrap(l.dst, origin, iface, l.new_phero, false);
         
         // If the updates pheromone was not the best to begin with, there is no need to 
         // inform the other nodes
-        if (old_pheromone < other_inits.second) {
+        if (old_phero < other_inits.second) {
           continue;
         }
         
-        if (new_pheromone < other_inits.second) {
+        if (new_phero < other_inits.second) {
           response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
         }
-        
+        */
         break;
       default:
         break;
@@ -594,72 +605,50 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
   
   NS_LOG_FUNCTION(this << "Response::" << response);
   return;
-}*/
+  */
+}
 
-/*
+
 void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts, 
                                      Ptr<UniformRandomVariable> vr) {
   
-  // NOTE: This is extremly inefficient.
-  // Maybe consider to add additional data into
-  // RoutingTable, to make a full iteration faster.
-  
   bool use_random = true;
-  
   // If there are less known destinations than requested,
   // there is no need to select some randomly
-  if (this->n_dst <= num_dsts) {
+  if (this->dsts.size() <= num_dsts) {
     use_random = false;
   }
   
   std::list<std::pair<Ipv4Address, double> > selection;
   
-  // Iterate over all possible connections
-  for (auto dst_it = this->dsts.begin();
-       dst_it != this->dsts.end(); ++dst_it) {
+  for (auto dst_it = this->dsts.beggin(); dst_it != this->dsts.end(); ++dst_it) [
     
-    Ipv4Address best_dst = dst_it->first;
-    double best = NAN;
+    Ipv4Address temp_dst = dst_it->first;
+    double best_phero = 0.0
     
-    // Iterate over all neighbors
-    // to get all destinations best nb candidates
-    for (auto nb_it1 = this->dsts.begin(); 
-         nb_it1 != this->dsts.end(); ++nb_it1) {
+    for (auto nb_it != this->nbs.end(); ++nb_it) {
       
-      for (auto nb_it2 = nb_it1->second.nbs.begin();
-           nb_it2 != nb_it1->second.nbs.end(); ++nb_it2) {
-        
-        uint32_t dst_idx = dst_it->second.index;
-        uint32_t nb_idx = nb_it2->second.index;
-	  
-        // Check the real pheromone value
-        if (std::abs(best) <= this->rtable[dst_idx][nb_idx].pheromone
-            || best != best) {// check for nan
-          best = this->rtable[dst_idx][nb_idx].pheromone;
-        }
-        
-        // Check the virtual pheromone
-        // We mark virtual pheromone by a negative value instead of flag
-        if (std::abs(best) <= this->rtable[dst_idx][nb_idx].virtual_pheromone){
-          best = -1.0 * this->rtable[dst_idx][nb_idx].virtual_pheromone;
-        }
-      } 
+      auto p_it = this->rtable.find(std::make_pair(dst_it->first, nb_it->first));
+      if (p_it == this->rtable.end())
+        continue;
+      
+      if (std::abs(best_phero) > p_it->second.pheromone)
+        best_phero = p_it->second.pheromone;
+      
+      
+      if (std::abs(best_phero) > p_it->second.virtual_pheromone)
+        best_phero = -1.0 * p_it->second.virtual_pheromone;
     }
-    
-    
-    // Check if still NAN
-    if (best == best) {
-      selection.push_back(std::make_pair(best_dst, best));
-    }
-    
+   
+   if (best_phero > this->config->min_pheromone)
+     selection.push_back(std::make_pair(temp_dst, best_phero));
   }
   
   // Now select some of the pairs we found
   for (uint32_t i = 0; i < num_dsts; i++) {
     
-    if (selection.empty()) {
+    if (selection.empty()) 
       break;
-    }
     
     uint32_t select;
     if (use_random) {
@@ -677,75 +666,47 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       sel_it++;
     }
     
-    //double selected = sel_it->second;
-    //NS_LOG_FUNCTION(this << "selected" << sel_it->first << selected);
+    NS_LOG_FUNCTION(this << "message" << msg);
     msg.PushDiffusion(sel_it->first, sel_it->second);
-    selection.erase(sel_it);
-    
+    selection.erase(sel_it); 
   }
-  
-  
-}*/
+}
 
-/*
-void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg, uint32_t iface) {
+
+void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
   
   if(!msg.IsValid()) {
-    NS_LOG_FUNCTION(this << "Malformed HellMsg -> dropped");
+    NS_LOG_FUNCTION(this << "Malformed HelloMsg -> dropped");
     return;
   }
+  
+  if (!this->IsNeighbor(msg.GetSrc()))
+    this->AddNeighbor(msg.GetSrc());
   
   // Bootstrap information for every possible destination
   while (msg.GetSize() != 0) {
     
-    auto pos_dst = msg.PopDiffusion();
+    auto diff_val = msg.PopDiffusion();
     
     // Get destination or add if not yet exist
-    this->AddDestination(pos_dst.first);
-    this->AddDestination(msg.GetSrc());
-  
-    // Get iterators to the destination and the neigbor
-    auto dst_it = this->dsts.find(pos_dst.first);
-    auto nb_it1 = this->dsts.find(msg.GetSrc());
+    if (!this->IsDestination(diff_val.first))
+      this->AddDestination(diff_val.first);
     
-    this->AddNeighbor(iface, msg.GetSrc());
-    auto nb_it2 = nb_it1->second.nbs.find(iface);
-    
-    uint32_t dst_index = dst_it->second.index;
-    uint32_t nb_index = nb_it2->second.index;
-    
-    bool is_virtual = false;
-    
-    if (pos_dst.second < 0) {
-      is_virtual = true;
-      pos_dst.second *= -1.0;
+    bool is_virt = false;
+    double bs_phero = diff_val.second;
+    if (bs_phero < 0) {
+      bs_phero *= -1;
+      is_virt = true;
     }
     
-    double T_id = this->GetTSend(pos_dst.first, iface).GetMilliSeconds();
-    
-    double bootstrap_info = (1.0/ (1.0/(pos_dst.second) + T_id));
-    NS_LOG_FUNCTION(this << "bootstapped" 
-      << bootstrap_info << "from" << pos_dst.second 
-      << "dst" << pos_dst.first << "nb" << msg.GetSrc()
-      << "dst_in" << dst_index << "nb_index" << nb_index
-      << "virt" << is_virtual);
-      
-    RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
+    double T_id = this->GetTSend(diff_val.first).GetMilliSeconds();
+    double new_phero = this->Bootstrap(bs_phero, T_id);
     
     // TODO: Add special case where real pheromone is used
-    // TODO: Use bootstrap utility function here after testing it
     
-    if (ra->virtual_pheromone != ra->virtual_pheromone) {
-      ra->virtual_pheromone = bootstrap_info;
-    }
-    else {
-      ra->virtual_pheromone = 
-        this->config->alpha_pheromone*ra->virtual_pheromone +
-        (1.0 - this->config->alpha_pheromone) * (bootstrap_info);
-    }
-    
+    this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, true);
   }
-}*/
+}
 /*
 
 bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
@@ -824,113 +785,44 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, uint32_t iface,
 */
 
 
-/*
-double RoutingTable::Bootstrap(Ipv4Address dst,
-                            Ipv4Address nb, uint32_t iface,
-                            double pheromone, bool use_virtual) {
-  
-  NS_LOG_FUNCTION(this << dst << nb << iface << pheromone);
-  
-  auto dst_it = this->dsts.find(dst);
-  auto nb1_it = this->dsts.find(nb);
-  
-  if (dst_it == this->dsts.end() || nb1_it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "dst or nb not found");
-    return NAN;
-  }
-  
-  auto nb2_it = nb1_it->second.nbs.find(iface);
-  if (nb2_it == nb1_it->second.nbs.end()) {
-    NS_LOG_FUNCTION(this << "iface not found");
-    return NAN;
-  }
-  
-  uint32_t dst_index = dst_it->second.index;
-  uint32_t nb_index = nb2_it->second.index;
-  RoutingTableEntry* ra = &this->rtable[dst_index][nb_index];
-  
-  double T_id = this->GetTSend(nb, iface).GetMilliSeconds();
-  double bootstrap = 1.0/(1.0/(pheromone) + T_id);
-  
-  double result;
-  
-  if (!use_virtual) {
-    if (ra->pheromone != ra->pheromone) {
-      result = ra->pheromone = bootstrap;
-    }
-    else {
-      result = ra->pheromone = 
-        this->config->gamma_pheromone*ra->pheromone +
-        (1.0 - this->config->gamma_pheromone) * (bootstrap);
-    }
-  }
-  else {
-    if (ra->virtual_pheromone != ra->virtual_pheromone) {
-      result = ra->virtual_pheromone = bootstrap;
-    }
-    else {
-      result = ra->virtual_pheromone = 
-        this->config->alpha_pheromone*ra->virtual_pheromone +
-        (1.0 - this->config->alpha_pheromone) * (bootstrap);
-    }
-    // TODO: There is a special case where the real pheromones are used
-  }
-  
-  return result;
-}*/
 
-/*
+double RoutingTable::Bootstrap(double ph_value, double update) {
+  return 1.0/(1.0/(update) + ph_value);
+}
+
+
 std::pair<bool, double> RoutingTable::IsOnly(Ipv4Address dst, 
-                                             Ipv4Address nb, uint32_t iface) {
+                                             Ipv4Address nb) {
   
-  auto dst_it = this->dsts.find(dst);
   
-  if (dst_it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "dst  not found");
-    return std::make_pair(false, NAN);
-  }
-  
-  uint32_t dst_index = dst_it->second.index;
-  
-  double best_pheromone = 0.0;
   bool other_inits = false;
+  double best_phero = 0;
+  auto marked_nb_it = this->nbs.find(nb);
   
-  // Now iterate over all neighbors if there are other 
-  // initilized pheromone values
-  for (auto nb1_it = this->dsts.begin(); 
-        nb1_it != this->dsts.end(); ++nb1_it) {
+  for(auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
-    // Skip the dst_address itself
-    if (nb1_it->first == dst_it->first) {
+    if (nb_it == marked_nb_it)
       continue;
-    }
     
-    for (auto nb2_it = nb1_it->second.nbs.begin();
-      nb2_it != nb1_it->second.nbs.end(); ++nb2_it) {
+    auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
+    if (p_it == this->rtable.end())
+      continue
+    
+    if (p_it->second.pheromone > this->config->min_pheromone) {
+      other_inits = true;
       
-      if (nb1_it->first == nb && nb2_it->first == iface) {
-        continue;
+      if(p_it->second.pheromone > best_phero) {
+        best_phero = p_it->second.pheromone;
       }
-    
-      // Check if there are other initilized interfaces 
-      // for this destination
-      uint32_t nb_index = nb2_it->second.index;
-      if (this->rtable[dst_index][nb_index].pheromone ==
-        this->rtable[dst_index][nb_index].pheromone) {
-        
-        other_inits = true;
-        // Check, if they are better
-        if (this->rtable[dst_index][nb_index].pheromone > best_pheromone) {
-          best_pheromone = this->rtable[dst_index][nb_index].pheromone;
-        }  
-      }
+      
     }
+    
   }
+  
   
   NS_ASSERT((other_inits && best_pheromone != 0) || (!other_inits));
-  
   return std::make_pair(other_inits, best_pheromone);
-}*/
+}
 
 
 double RoutingTable::SumPropability(Ipv4Address dst, double beta, bool virt) {

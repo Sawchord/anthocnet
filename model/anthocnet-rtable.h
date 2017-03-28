@@ -126,6 +126,7 @@ public:
   
   void SetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
   double GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
+  bool HasPheromone(Ipv4Address dst, Ipv4Address nb, bool virt);
   
   void UpdatePheromone(Ipv4Address dst, Ipv4Address nb, double update, bool virt);
   
@@ -151,12 +152,12 @@ public:
   
   std::set<Ipv4Address> Update(Time interval);
   
-  /*void ProcessNeighborTimeout(LinkFailureHeader& msg 
+  void ProcessNeighborTimeout(LinkFailureHeader& msg 
                               Ipv4Address nb);
   
   
   void ProcessLinkFailureMsg(LinkFailureHeader& msg, 
-//                              LinkFailureHeader& response,
+                             LinkFailureHeader& response,
                              Ipv4Address origin);
   
   
@@ -171,7 +172,6 @@ public:
     Ipv4Address nb, double pheromone, uint32_t hops);
   
   
-  */
   
   void SetIpv4(Ptr<Ipv4> ipv4) {
     this->ipv4 = ipv4;
@@ -188,10 +188,9 @@ public:
 private:
   
   // Util functions
-  //double Bootstrap(Ipv4Address dst, Ipv4Address nb, double pheromone, 
-  //                 bool use_virtual);
+  double Bootstrap(double ph_value, double update);
   
-  //std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb);
+  std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb);
   
   double SumPropability(Ipv4Address dst, double beta, bool virt);
   
