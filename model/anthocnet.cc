@@ -1109,7 +1109,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
   }
   
   NS_LOG_FUNCTION("Found interface with ID " 
-    << iface << " on destination " << dst
+    << iface << " on dst " << dst << "from src" << src
     << "type" << type
   );
   

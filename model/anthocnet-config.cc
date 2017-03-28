@@ -55,13 +55,13 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute ("ProactiveAntTimer",
     "The interval, in which an active session sends out proactive ants",
-    TimeValue (MilliSeconds(2000)),
+    TimeValue (MilliSeconds(1000)),
     MakeTimeAccessor(&AntHocNetConfig::pr_ant_interval),
     MakeTimeChecker()
   )
   .AddAttribute ("DestinationExpire",
     "Time without traffic, after which a destination is considered offline.",
-    TimeValue (Seconds(30)),
+    TimeValue (Seconds(900)),
     MakeTimeAccessor(&AntHocNetConfig::dst_expire),
     MakeTimeChecker()
   )

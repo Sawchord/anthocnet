@@ -175,9 +175,10 @@ void RoutingTable::SetPheromone(Ipv4Address dst, Ipv4Address nb,
   
   auto p_it = this->rtable.find(std::make_pair(dst, nb));
   
-  
-  if (p_it == this->rtable.end())
+  if (p_it == this->rtable.end()) {
     this->AddPheromone(dst, nb, 0, 0);
+    p_it = this->rtable.find(std::make_pair(dst, nb));
+  }
   
   if (!virt)
     p_it->second.pheromone = pher;
@@ -201,6 +202,8 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
 
 void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
                                    double update, bool virt) {
+  
+  NS_LOG_FUNCTION(this << dst << nb << update << virt);
   
   auto target_nb_it = this->nbs.find(nb);
   if (target_nb_it == this->nbs.end()) {
@@ -405,8 +408,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     return false;
   }
   
-  NS_LOG_UNCOND(*this);
-  
   double total_pheromone = this->SumPropability(dst, beta, virt);
   
   // NOTE: Very low pheromone can lead to the total_pheromone 
@@ -523,7 +524,7 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
   // Need to check if we really have this neighbor as neighbor
   // If not just skip, since we do not have routes over this
   // node anyway
-  if (!this->IsDestination(origin)) {
+  if (!this->IsNeighbor(origin)) {
     NS_LOG_FUNCTION(this << origin << "not neighbor");
     return; 
   }
@@ -578,7 +579,11 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         T_id = this->GetTSend(origin).GetMilliSeconds();
         
         new_phero = this->Bootstrap(bs_phero, T_id);
-        this->UpdatePheromone(l.dst, origin, new_phero, true);
+        
+        //if (new_pheromone < this->config->min_pheromone)
+        //  continue;
+        
+        this->UpdatePheromone(l.dst, origin, new_phero, false);
         
         break;
       default:
@@ -616,11 +621,11 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       if (p_it == this->rtable.end())
         continue;
       
-      if (std::abs(best_phero) > p_it->second.pheromone)
+      if (std::abs(best_phero) < p_it->second.pheromone)
         best_phero = p_it->second.pheromone;
       
       
-      if (std::abs(best_phero) > p_it->second.virtual_pheromone)
+      if (std::abs(best_phero) < p_it->second.virtual_pheromone)
         best_phero = -1.0 * p_it->second.virtual_pheromone;
     }
    
@@ -650,10 +655,11 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       sel_it++;
     }
     
-    NS_LOG_FUNCTION(this << "message" << msg);
     msg.PushDiffusion(sel_it->first, sel_it->second);
     selection.erase(sel_it); 
   }
+  
+  NS_LOG_FUNCTION(this << "message" << msg);
 }
 
 

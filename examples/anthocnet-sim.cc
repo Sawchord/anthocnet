@@ -129,7 +129,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(30)),
+total_time(Seconds(50)),
 nWifis(20),
 nSender(5),
 nReceiver(5),
@@ -145,7 +145,7 @@ generate_pcap(false),
 output_granularity(1.0),
 
 phyMode(1),
-lossModel(1),
+lossModel(2),
 txpStart(7.5),
 txpEnd(7.5),
 
