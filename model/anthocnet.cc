@@ -159,7 +159,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   }
   
   // If not found, send it to loopback to handle it in the packet cache.
-   this->StartForwardAnt(dst, false);
+  this->StartForwardAnt(dst, false);
   
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "started FWAnt to " << dst);
@@ -192,7 +192,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   // Get dst and origin
   Ipv4Address dst = header.GetDestination();
   Ipv4Address origin = header.GetSource();
-  
   
   // Fail if Multicast 
   if (dst.IsMulticast()) {
@@ -755,7 +754,7 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   //  NS_LOG_FUNCTION(this << "unicast not allowed");
   //  return;
   //}
-  this->rtable.NoBroadcast(dst, this->config->no_broadcast);
+  //this->rtable.NoBroadcast(dst, this->config->no_broadcast);
   
   // Get the socket which runs on iface
   Ptr<Socket> socket = this->sockets[iface];
@@ -934,6 +933,8 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
       //this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), 
       //                            *ad_it);
       
+      
+    
     }
   }
   
@@ -1200,7 +1201,7 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg);
-  
+  this->rtable.UpdateNeighbor(hello_msg.GetSrc());
   
   // Prepare ack
   Ptr<Packet> packet2 = Create<Packet>();

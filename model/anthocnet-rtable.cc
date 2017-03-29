@@ -582,7 +582,7 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
     
   }
   
-  NS_LOG_FUNCTION(this << "Response::" << response);
+  NS_LOG_FUNCTION(this << "Response " << response);
   return;
 }
 
