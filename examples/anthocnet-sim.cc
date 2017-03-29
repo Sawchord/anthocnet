@@ -129,7 +129,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(50)),
+total_time(Seconds(150)),
 nWifis(20),
 nSender(5),
 nReceiver(5),
@@ -137,7 +137,7 @@ nReceiver(5),
 pWidth(400),
 pHeight(1200),
 
-nodePause(25),
+nodePause(30),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 
@@ -556,7 +556,8 @@ void RoutingExperiment::Run() {
   // Start the net animator
   AnimationInterface anim (tr_name + "_animation.xml");
   
-  //anim.EnablePacketMetadata ();
+  //anim.EnablePacketMetadata();
+  //anim.SetMaxPktsPerTraceFile(1000000000);
   //anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), 
   //                             Seconds(this->total_time), MilliSeconds(100));
   

@@ -215,7 +215,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ptr<Socket> recv_socket = this->sockets[recv_iface];
   Ipv4InterfaceAddress recv_sockaddress = this->socket_addresses[recv_socket];
   
-  NS_LOG_FUNCTION(this << "origin" << origin << "dst" << dst << "local" << recv_sockaddress.GetLocal());
+  NS_LOG_FUNCTION(this << "origin" << origin << "dst" 
+    << dst << "local" << recv_sockaddress.GetLocal());
   NS_LOG_FUNCTION(this << "iface_index" << recv_iface << "socket" 
     << recv_socket << "sockaddress" << recv_sockaddress);
   
@@ -937,6 +938,12 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
                               signalNoiseDbm snr) {
   
   this->last_snr = snr.signal - snr.noise;
+  //NS_LOG_FUNCTION(this << this->last_snr << *packet);
+  
+  // NOTE: experimental
+  
+  
+  
   
 }
 

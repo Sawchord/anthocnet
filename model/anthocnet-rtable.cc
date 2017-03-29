@@ -77,6 +77,9 @@ void RoutingTable::AddNeighbor(Ipv4Address nb) {
   if (!this->IsNeighbor(nb)) {
     this->nbs.insert(std::make_pair(nb, NeighborInfo()));
     this->AddDestination(nb);
+    
+    this->AddPheromone(nb, nb, 1, 1);
+    
   }
 }
 
@@ -395,7 +398,10 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     nb = temp_nb_it->first;
     NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
      << "usevirt" << virt);
-    return true;
+    
+    // NOTE: Always returning the neighbor is a bad idea, since the neighbor 
+    // might be in reach but the connection might be very shaky.
+    // It might be a good idea to put this behind the select route algo as a failsafe
   }
   
   
