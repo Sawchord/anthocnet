@@ -1164,6 +1164,33 @@ void RoutingProtocol::Send(Ptr<Socket> socket,
   socket->SendTo (packet, 0, InetSocketAddress (destination, 
                                                 this->config->ant_port));
 }
+
+void RoutingProtocol::SendDirect(Ptr<Socket> socket, 
+                                 Ptr<Packet> packet, Ipv4Address dst) {
+  
+  uint32_t iface = 1;
+  
+  NS_LOG_FUNCTION(this << "packet" << *packet 
+    << "destination" << dst);
+  
+  Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
+  
+  UdpHeader udp;
+  udp.SetSourcePort(this->config->ant_port);
+  udp.SetDestinationPort(this->config->ant_port);
+  packet->AddHeader(udp);
+  
+  Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
+  rt->SetSource(this_node);
+  rt->SetDestination(dst);
+  rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
+  rt->SetGateway(dst);
+  
+  l3->Send(packet, this_node, dst, 17, rt);
+  
+}
+
 // -------------------------------------------------------
 // Handlers of the different Ants
 
@@ -1272,7 +1299,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   
   // NS_LOG_FUNCTION(this << "Before update" << ant);
   ant.Update(this_node);
-  NS_LOG_FUNCTION(this << "After update" << ant);
+  //NS_LOG_FUNCTION(this << "After update" << ant);
   
   Ipv4Address final_dst = ant.GetDst();
   
@@ -1433,6 +1460,8 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     Ipv4Address nb;
     
     //NS_LOG_UNCOND(this->rtable);
+    
+    // TODO beta should be 20??
     if (this->rtable.SelectRoute(dst, 2.0, nb, this->uniform_random, false)) {
       Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
       

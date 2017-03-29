@@ -169,7 +169,8 @@ private:
   void Recv(Ptr<Socket> socket);
   
   // Callback to do a deferred send
-  void Send(Ptr<Socket>, Ptr<Packet>, Ipv4Address);
+  void Send(Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address dst);
+  void SendDirect(Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address dst);
   
   // Send a HelloAnt every other second
   void HelloTimerExpire();
