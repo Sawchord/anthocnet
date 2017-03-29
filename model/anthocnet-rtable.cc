@@ -40,6 +40,7 @@ RoutingTableEntry::~RoutingTableEntry() {}
 DestinationInfo::DestinationInfo() :
   last_active(Simulator::Now()),
   no_broadcast_time(Seconds(0)),
+  seqno(0),
   session_time(Seconds(0)),
   session_active(false)
   {}
@@ -335,7 +336,7 @@ void RoutingTable::NoBroadcast(Ipv4Address dst, Time duration) {
 }
 
 void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
-  
+  NS_LOG_FUNCTION(this << nb);
   auto nb_it = this->nbs.find(nb);
   if (!this->IsNeighbor(nb_it))
     return;
@@ -349,17 +350,15 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
 // TODO: Handle ret table as refenerence for speadup
 std::set<Ipv4Address> RoutingTable::Update(Time interval) {
   
-  
-  
   std::set<Ipv4Address> ret;
-  
+  // NOTE: Destinations never time out
+  /*
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
     if (dst_it->second.last_active + this->config->dst_expire < Simulator::Now()) {
       NS_LOG_FUNCTION(this << "dst" << dst_it->first << "timed out");
       this->RemoveDestination(dst_it->first);
     }
-  }
-  
+  }*/
   
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
@@ -716,7 +715,30 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   return true;
 }
 
+uint64_t RoutingTable::NextSeqno(Ipv4Address dst) {
+  auto dst_it = this->dsts.find(dst);
+  
+  if (!this->IsDestination(dst)) {
+    this->AddDestination(dst);
+    dst_it = this->dsts.find(dst);
+  }
+  //NS_ASSERT(dst_it != this->dsts.end());
+  
+  uint64_t seqno = dst_it->second.seqno;
+  dst_it->second.seqno++;
+  return seqno;
+}
 
+bool RoutingTable::HasHistory(Ipv4Address dst, uint64_t seqno) {
+  auto hist_it = this->history.find(std::make_pair(dst, seqno));
+  return (hist_it != this->history.end());
+}
+
+void RoutingTable::AddHistory(Ipv4Address dst, uint64_t seqno) {
+  this->history.insert(std::make_pair(dst, seqno));
+}
+
+// Private methods
 double RoutingTable::Bootstrap(double ph_value, double update) {
   return 1.0/(1.0/(update) + ph_value);
 }

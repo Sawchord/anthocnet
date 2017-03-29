@@ -714,8 +714,6 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   
   NS_LOG_FUNCTION(this);
   
-  // Broadcast if no valid entries
-  
   if (is_proactive) {
     if (!this->rtable.SelectRoute(dst, 2.0, nb, this->uniform_random,
       true)) {
@@ -737,6 +735,9 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   
   Ipv4Address this_node = it->second.GetLocal();
   ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
+  ant.SetSeqno(this->rtable.NextSeqno(dst));
+  this->rtable.AddHistory(this_node, ant.GetSeqno());
+  
   
   if (is_proactive) {
     ant.SetBCount(this->config->proactive_bcast_count); 
@@ -755,10 +756,10 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   // NOTE: To much unicast can lead to congestion
   // preventing the backward ants from comming trough
   // NOTE: experimental
-  if (!this->rtable.IsBroadcastAllowed(dst)) {
-    NS_LOG_FUNCTION(this << "unicast not allowed");
-    return;
-  }
+  //if (!this->rtable.IsBroadcastAllowed(dst)) {
+  //  NS_LOG_FUNCTION(this << "unicast not allowed");
+  //  return;
+  //}
   this->rtable.NoBroadcast(dst, this->config->no_broadcast);
   
   // Get the socket which runs on iface
@@ -837,6 +838,9 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     Ipv4Address this_node = iface.GetLocal();
     
     ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
+    ant.SetSeqno(this->rtable.NextSeqno(dst));
+    this->rtable.AddHistory(this_node, ant.GetSeqno());
+    
     if (is_proactive) {
       ant.SetBCount(this->config->proactive_bcast_count);
     }
@@ -1116,9 +1120,9 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
+    NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
     this->rtable.UpdateNeighbor(src);
     
-    NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
     
   }
   else {
@@ -1251,7 +1255,13 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     return;
   }
   
-  // TODO: Cache FW ants and discard doubled ants.
+  // DONE: Cache FW ants and discard doubled ants.
+  if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
+    NS_LOG_FUNCTION(this << "known history -> dropped"
+      << ant.GetDst() << ant.GetSeqno());
+    return;
+  }
+  this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());
   
   // Get the ip address of the interface, on which this ant
   // was received
@@ -1276,6 +1286,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   if (final_dst == this_node) {
     
     BackwardAntHeader bwant(ant);
+    bwant.SetSeqno(this->rtable.NextSeqno(bwant.GetDst()));
+    this->rtable.AddHistory(this_node, bwant.GetSeqno());
     
     Ipv4Address dst = bwant.PeekDst();
     
@@ -1348,6 +1360,13 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     NS_LOG_WARN("Received invalid BackwardAnt -> Dropped");
     return;
   }
+  
+  if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
+    NS_LOG_FUNCTION(this << "known history -> dropped"
+      << ant.GetDst() << ant.GetSeqno());
+    return;
+  }
+  this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());
   
   // TODO: Is this right??
   uint64_t T_ind = this->rtable.GetTSend(orig_src).GetNanoSeconds();

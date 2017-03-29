@@ -485,7 +485,7 @@ AntHeader::AntHeader (Ipv4Address src, Ipv4Address dst,
   uint8_t ttl_or_max_hops, uint8_t hops, uint64_t T) : 
 flags(0), 
 ttl_or_max_hops(ttl_or_max_hops), hops(hops),
-src(src), dst(dst), T_sd(T)
+src(src), dst(dst), T_sd(T), seqno(0)
 {}
 
 AntHeader::~AntHeader() {}
@@ -511,7 +511,7 @@ uint32_t AntHeader::GetSerializedSize () const {
   
   // The ant_stack.size if the number of Ip Addresses
   // The assumption is made, that an Ip Address gets serialized to 4 bytes
-  return 19 + this->ant_stack.size() * 4;
+  return 27 + this->ant_stack.size() * 4;
 }
 
 void AntHeader::Serialize (Buffer::Iterator i) const {
@@ -525,7 +525,8 @@ void AntHeader::Serialize (Buffer::Iterator i) const {
   WriteTo (i, this->dst);
   
   // Write the time value
-  i.WriteHtonU64((uint64_t) this->T_sd);
+  i.WriteHtonU64(this->T_sd);
+  i.WriteHtonU64(this->seqno);
   
   // Serialize the AntStack
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
@@ -548,7 +549,8 @@ uint32_t AntHeader::Deserialize (Buffer::Iterator start) {
   ReadFrom(i, this->dst);
   
   // Read the time value
-  this->T_sd = (double) i.ReadNtohU64();
+  this->T_sd = i.ReadNtohU64();
+  this->seqno = i.ReadNtohU64();
   
   // Erase the existing antstack
   this->ant_stack.erase(this->ant_stack.begin(), this->ant_stack.end());
@@ -571,6 +573,7 @@ void AntHeader::Print(std::ostream &os) const {
   << " Source Address: " << this->src
   << " Destination: " << this->dst
   << " T_sd: " << this->T_sd
+  << " Seqno: " << this->seqno
   << " AntStack(" << this->ant_stack.size() << "): [ ";
   
   for (std::vector<Ipv4Address>::const_iterator it = this->ant_stack.begin(); 
@@ -614,6 +617,14 @@ bool AntHeader::DecBCount() {
   else {
     return false;
   }
+}
+
+void AntHeader::SetSeqno(uint64_t seqno) {
+  this->seqno = seqno;
+}
+
+uint64_t AntHeader::GetSeqno() {
+  return this->seqno;
 }
 
 std::ostream& operator<< (std::ostream & os, AntHeader const & h) {

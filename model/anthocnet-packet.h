@@ -272,6 +272,9 @@ public:
   void SetBCount(uint8_t count);
   bool DecBCount();
   
+  void SetSeqno(uint64_t seqno);
+  uint64_t GetSeqno();
+  
 protected:
   
   uint8_t flags;
@@ -287,7 +290,9 @@ protected:
   Ipv4Address src;
   Ipv4Address dst;
   
-  double T_sd;
+  uint64_t T_sd;
+  
+  uint64_t seqno;
   
   // All the ants travelled so far/ yet to travel
   std::vector<Ipv4Address> ant_stack;

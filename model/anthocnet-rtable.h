@@ -85,6 +85,8 @@ public:
   // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
   Time no_broadcast_time;
   
+  uint64_t seqno;
+  
   // Last Time a RouteOutput was called on this destination.
   // Important for the proactive ants
   Time session_time;
@@ -100,6 +102,9 @@ typedef NbMap::iterator NbIt;
 
 typedef std::map<std::pair<Ipv4Address, Ipv4Address>, RoutingTableEntry> PheromoneTable;
 typedef PheromoneTable::iterator PheromoneIt;
+
+typedef std::set<std::pair<Ipv4Address, uint64_t> > AntHist;
+typedef AntHist::iterator AntHistIt;
 
 class RoutingTable {
 public:
@@ -164,6 +169,9 @@ public:
                            uint64_t T_sd, uint32_t hops);
   
   
+  uint64_t NextSeqno(Ipv4Address dst);
+  bool HasHistory(Ipv4Address dst, uint64_t seqno);
+  void AddHistory(Ipv4Address dst, uint64_t seqno);
   
   void SetIpv4(Ptr<Ipv4> ipv4) {
     this->ipv4 = ipv4;
@@ -194,6 +202,7 @@ private:
   
   PheromoneTable rtable;
   
+  AntHist history;
   
   // The IP protocol
   Ptr<Ipv4> ipv4;
