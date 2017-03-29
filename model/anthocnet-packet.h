@@ -287,7 +287,7 @@ protected:
   Ipv4Address src;
   Ipv4Address dst;
   
-  double T;
+  double T_sd;
   
   // All the ants travelled so far/ yet to travel
   std::vector<Ipv4Address> ant_stack;

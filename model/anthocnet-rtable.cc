@@ -47,7 +47,6 @@ DestinationInfo::DestinationInfo() :
 DestinationInfo::~DestinationInfo() {
 }
 
-
 // ---------------F-----------------------------------------
 NeighborInfo::NeighborInfo() :
   last_active(Simulator::Now()),
@@ -56,8 +55,6 @@ NeighborInfo::NeighborInfo() :
 
 NeighborInfo::~NeighborInfo() {
 }
-
-
 
 RoutingTable::RoutingTable(){}
   
@@ -103,9 +100,7 @@ void RoutingTable::RemoveNeighbor(Ipv4Address nb) {
 void RoutingTable::AddDestination(Ipv4Address dst) {
     if (!this->IsDestination(dst)) {
     this->dsts.insert(std::make_pair(dst, DestinationInfo()));
-
     // TODO: Add initialized pheromone tables here?
-    
   }
 }
 
@@ -124,9 +119,6 @@ void RoutingTable::RemoveDestination(Ipv4Address dst) {
   }
   this->RemoveNeighbor(dst);
   this->dsts.erase(dst);
-  
-  // TODO: Remove also as neighbor
-  
 }
 
 void RoutingTable::AddPheromone(Ipv4Address dst, Ipv4Address nb, 
@@ -206,7 +198,6 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
 void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
                                    double update, bool virt) {
   
-  NS_LOG_FUNCTION(this << dst << nb << update << virt);
   
   auto target_nb_it = this->nbs.find(nb);
   if (target_nb_it == this->nbs.end()) {
@@ -391,20 +382,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){
   
-  
-  // Check if destination is a neighbor
-  auto temp_nb_it = this->nbs.find(dst);
-  if (temp_nb_it != this->nbs.end()) {
-    nb = temp_nb_it->first;
-    NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
-     << "usevirt" << virt);
-    
-    // NOTE: Always returning the neighbor is a bad idea, since the neighbor 
-    // might be in reach but the connection might be very shaky.
-    // It might be a good idea to put this behind the select route algo as a failsafe
-  }
-  
-  
   //Get the destination index:
   auto dst_it = this->dsts.find(dst);
   
@@ -416,15 +393,25 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   
   double total_pheromone = this->SumPropability(dst, beta, virt);
   
-  // NOTE: Very low pheromone can lead to the total_pheromone 
-  // beeing rounded down to Zero. (When used with a high power) 
-  // This leads to the system acting as if
-  // there is no pheromone at all. This is most likely not an intended
-  // behaviour and there should be a case to handle that
-  
   // Fail, if there are no initialized entries (same as no entires at all)
   if (total_pheromone < this->config->min_pheromone) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
+    
+    // Check if destination is a neighbor
+    // suggest this route, even if no pheromone
+    // NOTE: Experimental
+    auto temp_nb_it = this->nbs.find(dst);
+    if (temp_nb_it != this->nbs.end()) {
+      nb = temp_nb_it->first;
+      NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
+        << "usevirt" << virt);
+      
+      // NOTE: Always returning the neighbor is a bad idea, since the neighbor 
+      // might be in reach but the connection might be very shaky.
+      // It might be a good idea to put this behind the select route algo as a failsafe
+      return true;
+    }
+    
     return false;
   }
   
@@ -435,7 +422,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   double select = vr->GetValue(0.0, 1.0);
   double selected = 0.0;
   
-  NS_LOG_FUNCTION(this << "total_pheromone" << total_pheromone);
+  NS_LOG_FUNCTION(this << "total_pheromone" << total_pheromone << beta);
   
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
@@ -585,10 +572,6 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         T_id = this->GetTSend(origin).GetMilliSeconds();
         
         new_phero = this->Bootstrap(bs_phero, T_id);
-        
-        //if (new_pheromone < this->config->min_pheromone)
-        //  continue;
-        
         this->UpdatePheromone(l.dst, origin, new_phero, false);
         
         break;
@@ -808,7 +791,6 @@ void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
   this->Print(*stream->GetStream());
 }
 
-// FIXME: This function causes program to crash (when used in NS_LOG_FUNCTION)
 void RoutingTable::Print(std::ostream& os) const {
   
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {

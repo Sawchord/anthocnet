@@ -129,13 +129,13 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(150)),
-nWifis(20),
-nSender(5),
-nReceiver(5),
+total_time(Seconds(16)),
+nWifis(80),
+nSender(20),
+nReceiver(20),
 
-pWidth(400),
-pHeight(1200),
+pWidth(800),
+pHeight(2400),
 
 nodePause(30),
 nodeMinSpeed(5),
@@ -383,6 +383,9 @@ void RoutingExperiment::Run() {
       break;
     case 2:
       loss_model_string = "ns3::FriisPropagationLossModel";
+      break;
+    case 3:
+      loss_model_string = "ns3::TwoRayGroundPropagationLossModel";
       break;
     default:
       NS_FATAL_ERROR ("Loss model not supported");

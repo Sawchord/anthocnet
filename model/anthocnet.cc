@@ -752,6 +752,14 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
                                         Ipv4Address dst,
                                         ForwardAntHeader ant, 
                                         bool is_proactive) {
+  // NOTE: To much unicast can lead to congestion
+  // preventing the backward ants from comming trough
+  // NOTE: experimental
+  if (!this->rtable.IsBroadcastAllowed(dst)) {
+    NS_LOG_FUNCTION(this << "unicast not allowed");
+    return;
+  }
+  this->rtable.NoBroadcast(dst, this->config->no_broadcast);
   
   // Get the socket which runs on iface
   Ptr<Socket> socket = this->sockets[iface];
@@ -849,6 +857,8 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
     NS_LOG_FUNCTION(this << "broadcast not allowed");
     return;
   }
+  
+  NS_LOG_FUNCTION(this << "broadcasting");
   
   this->rtable.NoBroadcast(dst, this->config->no_broadcast);
   
@@ -1310,7 +1320,6 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     // counted amount of broadcasr
     if (ant.DecBCount()) {
       this->BroadcastForwardAnt(final_dst, ant, is_proactive);
-      NS_LOG_FUNCTION(this << "broadcasting");
       return;
     }
     else {
