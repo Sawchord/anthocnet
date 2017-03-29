@@ -164,7 +164,6 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   sockerr = Socket::ERROR_NOTERROR;
   NS_LOG_FUNCTION(this << "started FWAnt to " << dst);
   
-  // TODO: This seems to be buggy and lead to data drop
   return this->LoopbackRoute(header, oif);
 }
 
@@ -784,7 +783,7 @@ void RoutingProtocol::UnicastForwardAnt(uint32_t iface,
   NS_LOG_FUNCTION(this << "sending fwant" << *packet);
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+  Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
     this, socket, packet, dst);
   
 }
@@ -812,7 +811,7 @@ void RoutingProtocol::UnicastBackwardAnt(uint32_t iface,
   NS_LOG_FUNCTION(this << "sending bwant" << ant << "dst" << dst);
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+  Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
     this, socket, packet, dst);
   
 }
@@ -904,7 +903,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst,
     NS_LOG_FUNCTION(this << "broadcast ant" << *packet << "dst" << dst);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket, packet, destination);
     
   }
@@ -1005,7 +1004,7 @@ void RoutingProtocol::HelloTimerExpire() {
     
     // NOTE: The simulation does not work with jitter set to fixed value
     // Is this due to a bug, or is it due to all nodes sneding at once
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket, packet, destination);
   }
   
@@ -1075,7 +1074,7 @@ void RoutingProtocol::RTableTimerExpire() {
         }
         
         Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-        Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+        Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
           this, socket, packet, destination);
       }
     }
@@ -1213,7 +1212,7 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   Ptr<Socket> socket = this->sockets[iface];
   
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-  Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+  Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
     this, socket, packet2, dst);
   
   //NS_LOG_UNCOND(this->rtable);
@@ -1259,7 +1258,7 @@ void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src,
     }
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket, packet, destination);
     
   }
@@ -1329,7 +1328,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
       << iface << "dst" << dst);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-    Simulator::Schedule(jitter, &RoutingProtocol::Send, 
+    Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket2, packet2, dst);
     
     return;

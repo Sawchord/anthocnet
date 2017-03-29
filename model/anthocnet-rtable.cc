@@ -344,7 +344,6 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
   nb_it->second.last_active = Simulator::Now();
 }
 
-// TODO: Update destination
 
 // TODO: Remove Interval parameter, use config interval thing instead??
 // TODO: Handle ret table as refenerence for speadup
@@ -699,7 +698,6 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   if (!this->IsDestination(dst))
     this->AddDestination(dst);
   
-  // TODO: necessary? dangerous?
   if (!this->IsNeighbor(nb))
     this->AddNeighbor(nb);
   
