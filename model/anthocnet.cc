@@ -179,10 +179,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   uint32_t recv_iface = this->ipv4->GetInterfaceForDevice(idev);
   Ipv4Address this_node = this->ipv4->GetAddress(recv_iface, 0).GetLocal();
   
-  NS_LOG_FUNCTION(this << "called");
-  
-  // TODO: Register activity for destination here
-  
   // Fail if no interfaces
   if (this->socket_addresses.empty()) {
     NS_LOG_LOGIC("No active interfaces -> Data dropped");
@@ -1049,13 +1045,11 @@ void RoutingProtocol::RTableTimerExpire() {
       Ipv4InterfaceAddress iface = sock_it->second;
       
       if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
-        NS_LOG_FUNCTION(this << "skip lo");
         continue;
       }
     
       
       LinkFailureHeader msg;
-      
       msg.SetSrc(iface.GetLocal());
       
       //NS_LOG_UNCOND(this->rtable);
@@ -1431,7 +1425,6 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       
       this->data_drop(cv.second.packet, 
                       "Cached and expired", cv.second.header.GetSource());
-      
       continue;
     }
     

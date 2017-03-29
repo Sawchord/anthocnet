@@ -481,8 +481,10 @@ void RoutingTable::ProcessNeighborTimeout(LinkFailureHeader& msg,
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
     
     auto p_it = this->rtable.find(std::make_pair(dst_it->first, nb));
-    if (p_it == this->rtable.end())
+    if (p_it == this->rtable.end() 
+          || p_it->second.pheromone < this->config->min_pheromone) {
       continue;
+    }
     
     auto other_inits = this->IsOnly(dst_it->first, nb);
     
