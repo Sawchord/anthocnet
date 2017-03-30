@@ -239,7 +239,9 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
     
   }
-  else {
+  else if (origin == Ipv4Address("127.0.0.1")){
+    // Cache, if this comes from this node
+    
     // If there is no route, cache the data to wait for a route
     
     // Also start a forward ant towards the destination 
@@ -260,7 +262,35 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     
     // TODO: Only start FWAnt, if origin not 127.0.0.1
     //this->StartForwardAnt(dst, false);
+    
     return true;
+  }
+  else {
+    NS_LOG_FUNCTION(this << "pruning link");
+    for (auto sock_it = this->socket_addresses.begin(); 
+         sock_it != this->socket_addresses.end(); ++sock_it) {
+      
+      Ptr<Socket> socket = sock_it->first;
+      Ipv4InterfaceAddress iface = sock_it->second;
+      
+      if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+        continue;
+      }
+    
+      LinkFailureHeader msg;
+      msg.SetSrc(iface.GetLocal());
+      msg.AppendUpdate(dst, ONLY_VALUE, 0.0);
+      
+      TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);    
+      Ptr<Packet> packet = Create<Packet> ();
+      packet->AddHeader(msg);
+      packet->AddHeader(type_header);
+      
+      Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+      Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
+        this, socket, packet, origin);
+    
+    }
   }
   
   this->data_drop(p, "Unknown reason", this_node);
