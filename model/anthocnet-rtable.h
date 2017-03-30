@@ -65,8 +65,6 @@ public:
   NeighborInfo ();
   ~NeighborInfo();
   
-  Time last_active;
-  
   // Average time to send data to this neighbor
   Time avr_T_send;
   
@@ -78,8 +76,6 @@ public:
   
   DestinationInfo();
   ~DestinationInfo();
-  
-  Time last_active;
   
   // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
   Time no_broadcast_time;

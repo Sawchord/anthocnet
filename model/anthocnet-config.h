@@ -67,7 +67,6 @@ public:
   Time pr_ant_interval;
   
   // Timeout of Rtable information
-  Time dst_expire;
   Time nb_expire;
   Time session_expire;
   Time dcache_expire;

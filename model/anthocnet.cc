@@ -924,9 +924,8 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
     for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
       ad_it != addresses.end(); ++ad_it) {
       NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
-      //this->rtable.RemoveNeighbor(this->ipv4->GetInterfaceForAddress(*ad_it), 
-      //                            *ad_it);
       
+      this->NBExpire(*ad_it);
       
     
     }
@@ -1021,7 +1020,7 @@ void RoutingProtocol::PrAntTimerExpire() {
   this->pr_ant_timer.Schedule(this->config->pr_ant_interval + jitter);
 }
 
-void RoutingProtocol::NBTimerExpire(Ipv4Address nb) {
+void RoutingProtocol::NBExpire(Ipv4Address nb) {
   NS_LOG_FUNCTION(this << "nb" << nb << "timed out");
   
   for (auto sock_it = this->socket_addresses.begin(); 
@@ -1098,7 +1097,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     
     if (!this->rtable.IsNeighbor(src)) {
       this->rtable.AddNeighbor(src);
-      this->rtable.InitNeighborTimer(src, &RoutingProtocol::NBTimerExpire, 
+      this->rtable.InitNeighborTimer(src, &RoutingProtocol::NBExpire, 
                                      this);
     }
     this->rtable.UpdateNeighbor(src);
@@ -1188,7 +1187,7 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg);
   this->rtable.InitNeighborTimer(hello_msg.GetSrc(), 
-    &RoutingProtocol::NBTimerExpire, this);
+    &RoutingProtocol::NBExpire, this);
   this->rtable.UpdateNeighbor(hello_msg.GetSrc());
   
   // Prepare ack

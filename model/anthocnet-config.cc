@@ -59,12 +59,6 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeTimeAccessor(&AntHocNetConfig::pr_ant_interval),
     MakeTimeChecker()
   )
-  .AddAttribute ("DestinationExpire",
-    "Time without traffic, after which a destination is considered offline.",
-    TimeValue (Seconds(900)),
-    MakeTimeAccessor(&AntHocNetConfig::dst_expire),
-    MakeTimeChecker()
-  )
   .AddAttribute ("NeighborExpire",
     "Time without HelloAnt, after which a neighbor is considered offline.",
     TimeValue (MilliSeconds(2500)),
@@ -187,7 +181,6 @@ void AntHocNetConfig::Print(std::ostream& os) const {
   os << "rtable_update_interval: " << rtable_update_interval << std::endl;
   os << "pr_ant_interval: " << pr_ant_interval << std::endl;
   
-  os << "dst_expire: " << dst_expire << std::endl;
   os << "nb_expire: " << nb_expire << std::endl;
   os << "session_expire: " << session_expire << std::endl;
   os << "dcache_expire: " << dcache_expire << std::endl;

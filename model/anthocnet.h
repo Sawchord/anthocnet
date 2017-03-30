@@ -181,7 +181,7 @@ private:
   // Update the RoutingTable (mainly throw out old data)
   void RTableTimerExpire();
   
-  void NBTimerExpire(Ipv4Address nb);
+  void NBExpire(Ipv4Address nb);
   
   // -------------------------------------------------
   // Ant Handlers

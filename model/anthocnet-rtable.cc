@@ -38,7 +38,6 @@ RoutingTableEntry::~RoutingTableEntry() {}
 
 // ------------------------------------------------------
 DestinationInfo::DestinationInfo() :
-  last_active(Simulator::Now()),
   no_broadcast_time(Seconds(0)),
   seqno(0),
   session_time(Seconds(0)),
@@ -50,7 +49,6 @@ DestinationInfo::~DestinationInfo() {
 
 // ---------------F-----------------------------------------
 NeighborInfo::NeighborInfo() :
-  last_active(Simulator::Now()),
   avr_T_send(Seconds(0))
   {}
 
@@ -348,8 +346,6 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
   auto nb_it = this->nbs.find(nb);
   if (!this->IsNeighbor(nb_it))
     return;
-  
-  //nb_it->second.last_active = Simulator::Now();
   
   auto nbt_it = this->nb_timers.find(nb);
   if(nbt_it == this->nb_timers.end())
