@@ -129,7 +129,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(16)),
+total_time(Seconds(150)),
 nWifis(80),
 nSender(20),
 nReceiver(20),
@@ -137,7 +137,7 @@ nReceiver(20),
 pWidth(800),
 pHeight(2400),
 
-nodePause(30),
+nodePause(150),
 nodeMinSpeed(5),
 nodeMaxSpeed(20),
 
@@ -166,10 +166,8 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   
   cmd.AddValue("nWifis", 
                "The total number of nodes in this simulation", this->nWifis);
-  cmd.AddValue("nSender", "The total sender nodes", this->nSender);
-  cmd.AddValue("nodeMaxSpeed", 
-               "Maximum speed a node ", 
-               this->nodeMaxSpeed);
+  cmd.AddValue("nSender", "The total number of sender nodes", this->nSender);
+  cmd.AddValue("nReceiver", "The total number of receiver nodes", this->nReceiver);
   
   cmd.AddValue("nodePause",
                "Time in seconds a node rests after reaching waypoint", 
@@ -243,6 +241,23 @@ void RoutingExperiment::PrintSummary(std::ostream& os) {
                 / (data_packets+control_packets)) << std::endl;
   os << "Data Byte rate: " << ((double)data_bytes
                 / (data_bytes+control_bytes)) << std::endl;
+  
+  
+  os << "Command line options: " << std::endl;
+  
+  os << "Time: " << this->total_time.GetSeconds() << std::endl;
+  
+  os << "nWifis: " << this->nWifis << std::endl;
+  os << "nSender: " << this->nSender << std::endl;
+  os << "nReceiver: " << this->nReceiver << std::endl;
+  
+  os << "nodePause: " << this->nodePause << std::endl;
+  
+  os << "nodeMinSpeed: " << this->nodeMinSpeed << std::endl;
+  os << "nodeMaxSpeed: " << this->nodeMaxSpeed << std::endl;
+  
+  os << "pWidth: " << this->pWidth << std::endl;
+  os << "pHeight: " << this->pHeight << std::endl;
   
 }
 
