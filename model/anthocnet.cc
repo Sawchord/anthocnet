@@ -143,7 +143,8 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   Ipv4Address nb;
   
   //NS_LOG_UNCOND(this->rtable);
-  if (this->rtable.SelectRoute(dst, 20.0, nb, this->uniform_random, false)) {
+  if (this->rtable.SelectRoute(dst, this->config->cons_beta,
+    nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
     
     Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
@@ -225,7 +226,8 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   
   //Search for a route, 
   //NS_LOG_UNCOND(this->rtable);
-  if (this->rtable.SelectRoute(dst, 20.0, nb, this->uniform_random, false)) {
+  if (this->rtable.SelectRoute(dst, this->config->cons_beta, 
+    nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
     // If a route was found:
     // create the route and call UnicastForwardCallback
@@ -733,14 +735,16 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   NS_LOG_FUNCTION(this);
   
   if (is_proactive) {
-    if (!this->rtable.SelectRoute(dst, 2.0, nb, this->uniform_random,
+    if (!this->rtable.SelectRoute(dst, this->config->prog_beta,
+      nb, this->uniform_random,
       true)) {
       this->BroadcastForwardAnt(dst, true);
       return;
     }
   }
   else {
-    if (!this->rtable.SelectRoute(dst, 20.0, nb, this->uniform_random,
+    if (!this->rtable.SelectRoute(dst, this->config->cons_beta,
+      nb, this->uniform_random,
       false)) {
       this->BroadcastForwardAnt(dst, false);
       return;
@@ -1372,10 +1376,12 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   uint32_t next_iface = 1;
   //NS_LOG_UNCOND(this->rtable);
   if(
-    (!is_proactive && !this->rtable.SelectRoute(final_dst, 20.0, 
+    (!is_proactive && !this->rtable.SelectRoute(final_dst, 
+                                                this->config->cons_beta, 
       next_nb, this->uniform_random, false))
     ||
-    (is_proactive && !this->rtable.SelectRoute(final_dst, 2.0, 
+    (is_proactive && !this->rtable.SelectRoute(final_dst, 
+                                               this->config->prog_beta, 
       next_nb, this->uniform_random, true))
   )
   {
@@ -1493,7 +1499,8 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     //NS_LOG_UNCOND(this->rtable);
     
     // TODO beta should be 20??
-    if (this->rtable.SelectRoute(dst, 2.0, nb, this->uniform_random, false)) {
+    if (this->rtable.SelectRoute(dst, this->config->prog_beta,
+      nb, this->uniform_random, false)) {
       Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
       
       // Create the route and call UnicastForwardCallback
