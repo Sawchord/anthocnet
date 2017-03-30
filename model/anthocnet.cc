@@ -1087,6 +1087,52 @@ void RoutingProtocol::RTableTimerExpire() {
 }
 
 
+void RoutingProtocol::NBTimerExpire(Ipv4Address nb) {
+  NS_LOG_FUNCTION(this << "nb" << nb << "timed out");
+  
+  for (auto sock_it = this->socket_addresses.begin(); 
+         sock_it != this->socket_addresses.end(); ++sock_it) {
+      
+      Ptr<Socket> socket = sock_it->first;
+      Ipv4InterfaceAddress iface = sock_it->second;
+      
+      if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
+        continue;
+      }
+    
+      
+      LinkFailureHeader msg;
+      msg.SetSrc(iface.GetLocal());
+      
+      //NS_LOG_UNCOND(this->rtable);
+      
+      this->rtable.ProcessNeighborTimeout(msg, nb);
+      
+      NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
+      //NS_LOG_UNCOND(this->rtable);
+      
+      if (msg.HasUpdates()) {
+        TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
+        
+        Ptr<Packet> packet = Create<Packet> ();
+        
+        packet->AddHeader(msg);
+        packet->AddHeader(type_header);
+        
+        Ipv4Address destination;
+        if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+            destination = Ipv4Address ("255.255.255.255");
+        } else { 
+            destination = iface.GetBroadcast ();
+        }
+        
+        Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+        Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
+          this, socket, packet, destination);
+      }
+    }
+}
+
 // -----------------------------------------------------
 // Receiving and Sending stuff
 void RoutingProtocol::Recv(Ptr<Socket> socket) {
@@ -1115,6 +1161,12 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     dst = this->socket_addresses[socket].GetLocal();
     
     NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
+    
+    if (!this->rtable.IsNeighbor(src)) {
+      this->rtable.AddNeighbor(src);
+      this->rtable.InitNeighborTimer(src, &RoutingProtocol::NBTimerExpire, 
+                                     this);
+    }
     this->rtable.UpdateNeighbor(src);
     
     
@@ -1201,6 +1253,8 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
   this->rtable.HandleHelloMsg(hello_msg);
+  this->rtable.InitNeighborTimer(hello_msg.GetSrc(), 
+    &RoutingProtocol::NBTimerExpire, this);
   this->rtable.UpdateNeighbor(hello_msg.GetSrc());
   
   // Prepare ack

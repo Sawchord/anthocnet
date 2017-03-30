@@ -67,7 +67,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute ("NeighborExpire",
     "Time without HelloAnt, after which a neighbor is considered offline.",
-    TimeValue (Seconds(5)),
+    TimeValue (MilliSeconds(2500)),
     MakeTimeAccessor(&AntHocNetConfig::nb_expire),
     MakeTimeChecker()
   )

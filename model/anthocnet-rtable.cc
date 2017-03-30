@@ -78,6 +78,9 @@ void RoutingTable::AddNeighbor(Ipv4Address nb) {
     
     this->AddPheromone(nb, nb, 1, 1);
     
+    // Add timer
+    this->nb_timers.insert(std::make_pair(nb, Timer(Timer::CANCEL_ON_DESTROY)));
+    
   }
 }
 
@@ -93,10 +96,14 @@ void RoutingTable::RemoveNeighbor(Ipv4Address nb) {
   for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
     this->RemovePheromone(dst_it->first, nb);
   }
+  
+  // Remove timeout event
+  auto nbt_it = this->nb_timers.find(nb);
+  if (nbt_it != this->nb_timers.end())
+    nbt_it->second.Remove();
+  
   this->nbs.erase(nb);
 }
-
-
 
 void RoutingTable::AddDestination(Ipv4Address dst) {
     if (!this->IsDestination(dst)) {
@@ -336,12 +343,21 @@ void RoutingTable::NoBroadcast(Ipv4Address dst, Time duration) {
 }
 
 void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
+  
   NS_LOG_FUNCTION(this << nb);
   auto nb_it = this->nbs.find(nb);
   if (!this->IsNeighbor(nb_it))
     return;
   
-  nb_it->second.last_active = Simulator::Now();
+  //nb_it->second.last_active = Simulator::Now();
+  
+  auto nbt_it = this->nb_timers.find(nb);
+  if(nbt_it == this->nb_timers.end())
+    return;
+  
+  nbt_it->second.Remove();
+  nbt_it->second.Schedule(this->config->nb_expire);
+  
 }
 
 
@@ -359,6 +375,8 @@ std::set<Ipv4Address> RoutingTable::Update(Time interval) {
     }
   }*/
   
+  // NOTE: Experimental
+  /*
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
     if (nb_it->second.last_active + this->config->nb_expire < Simulator::Now()) {
@@ -368,7 +386,7 @@ std::set<Ipv4Address> RoutingTable::Update(Time interval) {
       
     }
   }
-  
+  */
   for (auto p_it = this->rtable.begin(); p_it != this->rtable.end(); ++p_it) {
     // NOTE: If use time based evaportation, use it here
   }

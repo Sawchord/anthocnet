@@ -38,7 +38,6 @@
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 
-
 #include "anthocnet-packet.h"
 #include "anthocnet-config.h"
 
@@ -105,6 +104,9 @@ typedef PheromoneTable::iterator PheromoneIt;
 
 typedef std::set<std::pair<Ipv4Address, uint64_t> > AntHist;
 typedef AntHist::iterator AntHistIt;
+
+typedef std::map<Ipv4Address, Timer> NbTimers;
+typedef NbTimers::iterator NbTimersIt;
 
 class RoutingTable {
 public:
@@ -177,6 +179,15 @@ public:
     this->ipv4 = ipv4;
   }
   
+  // This is used to set RoutingProtocols function as callback inside RoutingTable
+  template <typename MEM_PTR, typename OBJ_PTR>
+  void InitNeighborTimer(Ipv4Address nb, MEM_PTR memPtr, OBJ_PTR objPtr) {
+    auto nbt_it = this->nb_timers.find(nb);
+    if (nbt_it == this->nb_timers.end())
+      return;
+    nbt_it->second.SetFunction(memPtr, objPtr);
+    nbt_it->second.SetArguments(nb);
+  }
   
   void Print(Ptr<OutputStreamWrapper> stream) const;
   void Print(std::ostream& os) const;
@@ -203,6 +214,8 @@ private:
   PheromoneTable rtable;
   
   AntHist history;
+  
+  NbTimers nb_timers;
   
   // The IP protocol
   Ptr<Ipv4> ipv4;
