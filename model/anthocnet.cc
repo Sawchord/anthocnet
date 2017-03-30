@@ -911,7 +911,6 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
   NS_LOG_FUNCTION(this);
   
   Mac48Address addr[4];
-  
   addr[0] = header.GetAddr1();
   addr[1] = header.GetAddr2();
   addr[2] = header.GetAddr3();
@@ -926,11 +925,8 @@ void RoutingProtocol::ProcessTxError(WifiMacHeader const& header) {
       NS_LOG_FUNCTION(this << "Lost connections to" << *ad_it);
       
       this->NBExpire(*ad_it);
-      
-    
     }
   }
-  
 }
 
   
@@ -940,14 +936,36 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
                               WifiTxVector tx_vector, mpduInfo mpdu,
                               signalNoiseDbm snr) {
   
-  this->last_snr = snr.signal - snr.noise;
-  //NS_LOG_FUNCTION(this << this->last_snr << *packet);
-  
   // NOTE: experimental
+  WifiMacHeader mac;
+  packet->PeekHeader(mac);
   
+  if (mac.GetType() != WIFI_MAC_DATA) 
+    return;
   
+  this->last_snr = snr.signal - snr.noise;
+  //NS_LOG_UNCOND(this << " " << *packet << " snr: " << this->last_snr );
   
+  //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+  //Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();
   
+  Mac48Address addr[4];
+  addr[0] = mac.GetAddr1();
+  addr[1] = mac.GetAddr2();
+  addr[2] = mac.GetAddr3();
+  addr[3] = mac.GetAddr4();
+  
+  for (uint32_t i = 0; i < 4; i++) {
+    
+    std::vector<Ipv4Address> addresses = this->LookupMacAddress(addr[i]);
+    
+    for (std::vector<Ipv4Address>::const_iterator ad_it = addresses.begin();
+      ad_it != addresses.end(); ++ad_it) {
+      //NS_LOG_UNCOND(Simulator::Now().GetSeconds()
+      //  << " SINR from " << *ad_it << " at " << this_node
+      //  << " is " << this->last_snr);
+    }
+  }
 }
 
 // -------------------------------------------------------
@@ -1032,15 +1050,11 @@ void RoutingProtocol::NBExpire(Ipv4Address nb) {
       if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
         continue;
       }
-    
       
       LinkFailureHeader msg;
       msg.SetSrc(iface.GetLocal());
       
-      //NS_LOG_UNCOND(this->rtable);
-      
       this->rtable.ProcessNeighborTimeout(msg, nb);
-      
       NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
       //NS_LOG_UNCOND(this->rtable);
       
