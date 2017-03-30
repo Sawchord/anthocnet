@@ -34,7 +34,12 @@ TypeId AntHocNetConfig::GetTypeId() {
   .SetGroupName("AntHocNet")
   .AddConstructor<AntHocNetConfig>()
   
-  
+  .AddAttribute ("SnrCostMetric",
+    "Specify, wether SNR or Turnaround-Time should be used as cost metric",
+    BooleanValue(false),
+    MakeBooleanAccessor(&AntHocNetConfig::snr_cost_metric),
+    MakeBooleanChecker()
+  )
   .AddAttribute ("Port",
     "The port, the protocol uses to exchange control messages.",
     UintegerValue(5555),
@@ -133,14 +138,14 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute("SnrThreshold",
     "Connections with a SNR below this value are considered bad connections",
-    DoubleValue(20.0),
+    DoubleValue(17.0),
     MakeDoubleAccessor(&AntHocNetConfig::snr_threshold),
     MakeDoubleChecker<double>()
   )
-  .AddAttribute("BadSnrCost",
-    "The cost added to the vost function, if a connection is bad",
-    DoubleValue(4.0),
-    MakeDoubleAccessor(&AntHocNetConfig::bad_snr_cost),
+  .AddAttribute("SnrMalus",
+    "The malus of a bad connection",
+    DoubleValue(3.0),
+    MakeDoubleAccessor(&AntHocNetConfig::snr_malus),
     MakeDoubleChecker<double>()
   )
   .AddAttribute("InitialTTL",

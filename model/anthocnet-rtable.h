@@ -68,6 +68,8 @@ public:
   // Average time to send data to this neighbor
   Time avr_T_send;
   
+  double last_snr;
+  
 };
 
 
@@ -136,6 +138,10 @@ public:
   
   void ProcessAck(Ipv4Address nb, Time last_hello);
   Time GetTSend(Ipv4Address nb);
+  
+  void SetLastSnr(Ipv4Address nb, double snr);
+  double GetLastSnr(Ipv4Address nb);
+  double GetQSend(Ipv4Address nb);
   
   bool IsBroadcastAllowed(Ipv4Address address);
   void NoBroadcast(Ipv4Address address, Time duration);

@@ -25,6 +25,7 @@
 #include "ns3/attribute.h"
 #include "ns3/log.h"
 
+#include "ns3/boolean.h"
 #include "ns3/double.h"
 #include "ns3/integer.h"
 #include "ns3/uinteger.h"
@@ -53,6 +54,7 @@ public:
   
   // ---------------------------------
   // General
+  bool snr_cost_metric;
   uint16_t ant_port;
   
   // ---------------------------------
@@ -93,9 +95,8 @@ public:
   
   // TODO: Exploration power (settable)
   
-  // DEPRECATED
   double snr_threshold;
-  double bad_snr_cost;
+  double snr_malus;
   
   // TODO: Consideration values
   

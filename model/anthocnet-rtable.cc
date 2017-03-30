@@ -49,7 +49,8 @@ DestinationInfo::~DestinationInfo() {
 
 // ---------------F-----------------------------------------
 NeighborInfo::NeighborInfo() :
-  avr_T_send(Seconds(0))
+  avr_T_send(Seconds(0)),
+  last_snr(0)
   {}
 
 NeighborInfo::~NeighborInfo() {
@@ -327,6 +328,33 @@ Time RoutingTable::GetTSend(Ipv4Address nb) {
   return nb_it->second.avr_T_send;
 }
 
+void RoutingTable::SetLastSnr(Ipv4Address nb, double snr) {  
+  auto nb_it = this->nbs.find(nb);
+  if (nb_it == this->nbs.end())
+    return;
+  
+  nb_it->second.last_snr = snr;
+}
+
+double RoutingTable::GetLastSnr(Ipv4Address nb) {
+  auto nb_it = this->nbs.find(nb);
+  if (nb_it == this->nbs.end())
+    return 0;
+  
+  return nb_it->second.last_snr;
+}
+
+double RoutingTable::GetQSend(Ipv4Address nb) {
+  auto nb_it = this->nbs.find(nb);
+  if (nb_it == this->nbs.end())
+    return 0;
+  
+  if (nb_it->second.last_snr < this->config->snr_threshold)
+    return this->config->snr_malus;
+  else 
+    return 1;
+}
+
 void RoutingTable::NoBroadcast(Ipv4Address dst, Time duration) {
   
   auto dst_it = this->dsts.find(dst);
@@ -549,10 +577,12 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         
       case NEW_BEST_VALUE:
         
+        if (this->config->snr_cost_metric)
+          T_id = std::floor(this->GetQSend(origin));
+        else
+          T_id = this->GetTSend(origin).GetNanoSeconds();
+        
         bs_phero = l.new_pheromone;
-        T_id = this->GetTSend(origin).GetMilliSeconds();
-        
-        
         new_phero = this->Bootstrap(bs_phero, T_id);
         this->UpdatePheromone(l.dst, origin, new_phero, false);
         this->UpdatePheromone(l.dst, origin, new_phero, true);
@@ -661,7 +691,12 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
       //is_virt = true;
     }
     
-    double T_id = this->GetTSend(diff_val.first).GetMilliSeconds();
+    uint64_t T_id;
+    if (this->config->snr_cost_metric)
+      T_id = std::floor(this->GetQSend(diff_val.first));
+    else
+      T_id = this->GetTSend(diff_val.first).GetNanoSeconds();
+    
     double new_phero = this->Bootstrap(bs_phero, T_id);
     
     // TODO: Add special case where real pheromone is used
@@ -687,7 +722,11 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   // NOTE: This is the cost function.
   // One could get crazy here and have some 
   // really cool functions
-  double T_id = (( ((double)T_sd / 1000000) + hops * this->config->T_hop) / 2);
+   double T_id;
+  if (this->config->snr_cost_metric)
+    T_id = (( (double)T_sd + hops * this->config->T_hop) / 2);
+  else
+    T_id = (( ((double)T_sd / 1000000) + hops * this->config->T_hop) / 2);
   
   // Update the routing table
   this->UpdatePheromone(dst, nb, 1.0/T_id, false);

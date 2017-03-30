@@ -217,9 +217,6 @@ private:
   // Last time the Hello Timer expired
   Time last_hello;
   
-  // The last measured snr
-  double last_snr; 
-  
   // Holds the loopback device
   Ptr<NetDevice> lo;
   

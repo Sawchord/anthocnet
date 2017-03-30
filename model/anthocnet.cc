@@ -33,7 +33,6 @@ RoutingProtocol::RoutingProtocol ():
   
   // These are no configs but rather inital values 
   last_hello(Seconds(0)),
-  last_snr(0),
   
   rtable(RoutingTable()),
   data_cache(PacketCache(this->config))
@@ -970,15 +969,17 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
                               WifiTxVector tx_vector, mpduInfo mpdu,
                               signalNoiseDbm snr) {
   
-  // NOTE: experimental
+  if (!this->config->snr_cost_metric)
+    return;
+  
   WifiMacHeader mac;
   packet->PeekHeader(mac);
   
   if (mac.GetType() != WIFI_MAC_DATA) 
     return;
   
-  this->last_snr = snr.signal - snr.noise;
-  //NS_LOG_UNCOND(this << " " << *packet << " snr: " << this->last_snr );
+  double last_snr = snr.signal - snr.noise;
+  //NS_LOG_UNCOND(this << " " << *packet << " snr: " << last_snr );
   
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   //Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();
@@ -997,7 +998,8 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
       ad_it != addresses.end(); ++ad_it) {
       //NS_LOG_UNCOND(Simulator::Now().GetSeconds()
       //  << " SINR from " << *ad_it << " at " << this_node
-      //  << " is " << this->last_snr);
+      //  << " is " << last_snr);
+      this->rtable.SetLastSnr(*ad_it, last_snr);
     }
   }
 }
@@ -1054,7 +1056,7 @@ void RoutingProtocol::HelloTimerExpire() {
       this, socket, packet, destination);
   }
   
-  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 100));
+  Time jitter = MilliSeconds (uniform_random->GetInteger (0, 20));
   this->hello_timer.Schedule(this->config->hello_interval + jitter);
 }
 
@@ -1238,6 +1240,9 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
     &RoutingProtocol::NBExpire, this);
   this->rtable.UpdateNeighbor(hello_msg.GetSrc());
   
+  if (this->config->snr_cost_metric)
+    return;
+  
   // Prepare ack
   Ptr<Packet> packet2 = Create<Packet>();
   TypeHeader type_header(AHNTYPE_HELLO_ACK);
@@ -1250,8 +1255,6 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
   Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
     this, socket, packet2, dst);
-  
-  //NS_LOG_UNCOND(this->rtable);
   
   return;
 
@@ -1426,8 +1429,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
   }
   this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());
   
-  // TODO: Is this right??
-  uint64_t T_ind = this->rtable.GetTSend(orig_src).GetNanoSeconds();
+  uint64_t T_ind;
+  if (this->config->snr_cost_metric)
+    T_ind = std::floor(this->rtable.GetQSend(orig_src));
+  else
+    T_ind = this->rtable.GetTSend(orig_src).GetNanoSeconds();
+  
   
   // Update the Ant
   Ipv4Address nb = ant.Update(T_ind);
