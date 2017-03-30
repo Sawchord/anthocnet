@@ -561,8 +561,8 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
           response.AppendUpdate(l.dst, NEW_BEST_VALUE, other_inits.second);
         }
         
-        // TODO: Also delete virtual
         this->SetPheromone(l.dst, origin, 0, false);
+        this->SetPheromone(l.dst, origin, 0, true);
         
         break;
         
@@ -571,8 +571,10 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         bs_phero = l.new_pheromone;
         T_id = this->GetTSend(origin).GetMilliSeconds();
         
+        
         new_phero = this->Bootstrap(bs_phero, T_id);
         this->UpdatePheromone(l.dst, origin, new_phero, false);
+        this->UpdatePheromone(l.dst, origin, new_phero, true);
         
         break;
       default:
