@@ -207,9 +207,6 @@ private:
   // Timers and their intervals
   
   Timer hello_timer;
-  
-  Timer rtable_update_timer;
-  
   Timer pr_ant_timer;
   
   Ptr<UniformRandomVariable> uniform_random;

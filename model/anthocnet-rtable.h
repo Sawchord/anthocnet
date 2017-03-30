@@ -151,8 +151,6 @@ public:
   bool SelectRandomRoute(Ipv4Address& nb,
                                      Ptr<UniformRandomVariable> vr);
   
-  std::set<Ipv4Address> Update(Time interval);
-  
   void ProcessNeighborTimeout(LinkFailureHeader& msg, Ipv4Address nb);
   
   

@@ -361,39 +361,6 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
 }
 
 
-// TODO: Remove Interval parameter, use config interval thing instead??
-// TODO: Handle ret table as refenerence for speadup
-std::set<Ipv4Address> RoutingTable::Update(Time interval) {
-  
-  std::set<Ipv4Address> ret;
-  // NOTE: Destinations never time out
-  /*
-  for (auto dst_it = this->dsts.begin(); dst_it != this->dsts.end(); ++dst_it) {
-    if (dst_it->second.last_active + this->config->dst_expire < Simulator::Now()) {
-      NS_LOG_FUNCTION(this << "dst" << dst_it->first << "timed out");
-      this->RemoveDestination(dst_it->first);
-    }
-  }*/
-  
-  // NOTE: Experimental
-  /*
-  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
-    
-    if (nb_it->second.last_active + this->config->nb_expire < Simulator::Now()) {
-      NS_LOG_FUNCTION(this << "nb" << nb_it->first << "timed out");
-      
-      ret.insert(nb_it->first);
-      
-    }
-  }
-  */
-  for (auto p_it = this->rtable.begin(); p_it != this->rtable.end(); ++p_it) {
-    // NOTE: If use time based evaportation, use it here
-  }
-  
-  return ret;
-}
-
 bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){

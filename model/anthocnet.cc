@@ -29,7 +29,6 @@ namespace ahn {
 //ctor
 RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
-  rtable_update_timer(Timer::CANCEL_ON_DESTROY),
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
   
   // These are no configs but rather inital values 
@@ -641,11 +640,6 @@ void RoutingProtocol::Start() {
   this->pr_ant_timer.SetFunction(&RoutingProtocol::PrAntTimerExpire, this);
   this->pr_ant_timer.Schedule(this->config->pr_ant_interval);
   
-  // Start the RTableUpdateTimer
-  this->rtable_update_timer.SetFunction(
-    &RoutingProtocol::RTableTimerExpire, this);
-  this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
-  
   // Open socket on the loopback
   Ptr<Socket> socket = Socket::CreateSocket(GetObject<Node>(),
       UdpSocketFactory::GetTypeId());
@@ -1026,66 +1020,6 @@ void RoutingProtocol::PrAntTimerExpire() {
   Time jitter = MilliSeconds (uniform_random->GetInteger (0, 30));
   this->pr_ant_timer.Schedule(this->config->pr_ant_interval + jitter);
 }
-
-void RoutingProtocol::RTableTimerExpire() {
-  
-  std::set<Ipv4Address> nbs;
-  
-  // Update the routing table
-  nbs = this->rtable.Update(this->config->rtable_update_interval);
-  
-  // Send for every broken link
-  for (auto nb_it = nbs.begin(); nb_it != nbs.end(); ++nb_it) {
-    
-    // Over every active interface
-    for (auto sock_it = this->socket_addresses.begin(); 
-         sock_it != this->socket_addresses.end(); ++sock_it) {
-      
-      Ptr<Socket> socket = sock_it->first;
-      Ipv4InterfaceAddress iface = sock_it->second;
-      
-      if (iface.GetLocal() == Ipv4Address("127.0.0.1")) {
-        continue;
-      }
-    
-      
-      LinkFailureHeader msg;
-      msg.SetSrc(iface.GetLocal());
-      
-      //NS_LOG_UNCOND(this->rtable);
-      
-      this->rtable.ProcessNeighborTimeout(msg, *nb_it);
-      
-      NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
-      //NS_LOG_UNCOND(this->rtable);
-      
-      if (msg.HasUpdates()) {
-        TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
-        
-        Ptr<Packet> packet = Create<Packet> ();
-        
-        packet->AddHeader(msg);
-        packet->AddHeader(type_header);
-        
-        Ipv4Address destination;
-        if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
-            destination = Ipv4Address ("255.255.255.255");
-        } else { 
-            destination = iface.GetBroadcast ();
-        }
-        
-        Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
-        Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
-          this, socket, packet, destination);
-      }
-    }
-    
-  }
-  
-  
-  this->rtable_update_timer.Schedule(this->config->rtable_update_interval);
-}
-
 
 void RoutingProtocol::NBTimerExpire(Ipv4Address nb) {
   NS_LOG_FUNCTION(this << "nb" << nb << "timed out");
