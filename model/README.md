@@ -14,10 +14,6 @@ anthocnet-pcache.cc
 	In this implementation, this is done via a packet cache mechanism, that saves the packets on a per destination basis.
 	Thus, it is possible to cache packets, if the route to the destination is unknown.
 	Once, this is known, it can send out all the data at once.
-anthocnet-queue.h
-anthocnet-queue.cc
-	The AntHocNet protocol assumes, that incomming packets are queued inside a priority queue.
-	These files implement a simple FIFO. The protocol uses two of those, to implement a two level priority queue.
 anthocnet-rtable.h
 anthocnet-rtable.cc
 	These files implement the actual routing table data structure.

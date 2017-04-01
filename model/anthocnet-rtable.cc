@@ -205,7 +205,7 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
 void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb, 
                                    double update, bool virt) {
   
-  
+  NS_LOG_FUNCTION(this << dst << nb << update << virt);
   auto target_nb_it = this->nbs.find(nb);
   if (target_nb_it == this->nbs.end()) {
     NS_LOG_FUNCTION(this << "nb not found" << nb);
@@ -724,7 +724,7 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   // really cool functions
    double T_id;
   if (this->config->snr_cost_metric)
-    T_id = (( (double)T_sd + hops * this->config->T_hop) / 2);
+    T_id = (double)T_sd;
   else
     T_id = (( ((double)T_sd / 1000000) + hops * this->config->T_hop) / 2);
   

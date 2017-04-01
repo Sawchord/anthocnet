@@ -1422,6 +1422,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
+  // TODO: Check if keeping BWAnt makes protocol better
   if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
     NS_LOG_FUNCTION(this << "known history -> dropped"
       << ant.GetDst() << ant.GetSeqno());

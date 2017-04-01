@@ -197,7 +197,7 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   cmd.AddValue("phyMode", 
                "The physical Mode to use: 1=Dsss11Mbps; 2=Dsss1Mbps; 3=Dsss2Mbps",
                this->phyMode);
-  cmd.AddValue("lossModel", "The loss model to simulate",
+  cmd.AddValue("lossModel", "The loss model to simulate 1=Range; 2=Friis; 3=TwoRay",
                this->lossModel);
   
   cmd.AddValue("txpStart", "Antenna gain at start of transmission", this->txpStart);
@@ -258,6 +258,10 @@ void RoutingExperiment::PrintSummary(std::ostream& os) {
   
   os << "pWidth: " << this->pWidth << std::endl;
   os << "pHeight: " << this->pHeight << std::endl;
+  
+  os << "protocol: " << this->protocol << std::endl;
+  os << "lossModel: " << this->lossModel << std::endl;
+  
   
 }
 
@@ -400,6 +404,8 @@ void RoutingExperiment::Run() {
       loss_model_string = "ns3::FriisPropagationLossModel";
       break;
     case 3:
+      Config::SetDefault("ns3::TwoRayGroundPropagationLossModel::HeightAboveZ", 
+                     DoubleValue(1.2));
       loss_model_string = "ns3::TwoRayGroundPropagationLossModel";
       break;
     default:
