@@ -237,7 +237,7 @@ public:
     Ipv4Address dst = Ipv4Address(),
     uint8_t ttl_or_max_hops = 20,
     uint8_t hops = 0,
-    uint64_t T = 0
+    uint64_t T_sd = 0
   );
   
   //dtor
@@ -332,6 +332,9 @@ public:
   // ctor
   BackwardAntHeader();
   BackwardAntHeader(ForwardAntHeader& ia);
+  
+  // NOTE: This is a constructor for a fake Ant meant for blackhole attacks
+  BackwardAntHeader(Ipv4Address dst, Ipv4Address nb, Ipv4Address me, uint8_t hops);
   //dtor
   ~BackwardAntHeader();
   

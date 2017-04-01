@@ -141,7 +141,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   uint32_t iface = 1;
   Ipv4Address nb;
   
-  //NS_LOG_UNCOND(this->rtable);
+  NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta,
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -153,6 +153,8 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
     route->SetSource(this_node);
     route->SetGateway(nb);
     route->SetDestination(dst);
+    
+    NS_LOG_FUNCTION(this << "routed" << *route);
     
     return route;
   }
@@ -220,11 +222,20 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
   }
   
+  // Blackhole mode
+  if (this->config->IsBlackhole()) {
+    double rand = this->uniform_random->GetValue(0, 1);
+    if (rand < this->config->blackhole_amount) {
+      return false;
+    }
+  }
+  
+  
   uint32_t iface = 1;
   Ipv4Address nb;
   
   //Search for a route, 
-  //NS_LOG_UNCOND(this->rtable);
+  NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta, 
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
@@ -1341,6 +1352,26 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   
   Ipv4Address final_dst = ant.GetDst();
   
+  // Blackhole mode creates a fake bwant and return it
+  if (this->config->IsBlackhole()) {
+    double rand = this->uniform_random->GetValue(0, 1);
+    if (rand < this->config->blackhole_amount) {
+      
+      BackwardAntHeader bwant(ant.GetSrc(), ant.GetDst(), this_node, ant.GetHops());
+      Ptr<Packet> packet2 = Create<Packet>();
+      TypeHeader type_header(AHNTYPE_BW_ANT);
+      
+      packet2->AddHeader(bwant);
+      packet2->AddHeader(type_header);
+      
+      Ptr<Socket> socket2 = this->sockets[iface];
+      Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
+      Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
+        this, socket2, packet2, ant.GetDst());
+      return;
+    }
+  }
+  
   // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
     
@@ -1353,6 +1384,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     Ptr<Packet> packet2 = Create<Packet>();
     TypeHeader type_header(AHNTYPE_BW_ANT);
     
+    // FIXME: What do these do?
     SocketIpTtlTag tag;
     tag.SetTtl(bwant.GetMaxHops() - bwant.GetHops() + 1);
     
@@ -1364,12 +1396,11 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     
     NS_LOG_FUNCTION(this << "received fwant -> converting to bwant");
     NS_LOG_FUNCTION(this << "sending bwant" << "iface"
-      << iface << "dst" << dst);
+      << iface << "dst" << dst << "packet" << *packet2);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket2, packet2, dst);
-    
     return;
   }
   
@@ -1390,7 +1421,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   {
     
     // This is the new Implementation using a 
-    // counted amount of broadcasr
+    // counted amount of broadcasts
     if (ant.DecBCount()) {
       this->BroadcastForwardAnt(final_dst, ant, is_proactive);
       return;

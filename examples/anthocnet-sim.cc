@@ -123,6 +123,10 @@ private:
   uint32_t appStartBegin;
   uint32_t appStartEnd;
   
+  // Blackhole configuration
+  uint32_t nHoles;
+  uint32_t holesStartBegin;
+  uint32_t holesStartEnd;
   
   std::string comment;
   
@@ -155,7 +159,12 @@ packetSize(64),
 packetRate(4),
 
 appStartBegin(10),
-appStartEnd(15)
+appStartEnd(15),
+
+nHoles(0),
+holesStartBegin(40),
+holesStartEnd(50)
+
 {}
 
 std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
@@ -217,12 +226,19 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   
   
   cmd.AddValue("appStartBegin", 
-               "Time at which the first senders start", this->appStartBegin);
+               "Begin of time window where app starts", this->appStartBegin);
   cmd.AddValue("appStartEnd", 
-               "Time at which the last senders start", this->appStartEnd);
+               "End of time window where app starts", this->appStartEnd);
+  
+  cmd.AddValue("nHoles", 
+               "The number of blackhole nodes to introduce into the system", this->nHoles);
+  cmd.AddValue("holesStartBegin", 
+               "Begin of time window where blackhole mode triggers", this->holesStartBegin);
+  cmd.AddValue("holesStartEnd", 
+               "End of timewindow where blackhole mode triggers", this->holesStartEnd);
+  
   cmd.AddValue("Comment", 
                "Give a short description of this simulation", this->comment);
-  
   cmd.Parse(argc, argv);
   return "STUB";
 }
@@ -262,6 +278,12 @@ void RoutingExperiment::PrintSummary(std::ostream& os) {
   os << "protocol: " << this->protocol << std::endl;
   os << "lossModel: " << this->lossModel << std::endl;
   
+  os << "appStartBegin: " << this->appStartBegin << std::endl;
+  os << "appStartBegin: " << this->appStartBegin << std::endl;
+  
+  os << "nHoles: " << this->nHoles << std::endl;
+  os << "holesStartBegin: " << this->holesStartBegin << std::endl;
+  os << "holesStartEnd: " << this->holesStartEnd << std::endl;
   
 }
 

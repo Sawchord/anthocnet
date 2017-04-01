@@ -36,7 +36,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   
   .AddAttribute ("SnrCostMetric",
     "Specify, wether SNR or Turnaround-Time should be used as cost metric",
-    BooleanValue(false),
+    BooleanValue(true),
     MakeBooleanAccessor(&AntHocNetConfig::snr_cost_metric),
     MakeBooleanChecker()
   )
