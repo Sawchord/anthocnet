@@ -166,10 +166,34 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeUintegerAccessor(&AntHocNetConfig::proactive_bcast_count),
     MakeUintegerChecker<uint8_t>()
   )
+  // Blackhole mode configuration
+  .AddAttribute ("BlackholeMode",
+    "If set true, blackhole mode is activaed",
+    BooleanValue(false),
+    MakeBooleanAccessor(&AntHocNetConfig::blackhole_mode),
+    MakeBooleanChecker()
+  )
+  .AddAttribute ("BlackholeActivation",
+    "Time at which the blackhole shall become active",
+    TimeValue (Seconds(35)),
+    MakeTimeAccessor(&AntHocNetConfig::blackhole_activation),
+    MakeTimeChecker()
+  )
+  .AddAttribute("BlackholeAmount",
+    "Percentage of Data drop to conduct.",
+    DoubleValue(1.0),
+    MakeDoubleAccessor(&AntHocNetConfig::blackhole_amount),
+    MakeDoubleChecker<double>()
+  )
   ;
   return tid;
 }
-  
+
+bool AntHocNetConfig::IsBlackhole() {
+  return (this->blackhole_mode 
+    && (this->blackhole_activation > Simulator::Now()));
+}
+
 void AntHocNetConfig::DoDispose() {
   
 }

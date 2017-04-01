@@ -25,6 +25,8 @@
 #include "ns3/attribute.h"
 #include "ns3/log.h"
 
+#include "ns3/simulator.h"
+
 #include "ns3/boolean.h"
 #include "ns3/double.h"
 #include "ns3/integer.h"
@@ -106,6 +108,13 @@ public:
   
   uint8_t reactive_bcast_count;
   uint8_t proactive_bcast_count;
+  
+  // Blackhole mode
+  bool blackhole_mode;
+  Time blackhole_activation;
+  double blackhole_amount;
+  bool IsBlackhole();
+  
   
 };
 
