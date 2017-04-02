@@ -104,6 +104,9 @@ typedef AntHist::iterator AntHistIt;
 typedef std::map<Ipv4Address, Timer> NbTimers;
 typedef NbTimers::iterator NbTimersIt;
 
+typedef std::vector<std::pair<Ipv4Address, double> > ProbVect;
+typedef ProbVect::iterator ProbVectIt;
+
 class RoutingTable {
 public:
   
@@ -202,9 +205,11 @@ private:
   std::pair<bool, double> IsOnly(Ipv4Address dst, Ipv4Address nb);
   
   double SumPropability(Ipv4Address dst, double beta, bool virt);
+  uint32_t GetProbVector(ProbVect& pv, Ipv4Address dst, double beta, bool virt);
   
   double EvaporatePheromone(double ph_value);
   double IncressPheromone(double ph_value, double update);
+  
   
   DstMap dsts;
   NbMap nbs;

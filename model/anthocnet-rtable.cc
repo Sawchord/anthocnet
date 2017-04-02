@@ -398,10 +398,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     return false;
   }
   
-  double total_pheromone = this->SumPropability(dst, beta, virt);
-  
   // Fail, if there are no initialized entries (same as no entires at all)
-  if (total_pheromone < pow(this->config->min_pheromone, beta)) {
+  ProbVect pv;
+  if (this->GetProbVector(pv, dst, beta, virt) == 0) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
     
     // Check if destination is a neighbor
@@ -421,31 +420,16 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     return false;
   }
   
-  // To select with right probability, a random uniform variable between 
-  // 0 and 1 is generated, then it iterates over the neighbors, calculates their
-  // probability and adds it to an aggregator. If the aggregator gets over the 
-  // random value, the particular Neighbor is selected.
+  
   double select = vr->GetValue(0.0, 1.0);
   double selected = 0.0;
   
-  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
-    
-    auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
-    
-    if (p_it == this->rtable.end())
-      continue;
-    
-    // TODO: Consider virtual_malus
-    if (virt && p_it->second.virtual_pheromone > p_it->second.pheromone) {
-      selected += pow(p_it->second.virtual_pheromone, beta)/ total_pheromone;
-    } else {
-      selected += pow(p_it->second.pheromone, beta)/ total_pheromone;
-    }
-    
+  for (auto pv_it = pv.begin(); pv_it != pv.end(); pv_it++) {
+    selected += pv_it->second;
     if (selected > select) {
-      nb = nb_it->first;
+      nb = pv_it->first;
       return true;
-    }
+    } 
   }
   
   // Never come here
@@ -471,7 +455,6 @@ bool RoutingTable::SelectRandomRoute(Ipv4Address& nb,
       NS_LOG_FUNCTION(this <<  "nb" << nb);
       return true;
     }
-    
     counter++;
   }
   
@@ -802,16 +785,12 @@ std::pair<bool, double> RoutingTable::IsOnly(Ipv4Address dst,
 double RoutingTable::SumPropability(Ipv4Address dst, double beta, bool virt) {
   
   double Sum = 0;
-  
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
-    
     auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
     
     if (p_it == this->rtable.end())
       continue;
     
-    
-    // TODO: Add consideration value
     if (virt) {
       if (p_it->second.virtual_pheromone > p_it->second.pheromone)
         Sum += pow(p_it->second.virtual_pheromone, beta);
@@ -823,6 +802,38 @@ double RoutingTable::SumPropability(Ipv4Address dst, double beta, bool virt) {
     } 
   }
   return Sum;
+}
+
+uint32_t RoutingTable::GetProbVector(ProbVect& pv, Ipv4Address dst, 
+                                     double beta, bool virt) {
+  
+  double total_pheromone = this->SumPropability(dst, beta, virt);
+  double cur_pheromone;
+  uint32_t size = 0;
+  
+  // Fail, if there are no initialized entries (same as no entires at all)
+  if (total_pheromone < pow(this->config->min_pheromone, beta)) {
+    NS_LOG_FUNCTION(this << "total pheromone to low");
+    return 0;
+  }
+  
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
+    auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
+    if (p_it == this->rtable.end())
+      continue;
+    
+    if (virt && p_it->second.virtual_pheromone > p_it->second.pheromone) {
+      if (p_it->second.virtual_pheromone > this->config->min_pheromone)
+        cur_pheromone = pow(p_it->second.virtual_pheromone, beta)/ total_pheromone;
+    } else {
+      if (p_it->second.pheromone > this->config->min_pheromone)
+        cur_pheromone = pow(p_it->second.pheromone, beta)/ total_pheromone;
+    }
+    pv.push_back(std::make_pair(nb_it->first, cur_pheromone));
+    size++;
+  }
+  return size;
 }
 
 double RoutingTable::EvaporatePheromone(double ph_value) {
