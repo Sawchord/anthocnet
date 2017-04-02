@@ -191,7 +191,7 @@ TypeId AntHocNetConfig::GetTypeId() {
 
 bool AntHocNetConfig::IsBlackhole() {
   return (this->blackhole_mode 
-    && (this->blackhole_activation > Simulator::Now()));
+    && (this->blackhole_activation < Simulator::Now()));
 }
 
 void AntHocNetConfig::DoDispose() {

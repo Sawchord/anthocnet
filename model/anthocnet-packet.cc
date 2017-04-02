@@ -740,11 +740,6 @@ BackwardAntHeader::BackwardAntHeader(ForwardAntHeader& ia) :
     }
   }
 
-BackwardAntHeader::BackwardAntHeader(Ipv4Address dst, Ipv4Address nb, 
-                                     Ipv4Address me, uint8_t hops) :
-    AntHeader(src, dst, hops + 1, hops + 1, 0) {
-  this->ant_stack.push_back(me);
-}
   
 BackwardAntHeader::~BackwardAntHeader() {
 }
@@ -765,6 +760,7 @@ bool BackwardAntHeader::IsValid() {
   
   return true;
 }
+
 
 Ipv4Address BackwardAntHeader::Update(uint64_t T_ind) {
   

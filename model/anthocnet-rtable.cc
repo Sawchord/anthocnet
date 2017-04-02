@@ -61,7 +61,6 @@ RoutingTable::RoutingTable(){}
 RoutingTable::~RoutingTable() {}
 
 void RoutingTable::SetConfig(Ptr<AntHocNetConfig> config) {
-  NS_LOG_FUNCTION(this << "config set");
   this->config = config;
 }
 

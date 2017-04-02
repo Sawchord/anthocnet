@@ -86,7 +86,6 @@ TypeId RoutingProtocol::GetTypeId(void) {
 }
 
 void RoutingProtocol::DoInitialize() {
-  NS_LOG_FUNCTION(this);
   Ipv4RoutingProtocol::DoInitialize();
 }
 
@@ -737,8 +736,6 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   uint32_t iface = 1;
   Ipv4Address nb;
   
-  NS_LOG_FUNCTION(this);
-  
   if (is_proactive) {
     if (!this->rtable.SelectRoute(dst, this->config->prog_beta,
       nb, this->uniform_random,
@@ -1058,7 +1055,7 @@ void RoutingProtocol::HelloTimerExpire() {
         destination = iface.GetBroadcast ();
     }
     
-    NS_LOG_FUNCTION(this << "iface" << iface << "packet" << *packet);
+    NS_LOG_FUNCTION(this << "packet" << *packet);
     
     // Jittery send simulates clock divergence
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
@@ -1075,7 +1072,6 @@ void RoutingProtocol::HelloTimerExpire() {
 
 void RoutingProtocol::PrAntTimerExpire() {
   
-  NS_LOG_FUNCTION(this);
   
   std::list<Ipv4Address> dests = this->rtable.GetSessions();
   for (auto dst_it = dests.begin(); dst_it != dests.end(); ++dst_it) {
@@ -1164,7 +1160,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
                                      this);
     }
     this->rtable.UpdateNeighbor(src);
-    
     
   }
   else {
@@ -1290,8 +1285,6 @@ void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src,
   
   this->rtable.ProcessLinkFailureMsg(msg, response, src);
   
-  //NS_LOG_UNCOND(this->rtable);
-  
   if (response.HasUpdates()) {
     
     Ipv4InterfaceAddress iface = sock_it->second;
@@ -1359,7 +1352,12 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     double rand = this->uniform_random->GetValue(0, 1);
     if (rand < this->config->blackhole_amount) {
       
-      BackwardAntHeader bwant(ant.GetSrc(), ant.GetDst(), this_node, ant.GetHops());
+      BackwardAntHeader bwant(ant);
+      bwant.SetSeqno(this->rtable.NextSeqno(bwant.GetDst()));
+      this->rtable.AddHistory(this_node, bwant.GetSeqno());
+      
+      NS_LOG_FUNCTION(this << "Blackhole bwant");
+      
       Ptr<Packet> packet2 = Create<Packet>();
       TypeHeader type_header(AHNTYPE_BW_ANT);
       
@@ -1369,7 +1367,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
       Ptr<Socket> socket2 = this->sockets[iface];
       Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
       Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
-        this, socket2, packet2, ant.GetDst());
+        this, socket2, packet2, bwant.GetDst());
       return;
     }
   }
@@ -1455,12 +1453,12 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
-  // TODO: Check if keeping BWAnt makes protocol better
-  if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
-    NS_LOG_FUNCTION(this << "known history -> dropped"
-      << ant.GetDst() << ant.GetSeqno());
-    return;
-  }
+  // NOTE: Experimental: Not droppting doubld bwants
+  //if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
+  //  NS_LOG_FUNCTION(this << "known history -> dropped"
+  //    << ant.GetDst() << ant.GetSeqno());
+  //  return;
+  //}
   this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());
   
   uint64_t T_ind;

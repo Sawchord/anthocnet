@@ -39,7 +39,7 @@ Ptr<Ipv4RoutingProtocol> AntHocNetHelper::Create (Ptr<Node> node) const {
   return agent;
 }
 
-void AntHocNetHelper::Set (std::string name, 
+void AntHocNetHelper::Set(std::string name, 
                            const AttributeValue &value)
 {
   // NOTE: untested

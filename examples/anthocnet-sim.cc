@@ -503,8 +503,14 @@ void RoutingExperiment::Run() {
       data_drop_output = std::ofstream(tr_name + "_data_drops.tr");
       break;
     default:
-      NS_FATAL_ERROR ("Loss model not supported");
+      NS_FATAL_ERROR ("Protocol");
       break;
+  }
+  
+  
+  if (this->nHoles != 0 && this->protocol != 2) {
+    std::cout << "No Blackhole mode for AODV" << std::endl;
+    exit(0);
   }
   
   internet.SetRoutingHelper (list);
@@ -515,8 +521,20 @@ void RoutingExperiment::Run() {
   Ipv4InterfaceContainer adhocInterfaces;
   adhocInterfaces = addressAdhoc.Assign (adhocDevices);
   
-  // Set up the application
+  // Install blackhole mode
+  for (uint32_t i = this->nWifis - this->nHoles; i < this->nWifis; i++) {
+    
+    Ptr<AntHocNetConfig> conf = CreateObject<AntHocNetConfig>();
+    conf->SetAttribute("BlackholeMode", BooleanValue(true));
+    
+    std::stringstream conf_path;
+    conf_path << "/NodeList/" 
+      << i << "/$ns3::ahn::RoutingProtocol/Config";
+    
+    Config::Set(conf_path.str(), PointerValue(conf));
+  }
   
+  // Set up the application
   this->db = Create<SimDatabase>();
   
   // Set the default for the SimApllication

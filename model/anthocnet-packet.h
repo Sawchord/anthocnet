@@ -312,7 +312,6 @@ public:
   ~ForwardAntHeader();
   
   virtual bool IsValid();
-  
   bool Update(Ipv4Address this_node);
   
   Ipv4Address PeekSrc();
@@ -333,8 +332,6 @@ public:
   BackwardAntHeader();
   BackwardAntHeader(ForwardAntHeader& ia);
   
-  // NOTE: This is a constructor for a fake Ant meant for blackhole attacks
-  BackwardAntHeader(Ipv4Address dst, Ipv4Address nb, Ipv4Address me, uint8_t hops);
   //dtor
   ~BackwardAntHeader();
   
