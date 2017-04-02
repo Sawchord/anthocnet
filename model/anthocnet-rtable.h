@@ -82,8 +82,6 @@ public:
   // After a broadcast, a node cannot broadcast out ants to that destination for a certain amount of time
   Time no_broadcast_time;
   
-  uint64_t seqno;
-  
   // Last Time a RouteOutput was called on this destination.
   // Important for the proactive ants
   Time session_time;
@@ -171,7 +169,7 @@ public:
                            uint64_t T_sd, uint32_t hops);
   
   
-  uint64_t NextSeqno(Ipv4Address dst);
+  uint64_t NextSeqno();
   bool HasHistory(Ipv4Address dst, uint64_t seqno);
   void AddHistory(Ipv4Address dst, uint64_t seqno);
   
@@ -216,6 +214,8 @@ private:
   AntHist history;
   
   NbTimers nb_timers;
+  
+  uint64_t seqno;
   
   // The IP protocol
   Ptr<Ipv4> ipv4;

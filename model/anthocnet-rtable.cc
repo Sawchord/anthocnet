@@ -39,7 +39,6 @@ RoutingTableEntry::~RoutingTableEntry() {}
 // ------------------------------------------------------
 DestinationInfo::DestinationInfo() :
   no_broadcast_time(Seconds(0)),
-  seqno(0),
   session_time(Seconds(0)),
   session_active(false)
   {}
@@ -56,7 +55,9 @@ NeighborInfo::NeighborInfo() :
 NeighborInfo::~NeighborInfo() {
 }
 
-RoutingTable::RoutingTable(){}
+RoutingTable::RoutingTable() :
+seqno(0)
+{}
   
 RoutingTable::~RoutingTable() {}
 
@@ -746,17 +747,9 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   return true;
 }
 
-uint64_t RoutingTable::NextSeqno(Ipv4Address dst) {
-  auto dst_it = this->dsts.find(dst);
-  
-  if (!this->IsDestination(dst)) {
-    this->AddDestination(dst);
-    dst_it = this->dsts.find(dst);
-  }
-  //NS_ASSERT(dst_it != this->dsts.end());
-  
-  uint64_t seqno = dst_it->second.seqno;
-  dst_it->second.seqno++;
+uint64_t RoutingTable::NextSeqno() {
+  uint64_t seqno = this->seqno;
+  this->seqno++;
   return seqno;
 }
 

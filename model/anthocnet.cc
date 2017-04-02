@@ -759,7 +759,7 @@ void RoutingProtocol::StartForwardAnt(Ipv4Address dst, bool is_proactive) {
   
   Ipv4Address this_node = it->second.GetLocal();
   ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
-  ant.SetSeqno(this->rtable.NextSeqno(dst));
+  ant.SetSeqno(this->rtable.NextSeqno());
   this->rtable.AddHistory(this_node, ant.GetSeqno());
   
   
@@ -862,7 +862,7 @@ void RoutingProtocol::BroadcastForwardAnt(Ipv4Address dst, bool is_proactive) {
     Ipv4Address this_node = iface.GetLocal();
     
     ForwardAntHeader ant (this_node, dst, this->config->initial_ttl);
-    ant.SetSeqno(this->rtable.NextSeqno(dst));
+    ant.SetSeqno(this->rtable.NextSeqno());
     this->rtable.AddHistory(this_node, ant.GetSeqno());
     
     if (is_proactive) {
@@ -1353,7 +1353,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     if (rand < this->config->blackhole_amount) {
       
       BackwardAntHeader bwant(ant);
-      bwant.SetSeqno(this->rtable.NextSeqno(bwant.GetDst()));
+      bwant.SetSeqno(this->rtable.NextSeqno());
       this->rtable.AddHistory(this_node, bwant.GetSeqno());
       
       NS_LOG_FUNCTION(this << "Blackhole bwant");
@@ -1376,7 +1376,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   if (final_dst == this_node) {
     
     BackwardAntHeader bwant(ant);
-    bwant.SetSeqno(this->rtable.NextSeqno(bwant.GetDst()));
+    bwant.SetSeqno(this->rtable.NextSeqno());
     this->rtable.AddHistory(this_node, bwant.GetSeqno());
     
     Ipv4Address dst = bwant.PeekDst();
