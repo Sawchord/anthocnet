@@ -272,9 +272,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     NS_LOG_FUNCTION(this << "cached data, send FWAnt");
     this->data_cache.CachePacket(dst, ce);
     
-    // TODO: Only start FWAnt, if origin not 127.0.0.1
-    //this->StartForwardAnt(dst, false);
-    
     return true;
   }
   else {
@@ -629,8 +626,6 @@ void RoutingProtocol::NotifyRemoveAddress (uint32_t interface,
 }
 
 void RoutingProtocol::SetIpv4 (Ptr<Ipv4> ipv4) {
-  
-  //NS_LOG_FUNCTION(this);
   
   NS_ASSERT (ipv4 != 0);
   NS_ASSERT (this->ipv4 == 0);
@@ -1308,7 +1303,7 @@ void RoutingProtocol::HandleLinkFailure(Ptr<Packet> packet, Ipv4Address src,
     packet->AddHeader(type_header);
     
     Ipv4Address destination;
-    if (iface.GetMask () == Ipv4Mask::GetOnes ()) {
+    if (iface.GetMask () == Ipv4Mask::GetOnes()) {
         destination = Ipv4Address ("255.255.255.255");
     } else { 
         destination = iface.GetBroadcast ();
@@ -1349,7 +1344,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   Ipv4Address this_node = it->second.GetLocal();
   
   if (ant.GetTTL() == 0) {
-    NS_LOG_FUNCTION(this << "Outlived ant" << ant << "->droped");
+    NS_LOG_FUNCTION(this << "Outlived ant" << ant << "-> dropped");
     return;
   }
   

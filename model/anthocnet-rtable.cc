@@ -402,12 +402,10 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   
   // Fail, if there are no initialized entries (same as no entires at all)
   if (total_pheromone < pow(this->config->min_pheromone, beta)) {
-  //if (total_pheromone < this->config->min_pheromone) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
     
     // Check if destination is a neighbor
     // suggest this route, even if no pheromone
-    // NOTE: Experimental
     auto temp_nb_it = this->nbs.find(dst);
     if (temp_nb_it != this->nbs.end()) {
       nb = temp_nb_it->first;
@@ -430,8 +428,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   double select = vr->GetValue(0.0, 1.0);
   double selected = 0.0;
   
-  NS_LOG_FUNCTION(this << "total_pheromone" << total_pheromone << beta);
-  
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
     auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
@@ -450,7 +446,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
       nb = nb_it->first;
       return true;
     }
-    
   }
   
   // Never come here
@@ -600,7 +595,6 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         break;
       
     }
-    
   }
   
   
