@@ -235,10 +235,9 @@ void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb,
       double new_phero = this->IncressPheromone(old_phero, update);
       this->SetPheromone(dst, nb_it->first, new_phero, virt);
     } else {
-      
       // Evaporate the value
-      double new_phero = this->EvaporatePheromone(old_phero);
-      this->SetPheromone(dst, nb_it->first, new_phero, virt);
+      //double new_phero = this->EvaporatePheromone(old_phero);
+      //this->SetPheromone(dst, nb_it->first, new_phero, virt);
     } 
   }
 }
@@ -297,7 +296,7 @@ void RoutingTable::ProcessAck(Ipv4Address nb, Time last_hello) {
   // Be happy or suspicios?
   
   auto nb_it = this->nbs.find(nb);
-  if (this->IsNeighbor(nb_it)) {
+  if (!this->IsNeighbor(nb_it)) {
     return;
   }
   
@@ -321,7 +320,7 @@ void RoutingTable::ProcessAck(Ipv4Address nb, Time last_hello) {
 Time RoutingTable::GetTSend(Ipv4Address nb) {
   
   auto nb_it = this->nbs.find(nb);
-  if (this->IsNeighbor(nb_it)) {
+  if (!this->IsNeighbor(nb_it)) {
     return Seconds(0);
   }
   
@@ -330,8 +329,9 @@ Time RoutingTable::GetTSend(Ipv4Address nb) {
 
 void RoutingTable::SetLastSnr(Ipv4Address nb, double snr) {  
   auto nb_it = this->nbs.find(nb);
-  if (nb_it == this->nbs.end())
+  if (nb_it == this->nbs.end()) {
     return;
+  }
   
   nb_it->second.last_snr = snr;
 }
@@ -401,7 +401,8 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   double total_pheromone = this->SumPropability(dst, beta, virt);
   
   // Fail, if there are no initialized entries (same as no entires at all)
-  if (total_pheromone < this->config->min_pheromone) {
+  if (total_pheromone < pow(this->config->min_pheromone, beta)) {
+  //if (total_pheromone < this->config->min_pheromone) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
     
     // Check if destination is a neighbor
@@ -521,7 +522,7 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
   NS_ASSERT(msg.GetSrc() == origin);
   NS_ASSERT(msg.HasUpdates());
   
-  NS_LOG_FUNCTION(this << "Processing::" << msg);
+  NS_LOG_FUNCTION(this << "Processing" << msg);
   
   // Need to check if we really have this neighbor as neighbor
   // If not just skip, since we do not have routes over this
@@ -577,10 +578,17 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
         
       case NEW_BEST_VALUE:
         
+        // NOTE: Experimental: Do not bootstrap if dst is unknown
+        if (!this->HasPheromone(l.dst, origin, false))
+          continue;
+        
         if (this->config->snr_cost_metric)
           T_id = std::floor(this->GetQSend(origin));
         else
-          T_id = this->GetTSend(origin).GetNanoSeconds();
+          T_id = this->GetTSend(origin).GetMilliSeconds();
+        
+        if (T_id == 0)
+          continue;
         
         bs_phero = l.new_pheromone;
         new_phero = this->Bootstrap(bs_phero, T_id);
@@ -594,6 +602,7 @@ void RoutingTable::ProcessLinkFailureMsg (LinkFailureHeader& msg,
     }
     
   }
+  
   
   NS_LOG_FUNCTION(this << "Response " << response);
   return;
@@ -630,6 +639,10 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
       if (std::abs(best_phero) < p_it->second.virtual_pheromone)
         best_phero = -1.0 * p_it->second.virtual_pheromone;
     }
+   
+   // Exclude neighbors from hello message
+   if (this->IsNeighbor(temp_dst))
+     continue;
    
    if (best_phero > this->config->min_pheromone)
      selection.push_back(std::make_pair(temp_dst, best_phero));
@@ -693,12 +706,15 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     
     uint64_t T_id;
     if (this->config->snr_cost_metric)
-      T_id = std::floor(this->GetQSend(diff_val.first));
+      T_id = std::floor(this->GetQSend(msg.GetSrc()));
     else
-      T_id = this->GetTSend(diff_val.first).GetNanoSeconds();
+      T_id = this->GetTSend(msg.GetSrc()).GetMilliSeconds();
+    
+    if (T_id == 0)
+      continue;
     
     double new_phero = this->Bootstrap(bs_phero, T_id);
-    
+    NS_LOG_FUNCTION(this << T_id << new_phero);
     // TODO: Add special case where real pheromone is used
     
     this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, true);
@@ -762,7 +778,7 @@ void RoutingTable::AddHistory(Ipv4Address dst, uint64_t seqno) {
 
 // Private methods
 double RoutingTable::Bootstrap(double ph_value, double update) {
-  return 1.0/(1.0/(update) + ph_value);
+  return 1.0/(1.0/(ph_value) + update);
 }
 
 

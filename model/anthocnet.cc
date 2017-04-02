@@ -141,7 +141,7 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   uint32_t iface = 1;
   Ipv4Address nb;
   
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta,
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -235,7 +235,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address nb;
   
   //Search for a route, 
-  NS_LOG_UNCOND(this->rtable);
+  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta, 
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
@@ -1010,6 +1010,13 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
       //NS_LOG_UNCOND(Simulator::Now().GetSeconds()
       //  << " SINR from " << *ad_it << " at " << this_node
       //  << " is " << last_snr);
+      
+      if (!this->rtable.IsNeighbor(*ad_it)) {
+        this->rtable.AddNeighbor(*ad_it);
+        this->rtable.InitNeighborTimer(*ad_it, &RoutingProtocol::NBExpire, 
+                                     this);
+      }
+      
       this->rtable.SetLastSnr(*ad_it, last_snr);
     }
   }
@@ -1531,19 +1538,26 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       continue;
     }
     
-    
     uint32_t iface = 1;
     Ipv4Address nb;
+    
+    Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
+    Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
     
     //NS_LOG_UNCOND(this->rtable);
     
     // TODO beta should be 20??
-    if (this->rtable.SelectRoute(dst, this->config->prog_beta,
+    if (this->rtable.SelectRoute(dst, this->config->cons_beta,
       nb, this->uniform_random, false)) {
       Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
       
       // Create the route and call UnicastForwardCallback
-      rt->SetSource(cv.second.header.GetSource());
+      if (cv.second.header.GetSource() != Ipv4Address("127.0.0.1")) {
+        rt->SetSource(cv.second.header.GetSource());
+      } else {
+        rt->SetSource(this_node);
+      }
+    
       rt->SetDestination(dst);
       rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
       rt->SetGateway(nb);
