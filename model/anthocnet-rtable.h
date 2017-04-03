@@ -107,6 +107,9 @@ typedef NbTimers::iterator NbTimersIt;
 typedef std::vector<std::pair<Ipv4Address, double> > ProbVect;
 typedef ProbVect::iterator ProbVectIt;
 
+typedef std::map<Ipv4Address, double> TrustVect;
+typedef TrustVect::iterator TrustVectIt;
+
 class RoutingTable {
 public:
   
@@ -148,6 +151,10 @@ public:
   void NoBroadcast(Ipv4Address address, Time duration);
   
   bool SelectRoute(Ipv4Address dst, double beta,
+    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+    bool virt);
+  
+  bool SelectRouteFuzzy(Ipv4Address dst, double beta,
     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
     bool virt);
   
@@ -206,6 +213,7 @@ private:
   
   double SumPropability(Ipv4Address dst, double beta, bool virt);
   uint32_t GetProbVector(ProbVect& pv, Ipv4Address dst, double beta, bool virt);
+  uint32_t GetTrustVector(TrustVect& pv, double& total_trust, Ipv4Address dst);
   
   double EvaporatePheromone(double ph_value);
   double IncressPheromone(double ph_value, double update);

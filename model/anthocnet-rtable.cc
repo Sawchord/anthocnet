@@ -420,7 +420,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     return false;
   }
   
-  
   double select = vr->GetValue(0.0, 1.0);
   double selected = 0.0;
   
@@ -435,6 +434,62 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   // Never come here
   NS_LOG_FUNCTION(this << "never come here");
   return false;
+}
+
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+                                    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+                                    bool virt) {
+  
+  auto dst_it = this->dsts.find(dst);
+  if (dst_it == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst does not exist" << dst);
+    return false;
+  }
+  
+  ProbVect pv;
+  if (this->GetProbVector(pv, dst, beta, virt) == 0) {
+    NS_LOG_FUNCTION(this << "no initialized nbs");
+    
+    auto temp_nb_it = this->nbs.find(dst);
+    
+    if (temp_nb_it != this->nbs.end()) {
+      nb = temp_nb_it->first;
+      NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
+        << "usevirt" << virt);
+      
+      return true;
+    }
+    return false;
+  }
+ 
+ double total_trust = 0;
+ TrustVect tv;
+ this->GetTrustVector(tv, total_trust, dst);
+ 
+ ProbVect new_pv;
+ for (auto pv_it = pv.begin(); pv_it != pv.end(); ++pv_it) {
+   auto tv_it = tv.find(pv_it->first);
+   double new_prob = pv_it->second * tv_it->second / total_trust;
+   new_pv.push_back(std::make_pair(pv_it->first, new_prob));
+   
+   NS_LOG_FUNCTION("NB" << pv_it->first 
+    << "Prob" << pv_it->second << "Trust" << tv_it->second
+    << "Corrected" << new_prob);
+ }
+ 
+ double select = vr->GetValue(0.0, 1.0);
+  double selected = 0.0;
+  
+  for (auto pv_it = new_pv.begin(); pv_it != new_pv.end(); pv_it++) {
+    selected += pv_it->second;
+    if (selected > select) {
+      nb = pv_it->first;
+      return true;
+    } 
+  }
+ 
+ NS_LOG_FUNCTION(this << "Never come here");
+ return false;
 }
 
 
@@ -835,6 +890,31 @@ uint32_t RoutingTable::GetProbVector(ProbVect& pv, Ipv4Address dst,
   }
   return size;
 }
+
+uint32_t RoutingTable::GetTrustVector(TrustVect& pv, double& total_trust,
+                                      Ipv4Address dst) {
+  
+  //NOTE: Try out with also considering virtual pheromone
+  double total_pheromone = this->SumPropability(dst, 0, false);
+  double phero;
+  double trust;
+  uint32_t size = 0;
+  
+  total_trust = 0;
+  
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    phero = this->GetPheromone(dst, nb_it->first, false);
+    
+    if (phero > this->config->min_pheromone) {
+      trust = this->config->fis->Eval(phero, total_pheromone);
+      total_trust += trust;
+      pv.insert(std::make_pair(nb_it->first, trust));
+    }
+  }
+  
+  return size;
+}
+
 
 double RoutingTable::EvaporatePheromone(double ph_value) {
   return ph_value - (1- this->config->alpha) * ph_value;
