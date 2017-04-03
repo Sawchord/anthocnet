@@ -14,3 +14,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifndef ANTHOCNET_FIS_H
+#define ANTHOCNET_FIS_H
+
+#include "fl/Headers.h"
+using namespace fl;
+
+class AntHocNetFis {
+public:
+  AntHocNetFis();
+  double Eval(double in1, double in2);
+  
+private:
+  Engine* engine;
+  InputVariable* input1;
+  InputVariable* input2;
+  OutputVariable* output;
+  
+};
+
+
+
+#endif /* ANTHOCNET_FIS_H */

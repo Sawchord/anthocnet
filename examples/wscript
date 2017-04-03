@@ -2,11 +2,14 @@
 
 def build(bld):
     obj = bld.create_ns3_program('anthocnet-compare', ['core','wifi', 'stats', 'anthocnet', 'aodv', 'applications', 'flow-monitor', 'netanim'])
+    obj.env.append_value("CXXFLAGS", ["-I../src/anthocnet/fuzzylite/fuzzylite"])
+    obj.env.append_value("LINKFLAGS", ["-L../src/anthocnet/fuzzylite/fuzzylite/debug/bin"])
+    obj.env.append_value("LIB", ["fuzzylite-static-debug"])
     obj.source = ['anthocnet-routing-compare.cc']
     
     obj = bld.create_ns3_program('anthocnet-sim', ['core','wifi', 'stats', 'anthocnet', 'aodv', 'applications', 'flow-monitor', 'netanim'])
+    obj.env.append_value("CXXFLAGS", ["-I../src/anthocnet/fuzzylite/fuzzylite"])
+    obj.env.append_value("LINKFLAGS", ["-L../src/anthocnet/fuzzylite/fuzzylite/debug/bin"])
+    obj.env.append_value("LIB", ["fuzzylite-static-debug"])
     obj.source = ['anthocnet-sim.cc']
     
-    obj = bld.create_ns3_program('anthocnet-example', ['core', 'anthocnet'])
-    obj.source = ['anthocnet-example.cc']
-
