@@ -18,14 +18,41 @@
 #define ANTHOCNET_FIS_H
 
 #include "fl/Headers.h"
+#include "ns3/log.h"
+#include "ns3/object.h"
+#include "ns3/attribute.h"
+
+#include "ns3/boolean.h"
+#include "ns3/double.h"
+#include "ns3/string.h"
+
 using namespace fl;
 
-class AntHocNetFis {
+namespace ns3 {
+namespace ahn { 
+  
+class AntHocNetFis : public Object{
 public:
   AntHocNetFis();
+  ~AntHocNetFis();
+  
+  void Init();
   double Eval(double in1, double in2);
   
+  static TypeId GetTypeId();
+  //void Print(std::ostream& os) const;
+  
+  virtual void DoDispose();
+protected:
+  virtual void DoInitialize();
+  
 private:
+  
+  std::string fis_file;
+  std::string in1_name;
+  std::string in2_name;
+  std::string out_name;
+  
   Engine* engine;
   InputVariable* input1;
   InputVariable* input2;
@@ -33,6 +60,8 @@ private:
   
 };
 
-
+// End of namespaces
+}
+}
 
 #endif /* ANTHOCNET_FIS_H */
