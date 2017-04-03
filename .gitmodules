@@ -1,0 +1,3 @@
+[submodule "fuzzylite"]
+	path = fuzzylite
+	url = https://github.com/fuzzylite/fuzzylite.git
