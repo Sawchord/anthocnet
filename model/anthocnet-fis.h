@@ -49,9 +49,6 @@ protected:
 private:
   
   std::string fis_file;
-  std::string in1_name;
-  std::string in2_name;
-  std::string out_name;
   
   Engine* engine;
   InputVariable* input1;

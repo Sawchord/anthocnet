@@ -41,24 +41,6 @@ TypeId AntHocNetFis::GetTypeId() {
     MakeStringAccessor(&AntHocNetFis::fis_file),
     MakeStringChecker()
   )
-  .AddAttribute ("Input1Name",
-    "The name of the first input",
-    StringValue("total-pheromone"),
-    MakeStringAccessor(&AntHocNetFis::in1_name),
-    MakeStringChecker()
-  )
-  .AddAttribute ("Input2Name",
-    "The name of the second input",
-    StringValue("pheromone-percentage"),
-    MakeStringAccessor(&AntHocNetFis::in2_name),
-    MakeStringChecker()
-  )
-  .AddAttribute ("OutputName",
-    "The name of the output",
-    StringValue("trust"),
-    MakeStringAccessor(&AntHocNetFis::out_name),
-    MakeStringChecker()
-  )
   ;
   return tid;
 }
@@ -72,10 +54,10 @@ void AntHocNetFis::Init() {
     NS_LOG_ERROR("Fis file could not be loaded");
   }
   
-  this->input1 = this->engine->getInputVariable(this->in1_name);
-  this->input2 = this->engine->getInputVariable(this->in2_name);
+  this->input1 = this->engine->getInputVariable(0);
+  this->input2 = this->engine->getInputVariable(1);
   
-  this->output = this->engine->getOutputVariable(this->out_name);
+  this->output = this->engine->getOutputVariable(0);
 }
 
 double AntHocNetFis::Eval(double in1, double in2) {

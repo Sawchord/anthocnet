@@ -185,6 +185,14 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakeDoubleAccessor(&AntHocNetConfig::blackhole_amount),
     MakeDoubleChecker<double>()
   )
+  
+  .AddAttribute("Fis",
+    "Pointer to the fuzzy inference engine",
+    PointerValue(),
+    MakePointerAccessor(&AntHocNetConfig::fis),
+    MakePointerChecker<AntHocNetFis>()
+  )
+  
   ;
   return tid;
 }

@@ -31,6 +31,9 @@
 #include "ns3/double.h"
 #include "ns3/integer.h"
 #include "ns3/uinteger.h"
+#include "ns3/pointer.h"
+
+#include "anthocnet-fis.h"
 
 namespace ns3 {
 namespace ahn {
@@ -109,6 +112,7 @@ public:
   uint8_t reactive_bcast_count;
   uint8_t proactive_bcast_count;
   
+  // -------------------------------------
   // Blackhole mode
   bool blackhole_mode;
   Time blackhole_activation;
@@ -116,6 +120,9 @@ public:
   bool IsBlackhole();
   
   
+  // ----------------------------------------
+  // Fuzzy inference system
+  Ptr<AntHocNetFis> fis;
 };
 
 }  

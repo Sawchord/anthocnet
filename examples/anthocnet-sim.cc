@@ -128,6 +128,9 @@ private:
   uint32_t holesStartBegin;
   uint32_t holesStartEnd;
   
+  // Fuzzy configuration
+  uint32_t fuzzy_system;
+  
   std::string comment;
   
 };
@@ -163,7 +166,9 @@ appStartEnd(15),
 
 nHoles(0),
 holesStartBegin(40),
-holesStartEnd(50)
+holesStartEnd(50),
+
+fuzzy_system(1)
 
 {}
 
@@ -236,6 +241,9 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
                "Begin of time window where blackhole mode triggers", this->holesStartBegin);
   cmd.AddValue("holesStartEnd", 
                "End of timewindow where blackhole mode triggers", this->holesStartEnd);
+  
+  cmd.AddValue("FuzzySystem", 
+               "Select the fuzzy system to use", this->fuzzy_system);
   
   cmd.AddValue("Comment", 
                "Give a short description of this simulation", this->comment);
@@ -521,11 +529,39 @@ void RoutingExperiment::Run() {
   Ipv4InterfaceContainer adhocInterfaces;
   adhocInterfaces = addressAdhoc.Assign (adhocDevices);
   
+  // Install the fuzzy system on the nodes
+  std::string fis_file;
+  switch (this->fuzzy_system) {
+    case 1:
+    fis_file = "../src/anthocnet/fis/simple_control_analysis.fis";
+    break;
+    default:
+      std::cout << "Fuzzy system unknown" << std::endl;
+      exit(0);
+    break;
+  }
+  
+  Ptr<AntHocNetFis> fis = CreateObject<AntHocNetFis>();
+  fis->SetAttribute("FisFile", StringValue(fis_file));
+  
+  fis->Init();
+  
+  Ptr<AntHocNetConfig> conf = CreateObject<AntHocNetConfig>();
+  conf->SetAttribute("Fis", PointerValue(fis));
+  for (uint32_t i = 0; i < this->nWifis - this->nHoles; i++) {
+    std::stringstream conf_path;
+    conf_path << "/NodeList/" 
+      << i << "/$ns3::ahn::RoutingProtocol/Config";
+    
+    Config::Set(conf_path.str(), PointerValue(conf));
+  }
+  
   // Install blackhole mode
   for (uint32_t i = this->nWifis - this->nHoles; i < this->nWifis; i++) {
     
     Ptr<AntHocNetConfig> conf = CreateObject<AntHocNetConfig>();
     conf->SetAttribute("BlackholeMode", BooleanValue(true));
+    conf->SetAttribute("Fis", PointerValue(fis));
     
     std::stringstream conf_path;
     conf_path << "/NodeList/" 
@@ -533,6 +569,7 @@ void RoutingExperiment::Run() {
     
     Config::Set(conf_path.str(), PointerValue(conf));
   }
+  
   
   // Set up the application
   this->db = Create<SimDatabase>();
