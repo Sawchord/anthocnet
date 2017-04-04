@@ -729,11 +729,11 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     if (!this->IsDestination(diff_val.first))
       this->AddDestination(diff_val.first);
     
-    //bool is_virt = false;
+    bool is_virt = false;
     double bs_phero = diff_val.second;
     if (bs_phero < 0) {
       bs_phero *= -1;
-      //is_virt = true;
+      is_virt = true;
     }
     
     uint64_t T_id;
@@ -749,7 +749,14 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     NS_LOG_FUNCTION(this << T_id << new_phero);
     // TODO: Add special case where real pheromone is used
     
-    this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, true);
+    if (!is_virt && this->HasPheromone(diff_val.first, msg.GetSrc(), false)) {
+      // NOTE: Why does it makes it worse??
+      //this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, false);
+      //return;
+    }
+    
+    //this->UpdatePheromone(diff_val.first, msg.GetSrc(), new_phero, true);
+    this->SetPheromone(diff_val.first, msg.GetSrc(), new_phero, true);
   }
 }
 
