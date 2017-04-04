@@ -46,6 +46,18 @@ RoutingProtocol::RoutingProtocol ():
   
 RoutingProtocol::~RoutingProtocol() {}
 
+void RoutingProtocol::SetAttribute(std::string name, const AttributeValue& value) {
+  ObjectBase::SetAttribute(name, value);
+  if (name == "Config") {
+    
+    const AttributeValue* at = &value;
+    const PointerValue* p = dynamic_cast<const PointerValue*>(at);
+    Ptr<AntHocNetConfig> c = p->Get<AntHocNetConfig>();
+    
+    this->SetConfig(c);
+  }
+}
+
 void RoutingProtocol::SetConfig(Ptr<AntHocNetConfig> config) {
   this->config = config;
   this->rtable.SetConfig(config);
@@ -667,6 +679,8 @@ void RoutingProtocol::PrintRoutingTable
 
 void RoutingProtocol::Start() {
   NS_LOG_FUNCTION(this);
+  
+  this->SetConfig(this->config);
   
   // Start the HelloTimer
   this->hello_timer.SetFunction(&RoutingProtocol::HelloTimerExpire, this);

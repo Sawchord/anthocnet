@@ -136,7 +136,7 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(70)),
+total_time(Seconds(120)),
 nWifis(20),
 nSender(5),
 nReceiver(5),

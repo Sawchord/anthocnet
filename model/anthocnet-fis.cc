@@ -29,6 +29,8 @@ AntHocNetFis::AntHocNetFis() {
 
 AntHocNetFis::~AntHocNetFis() {}
 
+NS_OBJECT_ENSURE_REGISTERED (AntHocNetFis);
+
 TypeId AntHocNetFis::GetTypeId() {
   static TypeId tid = TypeId("ns3::ahn::AntHocNetFis")
   .SetParent<Object> ()
@@ -44,6 +46,7 @@ TypeId AntHocNetFis::GetTypeId() {
   ;
   return tid;
 }
+
 
 
 void AntHocNetFis::Init() {

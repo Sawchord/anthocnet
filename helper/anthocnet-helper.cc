@@ -65,7 +65,7 @@ AntHocNetHelper::AssignStreams (NodeContainer c, int64_t stream) {
     Ptr<ahn::RoutingProtocol> ahn =
       DynamicCast<ahn::RoutingProtocol> (proto);
     if (ahn) {
-      //current_stream += ahn->AssignStreams(current_stream);
+      current_stream += ahn->AssignStreams(current_stream);
       continue;
     }
     
@@ -81,8 +81,7 @@ AntHocNetHelper::AssignStreams (NodeContainer c, int64_t stream) {
         list_ahn = DynamicCast<ahn::RoutingProtocol>(list_proto);
         
         if (list_ahn) {
-          //current_stream += 
-            //list_ahn->AssignStreams (current_stream);
+          current_stream += list_ahn->AssignStreams (current_stream);
             break;
         }
       }

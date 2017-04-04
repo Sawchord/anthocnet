@@ -84,6 +84,8 @@ public:
   virtual void SetIpv4 (Ptr<Ipv4> ipv4);
   virtual void PrintRoutingTable (Ptr<OutputStreamWrapper> stream, Time::Unit unit = Time::S) const;
 
+  virtual void SetAttribute(std::string name, const AttributeValue& value);
+  int64_t AssignStreams (int64_t stream);
   virtual void DoDispose();
   
   // Added for initialization
@@ -105,21 +107,6 @@ private:
   Ptr<Ipv4Route> LoopbackRoute(const Ipv4Header& hdr, 
     Ptr<NetDevice> oif) const;
   
-  /**
-  * Assign a fixed random variable stream number to the random variables
-  * used by this model.  Return the number of streams (possibly zero) that
-  * have been assigned.
-  *
-  * \param stream first stream index to use
-  * \return the number of stream indices assigned by this model
-  */
-  int64_t AssignStreams (int64_t stream);
-    
-  /**
-   * \brief Finds the index of the Socket, used in the rtable.
-   * \param socket The pointer to the sockeT;
-   * \returns The index into the socket table.
-   */  
   uint32_t FindSocketIndex(Ptr<Socket>)const;
   
   TracedCallback<Ptr<Packet const>, std::string, Ipv4Address> ant_drop;
