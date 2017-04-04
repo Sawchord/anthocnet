@@ -1528,7 +1528,7 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
 
 void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   
-  NS_LOG_FUNCTION(this << "dst" << dst);
+  //NS_LOG_FUNCTION(this << "dst" << dst);
   
   bool dst_found = false;
   

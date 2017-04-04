@@ -75,7 +75,7 @@ void RoutingTable::AddNeighbor(Ipv4Address nb) {
     this->nbs.insert(std::make_pair(nb, NeighborInfo()));
     this->AddDestination(nb);
     
-    this->AddPheromone(nb, nb, 1, 1);
+    this->AddPheromone(nb, nb, 0, 0);
     
     // Add timer
     this->nb_timers.insert(std::make_pair(nb, Timer(Timer::CANCEL_ON_DESTROY)));
@@ -174,6 +174,8 @@ bool RoutingTable::HasPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
 
 void RoutingTable::SetPheromone(Ipv4Address dst, Ipv4Address nb,
                                 double pher, bool virt) {
+  
+  //NS_ASSERT(pher <= 1);
   
   auto p_it = this->rtable.find(std::make_pair(dst, nb));
   
@@ -385,7 +387,7 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
 }
 
 
-bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){
   
@@ -436,7 +438,7 @@ bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
   return false;
 }
 
-bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
                                     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
                                     bool virt) {
   
@@ -471,6 +473,9 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
  ProbVect new_pv;
  for (auto pv_it = pv.begin(); pv_it != pv.end(); ++pv_it) {
    auto tv_it = tv.find(pv_it->first);
+   
+   NS_ASSERT(tv_it != tv.end());
+   
    double new_prob = pv_it->second * tv_it->second / total_trust;
    total_prob += new_prob;
    new_pv.push_back(std::make_pair(pv_it->first, new_prob));
@@ -902,9 +907,14 @@ uint32_t RoutingTable::GetProbVector(ProbVect& pv, Ipv4Address dst,
       if (p_it->second.pheromone > this->config->min_pheromone)
         cur_pheromone = pow(p_it->second.pheromone, beta)/ total_pheromone;
     }
-    NS_LOG_FUNCTION("Appending" << nb_it->first << p_it->second.pheromone);
-    pv.push_back(std::make_pair(nb_it->first, cur_pheromone));
-    size++;
+    
+    if (cur_pheromone > pow(this->config->min_pheromone, beta)) {
+      NS_LOG_FUNCTION("Appending" << nb_it->first 
+        << p_it->second.pheromone << cur_pheromone);
+      
+      pv.push_back(std::make_pair(nb_it->first, cur_pheromone));
+      size++;
+    }
   }
   return size;
 }
@@ -913,7 +923,7 @@ uint32_t RoutingTable::GetTrustVector(TrustVect& pv, double& total_trust,
                                       Ipv4Address dst) {
   
   //NOTE: Try out with also considering virtual pheromone
-  double total_pheromone = this->SumPropability(dst, 0, false);
+  double total_pheromone = this->SumPropability(dst, 1, false);
   double phero;
   double trust;
   uint32_t size = 0;
@@ -945,7 +955,7 @@ double RoutingTable::EvaporatePheromone(double ph_value) {
 }
 
 double RoutingTable::IncressPheromone(double ph_value, double update) {
-  return (this->config->gamma * ph_value + (1 - this->config->gamma) + update);
+  return (this->config->gamma * ph_value + (1 - this->config->gamma) * update);
 }
 
 void RoutingTable::Print(Ptr<OutputStreamWrapper> stream) const {
