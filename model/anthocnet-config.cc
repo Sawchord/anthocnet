@@ -120,7 +120,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   .AddAttribute("ConservativeBeta",
     "BetaValue used by data and reactive ants",
-    DoubleValue(10),
+    DoubleValue(20),
     MakeDoubleAccessor(&AntHocNetConfig::cons_beta),
     MakeDoubleChecker<double>()
   )

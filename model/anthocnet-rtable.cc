@@ -75,8 +75,6 @@ void RoutingTable::AddNeighbor(Ipv4Address nb) {
     this->nbs.insert(std::make_pair(nb, NeighborInfo()));
     this->AddDestination(nb);
     
-    this->AddPheromone(nb, nb, 0, 0);
-    
     // Add timer
     this->nb_timers.insert(std::make_pair(nb, Timer(Timer::CANCEL_ON_DESTROY)));
     
@@ -107,7 +105,6 @@ void RoutingTable::RemoveNeighbor(Ipv4Address nb) {
 void RoutingTable::AddDestination(Ipv4Address dst) {
     if (!this->IsDestination(dst)) {
     this->dsts.insert(std::make_pair(dst, DestinationInfo()));
-    // TODO: Add initialized pheromone tables here?
   }
 }
 
@@ -188,6 +185,12 @@ void RoutingTable::SetPheromone(Ipv4Address dst, Ipv4Address nb,
     p_it->second.pheromone = pher;
   else
     p_it->second.virtual_pheromone = pher;
+  
+  if (p_it->second.pheromone < this->config->min_pheromone 
+    && p_it->second.virtual_pheromone < this->config->min_pheromone) {
+    this->rtable.erase(p_it);
+  }
+  
 }
 
 double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
@@ -196,6 +199,8 @@ double RoutingTable::GetPheromone(Ipv4Address dst, Ipv4Address nb, bool virt) {
   
   if (p_it == this->rtable.end())
     return 0;
+  
+  NS_ASSERT(p_it->second.pheromone > this->config->min_pheromone || p_it->second.virtual_pheromone > this->config->min_pheromone);
   
   if (!virt)
     return p_it->second.pheromone;
@@ -218,15 +223,10 @@ void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb,
   // and set initial pheromone
   auto dst_it = this->dsts.find(dst);
   if (dst_it == this->dsts.end()) {
-      this->AddDestination(dst);
-      this->AddPheromone(dst, nb, 0, 0);
+    NS_LOG_FUNCTION(this << "dst does not exist");
+    return;
   }
   
-  // Check if dst exists but now valid entry for the pair
-  auto p_it = this->rtable.find(std::make_pair(dst, target_nb_it->first));
-  if (p_it == this->rtable.end()) {
-    this->AddPheromone(dst, nb, 0, 0);
-  }
   
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
     
@@ -760,7 +760,7 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     
     double new_phero = this->Bootstrap(bs_phero, T_id);
     NS_LOG_FUNCTION(this << T_id << new_phero);
-    // TODO: Add special case where real pheromone is used
+    
     
     if (!is_virt && this->HasPheromone(diff_val.first, msg.GetSrc(), false)) {
       // NOTE: Why does it makes it worse??
@@ -773,7 +773,7 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
   }
 }
 
-// TODO: Make signature uniform with the others 
+
 bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb, 
                                       uint64_t T_sd, uint32_t hops) {
     

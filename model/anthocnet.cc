@@ -1071,11 +1071,10 @@ void RoutingProtocol::HelloTimerExpire() {
     
     NS_LOG_FUNCTION(this << "packet" << *packet);
     
-    // Jittery send simulates clock divergence
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     
     // NOTE: The simulation does not work with jitter set to fixed value
-    // Is this due to a bug, or is it due to all nodes sneding at once
+    // Is this due to a bug, or is it due to all nodes sending at once
     Simulator::Schedule(jitter, &RoutingProtocol::SendDirect, 
       this, socket, packet, destination);
   }
@@ -1185,7 +1184,6 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     << "type" << type
   );
   
-  // Now enqueue the received packets
   switch (type.Get()) {
     case AHNTYPE_HELLO_MSG:
       this->HandleHelloMsg(packet, iface);
@@ -1334,7 +1332,6 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
     return;
   }
   
-  // DONE: Cache FW ants and discard doubled ants.
   if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
     NS_LOG_FUNCTION(this << "known history -> dropped"
       << ant.GetDst() << ant.GetSeqno());
@@ -1361,6 +1358,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   
   Ipv4Address final_dst = ant.GetDst();
   
+  // ----------------------------------------
   // Blackhole mode creates a fake bwant and return it
   if (this->config->IsBlackhole()) {
     double rand = this->uniform_random->GetValue(0, 1);
@@ -1385,6 +1383,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
       return;
     }
   }
+  // ---------------------------------------------
   
   // Check if this is the destination and create a backward ant
   if (final_dst == this_node) {
@@ -1467,12 +1466,6 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
     return;
   }
   
-  // NOTE: Experimental: Not droppting doubld bwants
-  //if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
-  //  NS_LOG_FUNCTION(this << "known history -> dropped"
-  //    << ant.GetDst() << ant.GetSeqno());
-  //  return;
-  //}
   this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());
   
   uint64_t T_ind;
@@ -1533,13 +1526,11 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
   bool dst_found = false;
   
   while (this->data_cache.HasEntries(dst)) {
-    
     std::pair<bool, CacheEntry> cv = this->data_cache.GetCacheEntry(dst);
     
     // check, if cache entry is expired
     if (cv.first == false) {
       NS_LOG_FUNCTION(this << "Data " << cv.second.packet << "expired");
-      
       this->data_drop(cv.second.packet, 
                       "Cached and expired", cv.second.header.GetSource());
       continue;
@@ -1551,9 +1542,6 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
     Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
     Ipv4Address this_node = l3->GetAddress(iface, 0).GetLocal();
     
-    //NS_LOG_UNCOND(this->rtable);
-    
-    // TODO beta should be 20??
     if (this->rtable.SelectRoute(dst, this->config->cons_beta,
       nb, this->uniform_random, false)) {
       Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
