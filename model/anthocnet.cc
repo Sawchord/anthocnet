@@ -262,7 +262,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     return true;
     
   }
-  else if (origin == Ipv4Address("127.0.0.1")){
+  else if (origin == Ipv4Address("127.0.0.1") || origin == this_node){
     // Cache, if this comes from this node
     
     // If there is no route, cache the data to wait for a route

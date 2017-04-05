@@ -393,7 +393,7 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
 }
 
 
-bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){
   
@@ -444,7 +444,7 @@ bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
   return false;
 }
 
-bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
                                     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
                                     bool virt) {
   
