@@ -894,6 +894,13 @@ uint32_t RoutingTable::GetFuzzyProbVector(ProbVect& pv, Ipv4Address dst,
   
   TrustVect tv;
   double total_pheromone = this->SumPropability(dst, 1, false);
+  double range_phero;
+  
+  if (total_pheromone > 1)
+    range_phero = 1;
+  else 
+    range_phero = total_pheromone;
+  
   double phero;
   double trust;
   uint32_t size = 0;
@@ -908,8 +915,8 @@ uint32_t RoutingTable::GetFuzzyProbVector(ProbVect& pv, Ipv4Address dst,
     if (phero < this->config->min_pheromone)
       continue;
     
-    trust = this->config->fis->Eval(total_pheromone, phero/total_pheromone);
-    NS_LOG_FUNCTION("NB" << nb_it->first << "Input" << total_pheromone 
+    trust = this->config->fis->Eval(range_phero, phero/total_pheromone);
+    NS_LOG_FUNCTION("NB" << nb_it->first << "Input" << range_phero 
       << phero/total_pheromone << "Output" << trust);
     tv.insert(std::make_pair(nb_it->first, trust));
   }

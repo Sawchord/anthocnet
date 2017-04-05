@@ -13,11 +13,11 @@ DefuzzMethod='centroid'
 
 [Input1]
 Name='total-pheromone'
-Range=[0 5]
+Range=[0 1]
 NumMFs=3
-MF1='Low':'trapmf', [-1 0 1 1.5]
-MF2='Medium':'trapmf', [1 1.5 3.0 3.5]
-MF3='High':'trapmf', [3 3.5 5 6]
+MF1='Low':'trapmf', [-1 0 0.2 0.3]
+MF2='Medium':'trapmf', [0.2 0.3 0.6 0.7]
+MF3='High':'trapmf', [0.6 0.7 1 2]
 
 [Input2]
 Name='pheromone-percentage'
