@@ -338,6 +338,11 @@ results_t SimDatabase::Evaluate(double granularity) const {
       }  
   );
   
+  std::map<Ipv4Address, jitter_count_t> jitter;
+  Time jitter_acc = Seconds(0);
+  Time total_jitter = Seconds(0);
+  uint64_t jitter_packets = 0;
+  uint64_t total_jitter_packets = 0;
   
   uint64_t index = 0;
   Time last_step = Seconds(0);
@@ -371,10 +376,15 @@ results_t SimDatabase::Evaluate(double granularity) const {
         results.droprate.push_back(
           1 - ((double)num_received_packets / num_packets));
         results.end_to_end_delay.push_back((double) delay_acc.GetMilliSeconds() 
-                                           / num_packets);
-        
+                                           / num_packets);        
       }
       
+      if (jitter_packets == 0) {
+        results.average_delay_jitter.push_back(0);
+      } else {
+        results.average_delay_jitter.push_back((double) jitter_acc.GetMilliSeconds()
+                                          / jitter_packets);
+      }
       
       
       index++;
@@ -387,6 +397,9 @@ results_t SimDatabase::Evaluate(double granularity) const {
       num_received_packets = 0;
       num_dropped_packets = 0;
       num_unknown_packets = 0;
+      
+      jitter_packets = 0;
+      jitter_acc = Seconds(0);
       
       total_delay += delay_acc;
       delay_acc = Seconds(0);
@@ -401,12 +414,13 @@ results_t SimDatabase::Evaluate(double granularity) const {
       NS_LOG_WARN("Could not find packet");
     }
     
+    Time duration = (p_it->second.destruction - p_it->second.creation);
     
     switch (p_it->second.status) {
       case RECEIVED:
         num_received_packets++;
         total_received_packets++;
-        delay_acc += (p_it->second.destruction - p_it->second.creation);
+        delay_acc += duration;
         break;
       case DROPPED:
         num_dropped_packets++;
@@ -424,14 +438,54 @@ results_t SimDatabase::Evaluate(double granularity) const {
         break;
     }
     
+    // For jitter calculation
+    if (p_it->second.status == RECEIVED) {
+      
+        // For jitter calculation
+        std::map<Ipv4Address, jitter_count_t>::iterator j_it 
+            = jitter.find(p_it->second.dst);
+        
+        if (j_it == jitter.end()) {
+          jitter_count_t c;
+          c.t_2 = duration;
+          c.t_1 = Seconds(0);
+          jitter.insert(std::make_pair(p_it->second.dst, c));
+        }
+        else if (j_it->second.t_1 == Seconds(0)) {
+          j_it->second.t_1 = duration;
+        }
+        else {
+          
+          Time t_acc = 
+              (duration - j_it->second.t_1) -
+              (j_it->second.t_1 - j_it->second.t_2);
+          j_it->second.t_2 = j_it->second.t_1;
+          j_it->second.t_1 = duration;
+          
+          if (t_acc.IsNegative())
+            t_acc = NanoSeconds(t_acc.GetNanoSeconds() * -1);
+          
+          jitter_acc += t_acc;
+          
+          total_jitter += jitter_acc;
+          
+          jitter_packets++;
+          total_jitter_packets++;
+        }
+      
+    }
+    
   }
   
-  results.droprate_total_avr =  1 - ((double)total_received_packets
-                                      / total_num_packets);
+  results.droprate_total_avr =  1 - ((double)total_received_packets /
+                                      total_num_packets);
   
   results.end_to_end_delay_total_avr = (double)total_delay.GetMilliSeconds()/
-                                          total_num_packets;
+                                        total_num_packets;
   
+  results.total_average_delay_jitter = (double) total_jitter.GetMilliSeconds() /
+                                        total_jitter_packets;
+                                          
   // TODO: Evaluate the Transmission related stuff
   
   return results;

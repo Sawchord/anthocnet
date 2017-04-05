@@ -81,6 +81,10 @@ typedef enum TransmissionStatus {
   FAIL
 } transmission_status_t;
 
+typedef struct JitterCounter {
+  Time t_1;
+  Time t_2;
+} jitter_count_t;
 
 typedef struct PacketTrack {
   packet_status_t status;
@@ -111,6 +115,7 @@ typedef struct Results {
   //std::list<double> rate_control_bytes;
   double droprate_total_avr;
   double end_to_end_delay_total_avr;
+  double total_average_delay_jitter;
   
 } results_t;
 

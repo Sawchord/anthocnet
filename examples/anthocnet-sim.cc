@@ -256,11 +256,15 @@ void RoutingExperiment::PrintSummary(std::ostream& os) {
   
   os << "Simulations summary: " << std::endl;
   os << "Comment: " << this->comment << std::endl;
+  
   os << "Total average droprate: " 
     << this->result.droprate_total_avr << std::endl;
   os << "Total average delay: " 
     << this->result.end_to_end_delay_total_avr << "ms" << std::endl;
   
+  os << "Total average delay jitter: "
+    << this->result.total_average_delay_jitter << "ms" << std::endl;
+    
   os << "Data Packet rate: " << ((double)data_packets 
                 / (data_packets+control_packets)) << std::endl;
   os << "Data Byte rate: " << ((double)data_bytes
@@ -691,6 +695,9 @@ void RoutingExperiment::Run() {
                    "delay", "Time [s]", "End-To-End Delay[ms]", 
                    this->output_granularity);
   
+  //this->GenGnuplot(result.average_delay_jitter, tr_name, "Delay jitter", 
+  //                 "delay-jitter", "Time [s]", "Jitter [ms]", 
+  //                 this->output_granularity);
   
   std::ofstream packet_log(tr_name + "_packets.log");
   this->db->Print(packet_log);
