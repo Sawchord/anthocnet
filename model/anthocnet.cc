@@ -324,7 +324,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
 Ptr<Ipv4Route> RoutingProtocol::LoopbackRoute(const Ipv4Header& hdr, 
   Ptr<NetDevice> oif) const{
   
-  NS_LOG_FUNCTION (this << hdr);
+  //NS_LOG_FUNCTION (this << hdr);
   NS_ASSERT (lo != 0);
   Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
   rt->SetDestination (hdr.GetDestination ());
@@ -1069,7 +1069,7 @@ void RoutingProtocol::HelloTimerExpire() {
         destination = iface.GetBroadcast ();
     }
     
-    NS_LOG_FUNCTION(this << "packet" << *packet);
+    //NS_LOG_FUNCTION(this << "packet" << *packet);
     
     Time jitter = MilliSeconds (uniform_random->GetInteger (0, 10));
     
@@ -1165,7 +1165,7 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     iface = this->FindSocketIndex(socket);
     dst = this->socket_addresses[socket].GetLocal();
     
-    NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
+    //NS_LOG_FUNCTION(this << "src" << src << "dst" << dst);  
     
     if (!this->rtable.IsNeighbor(src)) {
       this->rtable.AddNeighbor(src);
@@ -1179,10 +1179,8 @@ void RoutingProtocol::Recv(Ptr<Socket> socket) {
     dst = Ipv4Address("255.255.255.255");
   }
   
-  NS_LOG_FUNCTION("Found interface with ID " 
-    << iface << " on dst " << dst << "from src" << src
-    << "type" << type
-  );
+  //NS_LOG_FUNCTION("dst " << dst << "from src" << src
+    //<< "type" << type);
   
   switch (type.Get()) {
     case AHNTYPE_HELLO_MSG:
@@ -1251,7 +1249,7 @@ void RoutingProtocol::SendDirect(Ptr<Socket> socket,
 
 void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   
-  NS_LOG_FUNCTION (this << iface << "packet" << *packet);
+  //NS_LOG_FUNCTION (this << iface << "packet" << *packet);
   
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
@@ -1333,8 +1331,8 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   }
   
   if (this->rtable.HasHistory(ant.GetSrc(), ant.GetSeqno())) {
-    NS_LOG_FUNCTION(this << "known history -> dropped"
-      << ant.GetDst() << ant.GetSeqno());
+    //NS_LOG_FUNCTION(this << "known history -> dropped"
+    //  << ant.GetDst() << ant.GetSeqno());
     return;
   }
   this->rtable.AddHistory(ant.GetSrc(), ant.GetSeqno());

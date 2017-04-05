@@ -378,7 +378,7 @@ void RoutingTable::NoBroadcast(Ipv4Address dst, Time duration) {
 
 void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
   
-  NS_LOG_FUNCTION(this << nb);
+  
   auto nb_it = this->nbs.find(nb);
   if (!this->IsNeighbor(nb_it))
     return;
@@ -393,7 +393,7 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
 }
 
 
-bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){
   
@@ -444,7 +444,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   return false;
 }
 
-bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
                                     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
                                     bool virt) {
   
@@ -455,51 +455,15 @@ bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
   }
   
   ProbVect pv;
-  if (this->GetProbVector(pv, dst, beta, virt) == 0) {
+  if (this->GetFuzzyProbVector(pv, dst, beta, virt) == 0) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
-    
-    auto temp_nb_it = this->nbs.find(dst);
-    
-    if (temp_nb_it != this->nbs.end()) {
-      nb = temp_nb_it->first;
-      NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
-        << "usevirt" << virt);
-      
-      return true;
-    }
     return false;
   }
- 
- double total_trust = 0;
- TrustVect tv;
- this->GetTrustVector(tv, total_trust, dst);
- 
- double total_prob = 0;
- 
- ProbVect new_pv;
- for (auto pv_it = pv.begin(); pv_it != pv.end(); ++pv_it) {
-   auto tv_it = tv.find(pv_it->first);
-   
-   NS_ASSERT(tv_it != tv.end());
-   
-   double new_prob = pv_it->second * tv_it->second / total_trust;
-   total_prob += new_prob;
-   new_pv.push_back(std::make_pair(pv_it->first, new_prob));
-   NS_LOG_FUNCTION("NB" << pv_it->first 
-    << "Prob" << pv_it->second << "Trust" << tv_it->second);
-    
- }
- 
- // Normalize prob vector
- for (auto new_pv_it = new_pv.begin(); new_pv_it != new_pv.end(); ++new_pv_it) {
-   new_pv_it->second = new_pv_it->second / total_prob;
-   NS_LOG_FUNCTION("NB" << new_pv_it->first << "Corrected" << new_pv_it->second);
- }
- 
- double select = vr->GetValue(0.0, 1.0);
+  
+  double select = vr->GetValue(0.0, 1.0);
   double selected = 0.0;
   
-  for (auto pv_it = new_pv.begin(); pv_it != new_pv.end(); pv_it++) {
+  for (auto pv_it = pv.begin(); pv_it != pv.end(); pv_it++) {
     selected += pv_it->second;
     if (selected > select) {
       nb = pv_it->first;
@@ -725,7 +689,7 @@ void RoutingTable::ConstructHelloMsg(HelloMsgHeader& msg, uint32_t num_dsts,
     selection.erase(sel_it); 
   }
   
-  NS_LOG_FUNCTION(this << "message" << msg);
+  //NS_LOG_FUNCTION(this << "message" << msg);
 }
 
 
@@ -925,32 +889,68 @@ uint32_t RoutingTable::GetProbVector(ProbVect& pv, Ipv4Address dst,
   return size;
 }
 
-uint32_t RoutingTable::GetTrustVector(TrustVect& pv, double& total_trust,
-                                      Ipv4Address dst) {
+uint32_t RoutingTable::GetFuzzyProbVector(ProbVect& pv, Ipv4Address dst, 
+                                          double beta, bool virt) {
   
-  //NOTE: Try out with also considering virtual pheromone
+  TrustVect tv;
   double total_pheromone = this->SumPropability(dst, 1, false);
   double phero;
   double trust;
   uint32_t size = 0;
   
-  total_trust = 0;
-  
   NS_LOG_FUNCTION("Total phero" << total_pheromone);
   
+  // Get the trust vector
   for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
     phero = this->GetPheromone(dst, nb_it->first, false);
     
-    if (phero > this->config->min_pheromone) {
-      trust = this->config->fis->Eval(total_pheromone, phero/total_pheromone);
-      NS_LOG_FUNCTION("Input" << total_pheromone 
-        << phero/total_pheromone << "Output" << trust);
-      total_trust += trust;
-      pv.insert(std::make_pair(nb_it->first, trust));
-    }
+    if (phero < this->config->min_pheromone)
+      continue;
+    
+    trust = this->config->fis->Eval(total_pheromone, phero/total_pheromone);
+    NS_LOG_FUNCTION("NB" << nb_it->first << "Input" << total_pheromone 
+      << phero/total_pheromone << "Output" << trust);
+    tv.insert(std::make_pair(nb_it->first, trust));
   }
   
-  NS_LOG_FUNCTION("Total trust" << total_trust);
+  ProbVect tpv;
+  double total_corrected_pheormone = 0;
+  
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
+    auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
+    if (p_it == this->rtable.end())
+      continue;
+    
+    if (p_it->second.pheromone < this->config->min_pheromone)
+      continue;
+    
+    auto tv_it = tv.find(nb_it->first);
+    NS_ASSERT(tv_it != tv.end());
+    
+    double cor_phero;
+    
+    if (virt && p_it->second.virtual_pheromone > p_it->second.pheromone) {
+      if (p_it->second.virtual_pheromone > this->config->min_pheromone) {
+        cor_phero = pow(p_it->second.virtual_pheromone * tv_it->second, beta);
+      }
+    } else {
+      if (p_it->second.pheromone > this->config->min_pheromone) {
+        cor_phero = pow(p_it->second.pheromone * tv_it->second, beta);
+      }
+    }
+    total_corrected_pheormone += cor_phero;
+    tpv.push_back(std::make_pair(nb_it->first, cor_phero));
+  }
+  
+  // Normalize the vector
+  for (auto tpv_it = tpv.begin(); tpv_it != tpv.end(); ++tpv_it) {
+     NS_LOG_FUNCTION("Appending" << tpv_it->first 
+        << tpv_it->second / total_corrected_pheormone);
+    pv.push_back(std::make_pair(tpv_it->first, tpv_it->second/ total_corrected_pheormone));
+    size++;
+  }
   
   return size;
 }

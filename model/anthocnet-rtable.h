@@ -213,7 +213,7 @@ private:
   
   double SumPropability(Ipv4Address dst, double beta, bool virt);
   uint32_t GetProbVector(ProbVect& pv, Ipv4Address dst, double beta, bool virt);
-  uint32_t GetTrustVector(TrustVect& pv, double& total_trust, Ipv4Address dst);
+  uint32_t GetFuzzyProbVector(ProbVect& pv, Ipv4Address dst, double beta, bool virt);
   
   double EvaporatePheromone(double ph_value);
   double IncressPheromone(double ph_value, double update);
