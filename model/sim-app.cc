@@ -36,6 +36,12 @@ TypeId SimApplication::GetTypeId() {
   .SetGroupName("AntHocNet")
   .AddConstructor<SimApplication>()
   
+  .AddAttribute("SendStartTime",
+    "The time, when this node shall start sending",
+    TimeValue(Seconds(10)),
+    MakeTimeAccessor(&SimApplication::send_start_time),
+    MakeTimeChecker()
+  )
   .AddAttribute ("SendMode",
     "Specify, whether this is a sender or a receiver",
     BooleanValue(false),
@@ -93,9 +99,14 @@ void SimApplication::StartApplication() {
   NS_LOG_FUNCTION(this);
   
   if (!this->socket) {
-    //socket = Socket::CreateSocket(GetNode(), this->GetTypeId());
+    
     socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
     
+    Ipv4Address t = InetSocketAddress::ConvertFrom(this->local).GetIpv4();
+    socket->Bind(InetSocketAddress(t, this->port));
+    socket->Listen();
+    
+    socket->SetRecvCallback(MakeCallback(&SimApplication::Recv, this));
     
     if (this->send_mode) {
       // Set socket up to be able to send data out
@@ -105,28 +116,15 @@ void SimApplication::StartApplication() {
         return;
       }
       
-      socket->Bind();
       socket->Connect(this->remote);
-      socket->SetAllowBroadcast(true);
+      //socket->SetAllowBroadcast(true);
       
+      // Schedule first send event
       this->tx_event = 
-        Simulator::Schedule(Seconds(1) / this->packet_rate,
+        Simulator::Schedule(this->send_start_time,
                             &SimApplication::NextTxEvent, this);
       
     }
-    else {
-      
-      // TODO: Why is source port one higher than dst port? should be same
-      // Make the socket listen
-      Ipv4Address t = InetSocketAddress::ConvertFrom(this->local).GetIpv4();
-      
-      
-      socket->Bind(InetSocketAddress(t, this->port));
-      socket->Listen();
-      socket->SetRecvCallback(MakeCallback(&SimApplication::Recv, this));
-    }
-    
-    
   }
   
 }

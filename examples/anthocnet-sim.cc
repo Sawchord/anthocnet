@@ -590,7 +590,7 @@ void RoutingExperiment::Run() {
   SimHelper apphelper("halp");
   
   // Install application in recevier mode
-  apphelper.SetAttribute("SendMode", BooleanValue(false));
+  apphelper.SetAttribute("SendMode", BooleanValue(true));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
     
     
@@ -598,8 +598,18 @@ void RoutingExperiment::Run() {
                   AddressValue(
                     InetSocketAddress(adhocInterfaces.GetAddress(i))));
     
+    apphelper.SetAttribute("Remote",
+                  AddressValue(
+                    InetSocketAddress(
+                      adhocInterfaces.GetAddress((i % this->nSender) + this->nReceiver))));
+    
+    Time start_time = Seconds(
+      random->GetValue(this->appStartBegin, appStartEnd));
+    std::cout << "App starts at " << start_time.GetSeconds() << std::endl;
+    
     apphelper.SetAttribute("StartTime", TimeValue(Seconds(0)));
     apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
+    apphelper.SetAttribute("SendStartTime", TimeValue(start_time));
     
     apphelper.Install(adhocNodes.Get(i));
     
@@ -621,11 +631,11 @@ void RoutingExperiment::Run() {
   
     Time start_time = Seconds(
       random->GetValue(this->appStartBegin, appStartEnd));
-    
     std::cout << "App starts at " << start_time.GetSeconds() << std::endl;
     
-    apphelper.SetAttribute("StartTime", TimeValue(start_time));
+    apphelper.SetAttribute("StartTime", TimeValue(Seconds(0)));
     apphelper.SetAttribute("StopTime", TimeValue(this->total_time));
+    apphelper.SetAttribute("SendStartTime", TimeValue(start_time));
     
     apphelper.Install(adhocNodes.Get(i));
     

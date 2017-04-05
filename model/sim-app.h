@@ -77,6 +77,8 @@ private:
   Address local;
   Address remote;
   
+  Time send_start_time;
+  
   Ptr<SimDatabase> db;
   
   // state
