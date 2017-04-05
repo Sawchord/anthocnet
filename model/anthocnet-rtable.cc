@@ -233,8 +233,14 @@ void RoutingTable::UpdatePheromone(Ipv4Address dst, Ipv4Address nb,
     double old_phero = this->GetPheromone(dst, nb_it->first, virt);
     // This is the neigbor we are processing our data for
     if (nb_it == target_nb_it) {
+      double new_phero;
       
-      double new_phero = this->IncressPheromone(old_phero, update);
+      // Why does this make results worese
+      //if (old_phero == 0)
+      //  new_phero = update;
+      //else
+      new_phero = this->IncressPheromone(old_phero, update);
+      
       this->SetPheromone(dst, nb_it->first, new_phero, virt);
     } else {
       // Evaporate the value
@@ -407,7 +413,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
     
     // Check if destination is a neighbor
     // suggest this route, even if no pheromone
-    auto temp_nb_it = this->nbs.find(dst);
+    /*auto temp_nb_it = this->nbs.find(dst);
     if (temp_nb_it != this->nbs.end()) {
       nb = temp_nb_it->first;
       NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
@@ -417,7 +423,7 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
       // might be in reach but the connection might be very shaky.
       // It might be a good idea to put this behind the select route algo as a failsafe
       return true;
-    }
+    }*/
     
     return false;
   }
