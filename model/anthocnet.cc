@@ -259,8 +259,11 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     
     NS_LOG_FUNCTION(this << "route to " << *rt);
     
-    NS_LOG_FUNCTION("RegisterTx" << origin << dst << nb);
-    this->rtable.stat.RegisterTx(origin, dst, nb);
+    if (this->config->fuzzy_mode) {
+      NS_LOG_FUNCTION("RegisterTx" << origin << dst << nb);
+      this->rtable.stat.RegisterTx(origin, dst, nb);
+    }
+    
     ucb(rt, p, header);
     return true;
     
@@ -1041,6 +1044,8 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
   
   // -------------------------
   // For traffic analysis used in fuzzy part
+  if (!this->config->fuzzy_mode)
+    return;
   
   WifiMacHeader mac1;
   LlcSnapHeader snap;
@@ -1088,6 +1093,7 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
   
   std::vector<Ipv4Address> addresses = this->LookupMacAddress(mac1.GetAddr2());
   for (auto it = addresses.begin(); it != addresses.end(); ++it) {
+    NS_LOG_FUNCTION("RegisterRx" << *it);
     this->rtable.stat.RegisterRx(*it);
   }
   

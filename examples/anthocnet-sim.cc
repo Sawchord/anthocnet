@@ -337,22 +337,23 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   packet->RemoveHeader(ipheader);
   packet->RemoveHeader(udpheader);
   
-  if (udpheader.GetSourcePort() != 49153) {
+  if (udpheader.GetSourcePort() != 49192) {
+    
+    control_packets++;
+    control_bytes += cpacket->GetSize();
+    
+  }
+  else {
     
     data_packets++;
     data_bytes += cpacket->GetSize();
     
-  }
-  else {
     packet->RemoveHeader(simheader);
     uint64_t seqno = this->db->CreateNewTransmission(
       ipv4->GetAddress(interface, 0).GetLocal());
     this->db->RegisterTx(seqno, simheader.GetSeqno(), packet->GetSize());
     
   }
-  
-  control_packets++;
-  control_bytes += cpacket->GetSize();
   
 }
 
@@ -370,7 +371,7 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   packet->RemoveHeader(udpheader);
   
   
-  if (udpheader.GetSourcePort() != 49153) {
+  if (udpheader.GetSourcePort() != 49192) {
     
     // How two get this tranmissions back?
   }
@@ -537,7 +538,7 @@ void RoutingExperiment::Run() {
   std::string fis_file;
   switch (this->fuzzy_system) {
     case 1:
-    fis_file = "../src/anthocnet/fis/simple_control_analysis.fis";
+    fis_file = "../src/anthocnet/fis/simple_data_analysis.fis";
     break;
     default:
       std::cout << "Fuzzy system unknown" << std::endl;

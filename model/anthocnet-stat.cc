@@ -105,6 +105,9 @@ double AntHocNetStat::GetTrafficSymmetry() {
     result += *it;
   }
   
+  if (sym_vals.size() == 0)
+    return 1.0;
+  
   result /= sym_vals.size();
   return result * 2;
 }
@@ -131,6 +134,9 @@ double AntHocNetStat::GetNbTrafficSymmetry(Ipv4Address nb) {
     }
   }
   
+  if (total_packets == 0)
+    return 0.5;
+  
   return ((double) packets_recvd) / total_packets;
 }
 
@@ -152,7 +158,7 @@ void AntHocNetStat::RemoveOutdatedDstEntries() {
   
   for (auto it = this->dst_traffic.begin(); 
        it != this->dst_traffic.end(); /* no increment */) {
-    if (it->time + this->dst_timewindow < Simulator::Now())
+    if ((it->time + this->dst_timewindow) < Simulator::Now())
       this->dst_traffic.erase(it++);
     else
       it++;
@@ -163,7 +169,7 @@ void AntHocNetStat::RemoveOutdatedNbEntries() {
   
   for (auto it = this->nb_recv_traffic.begin(); 
        it != this->nb_recv_traffic.end(); /* no increment */) {
-    if (it->time + this->nb_timewindow < Simulator::Now())
+    if ((it->time + this->nb_timewindow) < Simulator::Now())
       this->nb_recv_traffic.erase(it++);
     else
       it++;
@@ -171,7 +177,7 @@ void AntHocNetStat::RemoveOutdatedNbEntries() {
   
   for (auto it = this->nb_send_traffic.begin(); 
        it != this->nb_send_traffic.end(); /* no increment */) {
-    if (it->time + this->nb_timewindow < Simulator::Now())
+    if ((it->time + this->nb_timewindow) < Simulator::Now())
       this->nb_send_traffic.erase(it++);
     else
       it++;

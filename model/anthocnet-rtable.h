@@ -155,6 +155,10 @@ public:
     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
     bool virt);
   
+  bool SelectRouteStandard(Ipv4Address dst, double beta,
+    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+    bool virt);
+  
   bool SelectRouteFuzzy(Ipv4Address dst, double beta,
     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
     bool virt);

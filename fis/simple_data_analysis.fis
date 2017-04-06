@@ -15,9 +15,9 @@ DefuzzMethod='centroid'
 Name='rate-nb'
 Range=[0 1]
 NumMFs=3
-MF1='Low':'trapmf', [-1 0 0.25 0.35]
-MF2='Medium':'trapmf', [0.25 0.35 0.45 0.55]
-MF3='High':'trapmf', [0.45 0.55 1 2]
+MF1='Low':'trapmf', [-1 0 0.15 0.30]
+MF2='Medium':'trapmf', [0.15 0.30 0.35 0.50]
+MF3='High':'trapmf', [0.35 0.50 1 2]
 
 [Input2]
 Name='rate-all'

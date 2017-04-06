@@ -168,7 +168,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   )
   // Blackhole mode configuration
   .AddAttribute ("BlackholeMode",
-    "If set true, blackhole mode is activaed",
+    "If set true, blackhole mode is activated",
     BooleanValue(false),
     MakeBooleanAccessor(&AntHocNetConfig::blackhole_mode),
     MakeBooleanChecker()
@@ -192,6 +192,14 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakePointerAccessor(&AntHocNetConfig::fis),
     MakePointerChecker<AntHocNetFis>()
   )
+  // Blackhole mode configuration
+  .AddAttribute ("FuzzyMode",
+    "If set true, blackhole mode is activated",
+    BooleanValue(false),
+    MakeBooleanAccessor(&AntHocNetConfig::fuzzy_mode),
+    MakeBooleanChecker()
+  )
+  
   
   ;
   return tid;

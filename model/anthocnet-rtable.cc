@@ -392,8 +392,20 @@ void RoutingTable::UpdateNeighbor(Ipv4Address nb) {
   
 }
 
-
 bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
+                               Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
+                               bool virt){
+  
+  if (this->config->fuzzy_mode)
+    return this->SelectRouteFuzzy(dst, beta, nb, vr, virt);
+  else
+    return this->SelectRouteStandard(dst, beta, nb, vr, virt);
+    
+  
+}
+
+
+bool RoutingTable::SelectRouteStandard(Ipv4Address dst, double beta,
                                Ipv4Address& nb,  Ptr<UniformRandomVariable> vr,
                                bool virt){
   
@@ -410,21 +422,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   ProbVect pv;
   if (this->GetProbVector(pv, dst, beta, virt) == 0) {
     NS_LOG_FUNCTION(this << "no initialized nbs");
-    
-    // Check if destination is a neighbor
-    // suggest this route, even if no pheromone
-    /*auto temp_nb_it = this->nbs.find(dst);
-    if (temp_nb_it != this->nbs.end()) {
-      nb = temp_nb_it->first;
-      NS_LOG_FUNCTION(this << "dst" << dst << "is nb" << nb 
-        << "usevirt" << virt);
-      
-      // NOTE: Always returning the neighbor is a bad idea, since the neighbor 
-      // might be in reach but the connection might be very shaky.
-      // It might be a good idea to put this behind the select route algo as a failsafe
-      return true;
-    }*/
-    
     return false;
   }
   
@@ -442,37 +439,6 @@ bool RoutingTable::SelectRoute(Ipv4Address dst, double beta,
   // Never come here
   NS_LOG_FUNCTION(this << "never come here");
   return false;
-}
-
-bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
-                                    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
-                                    bool virt) {
-  
-  auto dst_it = this->dsts.find(dst);
-  if (dst_it == this->dsts.end()) {
-    NS_LOG_FUNCTION(this << "dst does not exist" << dst);
-    return false;
-  }
-  
-  ProbVect pv;
-  if (this->GetFuzzyProbVector(pv, dst, beta, virt) == 0) {
-    NS_LOG_FUNCTION(this << "no initialized nbs");
-    return false;
-  }
-  
-  double select = vr->GetValue(0.0, 1.0);
-  double selected = 0.0;
-  
-  for (auto pv_it = pv.begin(); pv_it != pv.end(); pv_it++) {
-    selected += pv_it->second;
-    if (selected > select) {
-      nb = pv_it->first;
-      return true;
-    } 
-  }
- 
- NS_LOG_FUNCTION(this << "Never come here");
- return false;
 }
 
 
@@ -999,6 +965,146 @@ std::ostream& operator<< (std::ostream& os, RoutingTable const& t) {
   t.Print(os);
   return os;
 }
+
+
+// ----------------------- 
+// Fuzzy experiments
+/*bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+                                    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+                                    bool virt) {
+  
+  auto dst_it = this->dsts.find(dst);
+  if (dst_it == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst does not exist" << dst);
+    return false;
+  }
+  
+  ProbVect pv;
+  if (this->GetFuzzyProbVector(pv, dst, beta, virt) == 0) {
+    NS_LOG_FUNCTION(this << "no initialized nbs");
+    return false;
+  }
+  
+  double select = vr->GetValue(0.0, 1.0);
+  double selected = 0.0;
+  
+  for (auto pv_it = pv.begin(); pv_it != pv.end(); pv_it++) {
+    selected += pv_it->second;
+    if (selected > select) {
+      nb = pv_it->first;
+      return true;
+    } 
+  }
+ 
+ NS_LOG_FUNCTION(this << "Never come here");
+ return false;
+}*/
+
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+                                    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+                                    bool virt) {
+  
+  auto dst_it = this->dsts.find(dst);
+  
+  // Fail, if there are no entries to that destination at all
+  if (dst_it == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst does not exist" << dst);
+    return false;
+  }
+  
+  double trust_thres = 0.12;
+  
+  // Number of packets total received before evaluating trust
+  uint64_t min_packets = 5;
+  double total_sym = this->stat.GetTrafficSymmetry();
+  
+  std::map<Ipv4Address, double> trust_map;
+  
+  
+  // Get all trusty neighbors and their trust values
+  
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); nb_it++) {
+    double nb_sym = this->stat.GetNbTrafficSymmetry(nb_it->first);
+    double nb_trust;
+    
+    // Exclude neighbors that do not have pheromone. They are uninteresting
+    if (!this->HasPheromone(dst, nb_it->first, virt))
+      continue;
+    
+    // If we do not have much information, we need to have some initial trust
+    if (this->stat.GetNumTrafficEntries(nb_it->first) > min_packets) {
+      nb_trust = this->config->fis->Eval(nb_sym, total_sym);
+      NS_LOG_FUNCTION("NB" << nb_it->first << "NBSym" << nb_sym << "Sym" << total_sym << "Trust" << nb_trust);
+    }
+    else {
+      nb_trust = 0.9;
+    }
+    
+    
+    // NOTE: We are excluding the neighbors, that do not have any trust
+    if (nb_trust < trust_thres)
+      continue;
+    
+    trust_map.insert(std::make_pair(nb_it->first, nb_trust));
+  }
+  
+  double total_pheromone;
+  std::map<Ipv4Address, double> phero_map;
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); nb_it++) {
+    
+    // Skip neighbors we do not have pheromone for
+    auto p_it = this->rtable.find(std::make_pair(dst, nb_it->first));
+    if (p_it == this->rtable.end())
+      continue;
+    
+    // Skip neighbors we do not trust enough
+    auto tm_it = trust_map.find(nb_it->first);
+    if (tm_it == trust_map.end())
+      continue;
+    
+    double init_pheromone;
+    if (virt && p_it->second.virtual_pheromone > p_it->second.pheromone) {
+      if (p_it->second.virtual_pheromone > this->config->min_pheromone)
+        init_pheromone = p_it->second.virtual_pheromone;
+    } else {
+      if (p_it->second.pheromone > this->config->min_pheromone)
+        init_pheromone = p_it->second.pheromone;
+    } 
+      
+      
+    double cor_phero = init_pheromone * tm_it->second;
+    
+    NS_LOG_FUNCTION("NB" << nb_it->first << "Phero" << init_pheromone << "Corrected Phero" << cor_phero);
+    double pow_phero = pow(cor_phero, beta);
+    
+    total_pheromone +=  pow_phero;
+    phero_map.insert(std::make_pair(nb_it->first, pow_phero));
+    
+  }
+  
+  NS_LOG_FUNCTION("Total phero" << total_pheromone);
+  
+  // Normalize the vector
+  for (auto pm_it = phero_map.begin(); pm_it != phero_map.end(); ++pm_it) {
+    pm_it->second /= total_pheromone;
+  }
+  
+  // Select as in normal select route
+  double select = vr->GetValue(0.0, 1.0);
+  double selected = 0.0;
+  
+  for (auto pm_it = phero_map.begin(); pm_it != phero_map.end(); pm_it++) {
+    selected += pm_it->second;
+    if (selected > select) {
+      nb = pm_it->first;
+      return true;
+    } 
+  }
+  
+  return false;
+}
+
+
 
 
 // End of namespace
