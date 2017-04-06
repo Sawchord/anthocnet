@@ -40,6 +40,7 @@
 
 #include "anthocnet-packet.h"
 #include "anthocnet-config.h"
+#include "anthocnet-stat.h"
 
 namespace ns3 {
 namespace ahn {
@@ -203,6 +204,8 @@ public:
   // Added for initialization
   void SetConfig(Ptr<AntHocNetConfig> config);
   Ptr<AntHocNetConfig> GetConfig() const;
+  
+  AntHocNetStat stat;
   
 private:
   

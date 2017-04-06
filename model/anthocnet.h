@@ -32,6 +32,7 @@
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-l3-protocol.h"
 #include "ns3/wifi-mac-header.h"
+#include "ns3/llc-snap-header.h"
 #include "ns3/arp-cache.h"
 #include "ns3/traced-callback.h"
 #include "ns3/wifi-phy.h"

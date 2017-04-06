@@ -23,6 +23,7 @@ def build(bld):
         'model/anthocnet-pcache.cc',
         'model/anthocnet-packet.cc',
         'model/anthocnet-fis.cc',
+        'model/anthocnet-stat.cc',
         'helper/anthocnet-helper.cc',
         
         'model/sim-database.cc',
@@ -44,6 +45,7 @@ def build(bld):
         'model/anthocnet-pcache.h',
         'model/anthocnet-packet.h',
         'model/anthocnet-fis.h',
+        'model/anthocnet-stat.h',
         'helper/anthocnet-helper.h',
         
         'model/sim-database.h',
