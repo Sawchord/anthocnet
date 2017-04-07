@@ -666,8 +666,7 @@ void RoutingTable::HandleHelloMsg(HelloMsgHeader& msg) {
     return;
   }
   
-  if (!this->IsNeighbor(msg.GetSrc()))
-    this->AddNeighbor(msg.GetSrc());
+  NS_ASSERT(this->IsNeighbor(msg.GetSrc()));
   
   // Bootstrap information for every possible destination
   while (msg.GetSize() != 0) {
@@ -720,8 +719,8 @@ bool RoutingTable::ProcessBackwardAnt(Ipv4Address dst, Ipv4Address nb,
   if (!this->IsDestination(dst))
     this->AddDestination(dst);
   
-  if (!this->IsNeighbor(nb))
-    this->AddNeighbor(nb);
+  // NOTE: Maybe drop ant if nb is unknown
+  NS_ASSERT(this->IsNeighbor(nb));
   
   // NOTE: This is the cost function.
   // One could get crazy here and have some 

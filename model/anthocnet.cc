@@ -1406,9 +1406,14 @@ void RoutingProtocol::HandleHelloMsg(Ptr<Packet> packet, uint32_t iface) {
   
   HelloMsgHeader hello_msg;
   packet->RemoveHeader(hello_msg);
+  
+  if (!this->rtable.IsNeighbor(hello_msg.GetSrc())) {
+    this->rtable.AddNeighbor(hello_msg.GetSrc());
+    this->rtable.InitNeighborTimer(hello_msg.GetSrc(), 
+      &RoutingProtocol::NBExpire, this);
+  }
+  
   this->rtable.HandleHelloMsg(hello_msg);
-  this->rtable.InitNeighborTimer(hello_msg.GetSrc(), 
-    &RoutingProtocol::NBExpire, this);
   this->rtable.UpdateNeighbor(hello_msg.GetSrc());
   
   if (this->config->snr_cost_metric)
@@ -1635,6 +1640,13 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
   
   NS_LOG_FUNCTION(this << "nb" << nb << "src" << src 
     << "final_dst" << final_dst << "next_dst" << next_dst);
+  
+  if (!this->rtable.IsNeighbor(nb)) {
+    this->rtable.AddNeighbor(nb);
+    this->rtable.InitNeighborTimer(nb, &RoutingProtocol::NBExpire, 
+                                   this);
+  }
+  
   
   // Check if this Node is the destination and manage behaviour
   Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
