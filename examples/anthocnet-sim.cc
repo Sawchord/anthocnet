@@ -538,7 +538,7 @@ void RoutingExperiment::Run() {
   std::string fis_file;
   switch (this->fuzzy_system) {
     case 1:
-    fis_file = "../src/anthocnet/fis/simple_data_analysis.fis";
+    fis_file = "../src/anthocnet/fis/simple_sniffer_analysis.fis";
     break;
     default:
       std::cout << "Fuzzy system unknown" << std::endl;
@@ -591,7 +591,7 @@ void RoutingExperiment::Run() {
   SimHelper apphelper("halp");
   
   // Install application in recevier mode
-  apphelper.SetAttribute("SendMode", BooleanValue(true));
+  apphelper.SetAttribute("SendMode", BooleanValue(false));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
     
     

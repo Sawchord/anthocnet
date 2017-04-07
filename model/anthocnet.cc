@@ -167,6 +167,14 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
     
     NS_LOG_FUNCTION(this << "routed" << *route);
     
+    // -------------------------------- 
+    // Fuzzy logic 
+    if (this->config->fuzzy_mode) {
+      NS_LOG_FUNCTION("Expect" << nb << this_node << dst << *p);
+      this->rtable.stat.Expect(nb, this_node, dst, p);
+    }
+    // ---------------------------------------------
+    
     return route;
   }
   
@@ -257,15 +265,22 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     rt->SetOutputDevice(this->ipv4->GetNetDevice(iface));
     rt->SetGateway(nb);
     
-    NS_LOG_FUNCTION(this << "route to " << *rt);
+    //NS_LOG_FUNCTION(this << "route to " << *rt);
     
+    // -------------------------------- 
+    // Fuzzy logic 
     if (this->config->fuzzy_mode) {
-      NS_LOG_FUNCTION("RegisterTx" << origin << dst << nb);
-      this->rtable.stat.RegisterTx(origin, dst, nb);
+      //NS_LOG_FUNCTION("RegisterTx" << origin << dst << nb);
+      //this->rtable.stat.RegisterTx(origin, dst, nb);
+      //Ptr<Packet> packet = p->Copy()
+      NS_LOG_FUNCTION("Expect" << nb << origin << dst << *p);
+      this->rtable.stat.Expect(nb, origin, dst, p);
+      
     }
     
     ucb(rt, p, header);
     return true;
+    // ------------------------------------
     
   }
   else if (origin == Ipv4Address("127.0.0.1") || origin == this_node){
@@ -1041,10 +1056,77 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
     }
   }
   
-  
   // -------------------------
   // For traffic analysis used in fuzzy part
+  
   if (!this->config->fuzzy_mode)
+    return;
+  
+  WifiMacHeader mac1;
+  LlcSnapHeader snap;
+  Ipv4Header ipheader;
+  UdpHeader udpheader;
+  WifiMacTrailer trailer;
+  
+  bool has_udp_header = false;
+  bool has_ip_header = false;
+  bool has_mac_trailer = false;
+  
+  PacketMetadata::ItemIterator i = packet->BeginItem();
+  while (i.HasNext()) {
+    PacketMetadata::Item item = i.Next ();
+    
+    if (!item.isFragment && item.type == PacketMetadata::Item::HEADER) {
+      if (item.tid == ipheader.GetTypeId())
+        has_ip_header = true;
+      if (item.tid == udpheader.GetTypeId())
+        has_udp_header = true;
+    }
+    if (!item.isFragment && item.type == PacketMetadata::Item::TRAILER) {
+      if (item.tid == trailer.GetTypeId())
+        has_mac_trailer = true;
+    }
+  }
+  
+  // If it has no ip header, it cannot be traffic
+  if (!has_ip_header)
+    return;
+  
+  std::set<Ipv4Address> expecting;
+  this->rtable.stat.GetExpectingNbs(expecting);
+  packet->PeekHeader(mac1);
+  std::vector<Ipv4Address> addresses = this->LookupMacAddress(mac1.GetAddr2());
+  
+  for (auto it = addresses.begin(); it != addresses.end(); ++it) {
+    if (expecting.find(*it) == expecting.end())
+      continue;
+    
+    Ptr<Packet> pkt = packet->Copy();
+    pkt->RemoveHeader(mac1);
+    pkt->RemoveHeader(snap);
+    pkt->RemoveHeader(ipheader);
+    
+    if (has_udp_header) {
+      pkt->PeekHeader(udpheader);
+      if (udpheader.GetSourcePort() == this->config->ant_port) {
+        // NOTE: Return instead of continue, since it is about the packet and not the addresses.
+        return;
+      }
+    }
+    
+    if (has_mac_trailer) {
+      pkt->RemoveTrailer(trailer);
+    }
+    
+    Ipv4Address src = ipheader.GetSource();
+    Ipv4Address dst = ipheader.GetDestination();
+    
+    NS_LOG_FUNCTION("Fullfilled" << *it << src << dst << *pkt);
+    this->rtable.stat.Fullfill(*it, src, dst, pkt);
+  }
+  
+  
+  /*if (!this->config->fuzzy_mode)
     return;
   
   WifiMacHeader mac1;
@@ -1095,7 +1177,7 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
   for (auto it = addresses.begin(); it != addresses.end(); ++it) {
     NS_LOG_FUNCTION("RegisterRx" << *it);
     this->rtable.stat.RegisterRx(*it);
-  }
+  }*/
   
 }
 
@@ -1629,6 +1711,15 @@ void RoutingProtocol::SendCachedData(Ipv4Address dst) {
       NS_LOG_FUNCTION(this << "route to" << *rt
         << "Data " << cv.second.packet << "send");
       cv.second.ucb(rt, cv.second.packet, cv.second.header);
+      
+      // -------------------------------- 
+      // Fuzzy logic 
+      if (this->config->fuzzy_mode) {
+        NS_LOG_FUNCTION("Expect" << nb << cv.second.header.GetSource() << dst << *cv.second.packet);
+        this->rtable.stat.Expect(nb, cv.second.header.GetSource(), dst, cv.second.packet);
+      }
+      // --------------------------------------------
+      
       
       // If there was a route found, the destination must exist
       // in rtable. We can safely assume, that all data to that destination

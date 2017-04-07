@@ -1000,6 +1000,7 @@ std::ostream& operator<< (std::ostream& os, RoutingTable const& t) {
  return false;
 }*/
 
+/*
 bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
                                     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
                                     bool virt) {
@@ -1103,8 +1104,27 @@ bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
   
   return false;
 }
+*/
 
+double RoutingTable::GetNbTrust(Ipv4Address nb) {
+  double fullfill = this->stat.GetFullfillmentRate(nb);
+  double data_amount = this->stat.GetNumberOfData(nb);
+  
+  double trust = this->config->fis->Eval(fullfill, data_amount);
+  
+  NS_LOG_FUNCTION("NB FRate AmountData and Trust"
+   << nb << fullfill << data_amount << trust);
+  return trust;
+}
 
+bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
+                                    Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
+                                    bool virt) {
+  
+  bool tmp = this->SelectRouteStandard(dst, beta, nb, vr, virt);
+  this->GetNbTrust(nb);
+  return tmp;
+}
 
 
 // End of namespace

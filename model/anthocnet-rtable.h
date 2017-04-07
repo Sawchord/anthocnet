@@ -225,6 +225,7 @@ private:
   double EvaporatePheromone(double ph_value);
   double IncressPheromone(double ph_value, double update);
   
+  double GetNbTrust(Ipv4Address nb);
   
   DstMap dsts;
   NbMap nbs;
