@@ -1121,9 +1121,59 @@ bool RoutingTable::SelectRouteFuzzy(Ipv4Address dst, double beta,
                                     Ipv4Address& nb, Ptr<UniformRandomVariable> vr,
                                     bool virt) {
   
-  bool tmp = this->SelectRouteStandard(dst, beta, nb, vr, virt);
-  this->GetNbTrust(nb);
-  return tmp;
+  auto dst_it = this->dsts.find(dst);
+  
+  // Fail, if there are no entries to that destination at all
+  if (dst_it == this->dsts.end()) {
+    NS_LOG_FUNCTION(this << "dst does not exist" << dst);
+    return false;
+  }
+  
+  double trust_thres = 0.12;
+  
+  ProbVect tv;
+  double total_pheromone = 0;
+  
+  for (auto nb_it = this->nbs.begin(); nb_it != this->nbs.end(); ++nb_it) {
+    
+    // If no pheromone at all, no need to evaulate further
+    if (!this->HasPheromone(dst, nb_it->first, virt))
+      continue;
+    
+    // Ignore neighbors, you do not trust at all
+    double trust = this->GetNbTrust(nb_it->first);
+    if (trust < trust_thres)
+      continue;
+    
+    double phero = this->GetPheromone(dst, nb_it->first, virt);
+    
+    // Calculate corrected pheromone
+    phero = phero * trust;
+    phero = pow(phero, beta);
+    
+    tv.push_back(std::make_pair(nb_it->first, phero));
+    total_pheromone += phero;
+  }
+  
+  // Normalize the vector
+  for (auto tv_it = tv.begin(); tv_it != tv.end(); ++tv_it) {
+    tv_it->second /= total_pheromone;
+  }
+  
+  // Select as in normal select route
+  double select = vr->GetValue(0.0, 1.0);
+  double selected = 0.0;
+  
+  for (auto tv_it = tv.begin(); tv_it != tv.end(); ++tv_it) {
+    selected += tv_it->second;
+    if (selected > select) {
+      nb = tv_it->first;
+      return true;
+    } 
+  }
+  
+  return false;
+  
 }
 
 

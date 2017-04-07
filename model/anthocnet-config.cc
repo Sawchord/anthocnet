@@ -195,7 +195,7 @@ TypeId AntHocNetConfig::GetTypeId() {
   // Blackhole mode configuration
   .AddAttribute ("FuzzyMode",
     "If set true, blackhole mode is activated",
-    BooleanValue(true),
+    BooleanValue(false),
     MakeBooleanAccessor(&AntHocNetConfig::fuzzy_mode),
     MakeBooleanChecker()
   )
