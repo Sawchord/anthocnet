@@ -145,13 +145,13 @@ private:
 };
 
 RoutingExperiment::RoutingExperiment():
-total_time(Seconds(120)),
-nWifis(20),
-nSender(5),
-nReceiver(5),
+total_time(Seconds(900)),
+nWifis(50),
+nSender(10),
+nReceiver(10),
 
-pWidth(400),
-pHeight(1200),
+pWidth(500),
+pHeight(1500),
 
 nodePause(30),
 nodeMinSpeed(5),
@@ -170,13 +170,12 @@ protocol(2),
 packetSize(64),
 packetRate(4),
 
-appStartBegin(10),
-appStartEnd(15),
-appSendRate(4),
+appStartBegin(0),
+appStartEnd(180),
 
 nHoles(0),
-holesStartBegin(40),
-holesStartEnd(50),
+holesStartBegin(30),
+holesStartEnd(180),
 
 use_fuzzy(false)
 
@@ -244,10 +243,6 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
                "Begin of time window where app starts", this->appStartBegin);
   cmd.AddValue("appStartEnd", 
                "End of time window where app starts", this->appStartEnd);
-  cmd.AddValue("appSendRate",
-               "Number of packets a app sends per second", 
-               this->appSendRate);
-  
   
   cmd.AddValue("nHoles", 
                "The number of blackhole nodes to introduce into the system", this->nHoles);
@@ -349,6 +344,9 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
   if (udpheader.GetSourcePort() != 49192) {
     
+    control_packets++;
+    control_bytes += cpacket->GetSize() + 36;
+    
   }
   else {
     
@@ -364,7 +362,6 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
 void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4, 
                                    uint32_t interface) {
   
-  //std::cout << "Packet rxd: " << *cpacket << std::endl; 
   Ptr<Packet> packet = cpacket->CreateFragment(0, cpacket->GetSize());
   
   Ipv4Header ipheader;
@@ -377,18 +374,15 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
   if (udpheader.GetSourcePort() != 49192) {
     
-    control_packets++;
-    control_bytes += cpacket->GetSize();
-    
   }
   else {
     
     Ptr<Ipv4L3Protocol> l3 = ipv4->GetObject<Ipv4L3Protocol>();
-    Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();;
+    Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();
     
     if (ipheader.GetDestination() == this_node) {
       data_packets++;
-      data_bytes += cpacket->GetSize();
+      data_bytes += cpacket->GetSize() + 36;
     }
     
     packet->RemoveHeader(simheader);
@@ -594,7 +588,6 @@ void RoutingExperiment::Run(uint32_t iteration) {
   SimHelper apphelper("Helper");
   
   // Install application in recevier mode
-  apphelper.SetAttribute("PacketRate", UintegerValue(this->appSendRate));
   apphelper.SetAttribute("SendMode", BooleanValue(false));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
     
