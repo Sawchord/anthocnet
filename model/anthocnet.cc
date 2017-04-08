@@ -1126,59 +1126,6 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
   }
   
   
-  /*if (!this->config->fuzzy_mode)
-    return;
-  
-  WifiMacHeader mac1;
-  LlcSnapHeader snap;
-  Ipv4Header ipheader;
-  UdpHeader udpheader;
-  
-  bool has_udp_header = false;
-  
-  PacketMetadata::ItemIterator i = packet->BeginItem();
-  
-  // Check this is a packet we are interested int
-  while (i.HasNext()) {
-    PacketMetadata::Item item = i.Next ();
-    
-    if (!item.isFragment && item.type == PacketMetadata::Item::HEADER) {
-      if (item.tid == udpheader.GetTypeId())
-        has_udp_header = true;
-    }
-  }
-  
-  if (!has_udp_header)
-    return;
-  
-  packet->PeekHeader(mac1);
-  
-  // Check that we are the destination
-  uint32_t iface = 1;
-  Ptr<NetDevice> dev = this->ipv4->GetNetDevice(iface);
-  Ptr<WifiNetDevice> wd = DynamicCast<WifiNetDevice> (dev);
-  auto my_mac = wd->GetMac()->GetAddress();
-  if (mac1.GetAddr1() != my_mac)
-    return;
-  
-  Ptr<Packet> pkt = packet->CreateFragment(0, packet->GetSize());
-  
-  // If we re sure, we can unwrap the packet to analyse it
-  pkt->RemoveHeader(mac1);
-  pkt->RemoveHeader(snap);
-  pkt->RemoveHeader(ipheader);
-  pkt->RemoveHeader(udpheader);
-  
-  // Only data traffic does count
-  if (udpheader.GetSourcePort() == this->config->ant_port)
-    return;
-  
-  std::vector<Ipv4Address> addresses = this->LookupMacAddress(mac1.GetAddr2());
-  for (auto it = addresses.begin(); it != addresses.end(); ++it) {
-    NS_LOG_FUNCTION("RegisterRx" << *it);
-    this->rtable.stat.RegisterRx(*it);
-  }*/
-  
 }
 
 // -------------------------------------------------------

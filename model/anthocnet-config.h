@@ -124,6 +124,7 @@ public:
   // Fuzzy inference system
   Ptr<AntHocNetFis> fis;
   bool fuzzy_mode;
+  double trust_threshold;
 };
 
 }  

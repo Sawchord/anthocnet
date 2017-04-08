@@ -242,9 +242,6 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
   cmd.AddValue("holesStartEnd", 
                "End of timewindow where blackhole mode triggers", this->holesStartEnd);
   
-  cmd.AddValue("FuzzySystem", 
-               "Select the fuzzy system to use", this->fuzzy_system);
-  
   cmd.AddValue("Comment", 
                "Give a short description of this simulation", this->comment);
   cmd.Parse(argc, argv);
@@ -536,15 +533,8 @@ void RoutingExperiment::Run() {
   
   // Install the fuzzy system on the nodes
   std::string fis_file;
-  switch (this->fuzzy_system) {
-    case 1:
-    fis_file = "../src/anthocnet/fis/simple_sniffer_analysis.fis";
-    break;
-    default:
-      std::cout << "Fuzzy system unknown" << std::endl;
-      exit(0);
-    break;
-  }
+  fis_file = "../src/anthocnet/fis/simple_sniffer_analysis.fis";
+    
   
   Ptr<AntHocNetFis> fis = CreateObject<AntHocNetFis>();
   fis->SetAttribute("FisFile", StringValue(fis_file));

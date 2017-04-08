@@ -192,14 +192,19 @@ TypeId AntHocNetConfig::GetTypeId() {
     MakePointerAccessor(&AntHocNetConfig::fis),
     MakePointerChecker<AntHocNetFis>()
   )
-  // Blackhole mode configuration
+  // Fuzzy mode configuration
   .AddAttribute ("FuzzyMode",
     "If set true, blackhole mode is activated",
     BooleanValue(false),
     MakeBooleanAccessor(&AntHocNetConfig::fuzzy_mode),
     MakeBooleanChecker()
   )
-  
+  .AddAttribute("TrustThreshold",
+    "If a neighbor has a trust value lower than this, it is considered offline",
+    DoubleValue(0.12),
+    MakeDoubleAccessor(&AntHocNetConfig::trust_threshold),
+    MakeDoubleChecker<double>()
+  )
   
   ;
   return tid;
