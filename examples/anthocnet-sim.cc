@@ -349,14 +349,8 @@ void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
   if (udpheader.GetSourcePort() != 49192) {
     
-    control_packets++;
-    control_bytes += cpacket->GetSize();
-    
   }
   else {
-    
-    data_packets++;
-    data_bytes += cpacket->GetSize();
     
     packet->RemoveHeader(simheader);
     uint64_t seqno = this->db->CreateNewTransmission(
@@ -383,9 +377,20 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
   if (udpheader.GetSourcePort() != 49192) {
     
-    // How two get this tranmissions back?
+    control_packets++;
+    control_bytes += cpacket->GetSize();
+    
   }
   else {
+    
+    Ptr<Ipv4L3Protocol> l3 = ipv4->GetObject<Ipv4L3Protocol>();
+    Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();;
+    
+    if (ipheader.GetDestination() == this_node) {
+      data_packets++;
+      data_bytes += cpacket->GetSize();
+    }
+    
     packet->RemoveHeader(simheader);
     
     this->db->RegisterRx(simheader.GetSeqno(), 
