@@ -122,6 +122,7 @@ private:
   
   uint32_t appStartBegin;
   uint32_t appStartEnd;
+  uint32_t appSendRate;
   
   // Blackhole configuration
   uint32_t nHoles;
@@ -163,6 +164,7 @@ packetRate(4),
 
 appStartBegin(10),
 appStartEnd(15),
+appSendRate(4),
 
 nHoles(0),
 holesStartBegin(40),
@@ -234,6 +236,10 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
                "Begin of time window where app starts", this->appStartBegin);
   cmd.AddValue("appStartEnd", 
                "End of time window where app starts", this->appStartEnd);
+  cmd.AddValue("appSendRate",
+               "Number of packets a app sends per second", 
+               this->appSendRate);
+  
   
   cmd.AddValue("nHoles", 
                "The number of blackhole nodes to introduce into the system", this->nHoles);
@@ -547,6 +553,7 @@ void RoutingExperiment::Run() {
   
   Ptr<AntHocNetConfig> conf = CreateObject<AntHocNetConfig>();
   conf->SetAttribute("Fis", PointerValue(fis));
+  conf->SetAttribute("FuzzyMode", BooleanValue(this->use_fuzzy));
   for (uint32_t i = 0; i < this->nWifis - this->nHoles; i++) {
     std::stringstream conf_path;
     conf_path << "/NodeList/" 
@@ -561,6 +568,7 @@ void RoutingExperiment::Run() {
     Ptr<AntHocNetConfig> conf = CreateObject<AntHocNetConfig>();
     conf->SetAttribute("BlackholeMode", BooleanValue(true));
     conf->SetAttribute("Fis", PointerValue(fis));
+    conf->SetAttribute("FuzzyMode", BooleanValue(this->use_fuzzy));
     
     std::stringstream conf_path;
     conf_path << "/NodeList/" 
@@ -568,8 +576,6 @@ void RoutingExperiment::Run() {
     
     Config::Set(conf_path.str(), PointerValue(conf));
   }
-  
-  conf->SetAttribute("FuzzyMode", BooleanValue(this->use_fuzzy));
   
   // Set up the application
   this->db = Create<SimDatabase>();
@@ -583,9 +589,10 @@ void RoutingExperiment::Run() {
   Config::SetDefault("ns3::ahn::SimApplication::Database", PointerValue(this->db));
   
   
-  SimHelper apphelper("halp");
+  SimHelper apphelper("Helper");
   
   // Install application in recevier mode
+  apphelper.SetAttribute("PacketRate", UintegerValue(this->appSendRate));
   apphelper.SetAttribute("SendMode", BooleanValue(false));
   for (uint32_t i = 0; i < this->nReceiver; i++) {
     
