@@ -65,19 +65,11 @@ void AntHocNetFis::Init() {
 
 double AntHocNetFis::Eval(double in1, double in2) {
   
-  auto it = this->cache.find(std::make_pair(in1, in2));
-  
-  if (it != this->cache.end()) {
-    return it->second;
-  }
-  
   this->input1->setValue(in1);
   this->input2->setValue(in2);
   this->engine->process();
   
-  double output = this->output->getValue();
-  this->cache.insert(std::make_pair(std::make_pair(in1, in2), (output)));
-  return output;
+  return this->output->getValue();;
 }
 
 void AntHocNetFis::DoDispose() {

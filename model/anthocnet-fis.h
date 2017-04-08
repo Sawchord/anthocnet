@@ -31,8 +31,6 @@ using namespace fl;
 namespace ns3 {
 namespace ahn {
   
-typedef std::map <std::pair<double, double>, double> FisCache;
-  
 class AntHocNetFis : public Object{
 public:
   AntHocNetFis();
@@ -56,9 +54,6 @@ private:
   InputVariable* input1;
   InputVariable* input2;
   OutputVariable* output;
-  
-  FisCache cache;
-  
 };
 
 // End of namespaces
