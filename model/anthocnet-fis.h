@@ -29,7 +29,9 @@
 using namespace fl;
 
 namespace ns3 {
-namespace ahn { 
+namespace ahn {
+  
+typedef std::map <std::pair<double, double>, double> FisCache;
   
 class AntHocNetFis : public Object{
 public:
@@ -54,6 +56,8 @@ private:
   InputVariable* input1;
   InputVariable* input2;
   OutputVariable* output;
+  
+  FisCache cache;
   
 };
 

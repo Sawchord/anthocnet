@@ -787,7 +787,7 @@ int main (int argc, char* argv[]) {
   std::ofstream option_file("options.txt");
   experiment.PrintOptions(option_file);
   
-#define NUM_ITERATIONS 5
+#define NUM_ITERATIONS 1
   
   sim_results_t result[NUM_ITERATIONS];
   
