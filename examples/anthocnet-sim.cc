@@ -129,7 +129,7 @@ private:
   uint32_t holesStartEnd;
   
   // Fuzzy configuration
-  uint32_t fuzzy_system;
+  bool use_fuzzy;
   
   std::string comment;
   
@@ -168,7 +168,7 @@ nHoles(0),
 holesStartBegin(40),
 holesStartEnd(50),
 
-fuzzy_system(1)
+use_fuzzy(false)
 
 {}
 
@@ -241,6 +241,10 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
                "Begin of time window where blackhole mode triggers", this->holesStartBegin);
   cmd.AddValue("holesStartEnd", 
                "End of timewindow where blackhole mode triggers", this->holesStartEnd);
+  
+  
+  cmd.AddValue("useFuzzy", 
+               "Select whether to use the fuzzy system or not", this->use_fuzzy);
   
   cmd.AddValue("Comment", 
                "Give a short description of this simulation", this->comment);
@@ -565,6 +569,7 @@ void RoutingExperiment::Run() {
     Config::Set(conf_path.str(), PointerValue(conf));
   }
   
+  conf->SetAttribute("FuzzyMode", BooleanValue(this->use_fuzzy));
   
   // Set up the application
   this->db = Create<SimDatabase>();
