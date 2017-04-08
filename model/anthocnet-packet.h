@@ -127,45 +127,6 @@ private:
 };
 
 
-class UnicastWarningHeader : public Header {
-public:
-  //ctor
-  UnicastWarningHeader();
-  UnicastWarningHeader(Ipv4Address src, Ipv4Address sender, Ipv4Address dst);
-  //dtor
-  ~UnicastWarningHeader();
-  
-  //Header serialization/deserialization
-  static TypeId GetTypeId();
-  TypeId GetInstanceTypeId() const;
-  uint32_t GetSerializedSize() const;
-  void Serialize (Buffer::Iterator i) const;
-  uint32_t Deserialize (Buffer::Iterator start);
-  void Print (std::ostream &os) const;
-  
-  MessageType Get () const;
-  // Check that type if valid
-  bool IsValid () const;
-  bool operator== (UnicastWarningHeader const & o) const;
-  
-  Ipv4Address GetNode();
-  Ipv4Address GetSender();
-  Ipv4Address GetDst();
-  
-private:
-  
-  // The node which failed to resebd the data
-  Ipv4Address node;
-  
-  // The sender of the data
-  Ipv4Address sender;
-  
-  // The destionation of the data, which is unreachable
-  Ipv4Address dst;
-  
-};
-
-
 /**
  * \brief The hello packet. It is used to notify the neigbor 
  *        of the existance of the node as well as distribute the 

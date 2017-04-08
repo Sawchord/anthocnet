@@ -33,28 +33,6 @@
 namespace ns3 {
 namespace ahn {
 
-typedef std::pair<Ipv4Address, Ipv4Address> SrcDstPair;
-
-typedef struct DstStatType {
-  Ipv4Address from;
-  Ipv4Address to;
-  Time time;
-} dst_stat_t;
-
-typedef struct NbRecvStatType {
-  Ipv4Address via;
-  Time time;
-} nb_recv_stat_t;
-
-typedef struct NbSendStatType {
-  Ipv4Address via;
-  Time time;
-} nb_send_stat_t;
-
-
-
-
-
 typedef struct ExpectType {
   Time included;
   Ipv4Address src;
@@ -83,19 +61,6 @@ public:
   double GetFullfillmentRate(Ipv4Address nb);
   double GetNumberOfData(Ipv4Address nb);
   
-  // ----------------------------
-  // Old to be removed in future
-  void RegisterTx(Ipv4Address src, Ipv4Address dst, 
-                  Ipv4Address nextHop);
-  
-  void RegisterRx(Ipv4Address prevHop);
-  
-  double GetTrafficSymmetry();
-  
-  double GetNbTrafficSymmetry(Ipv4Address nb);
-  uint64_t GetNumTrafficEntries(Ipv4Address nb);
-  
-  
 private:
   
   uint8_t buffer[STAT_MAX_PKT_SIZE];
@@ -107,18 +72,6 @@ private:
   Time expect_timeout = Seconds(1);
   Time consider_old = Seconds(30);
   uint32_t packets_considered = 30;
-  
-  void RemoveOutdatedDstEntries();
-  void RemoveOutdatedNbEntries();
-  
-  std::list<nb_recv_stat_t> nb_recv_traffic;
-  std::list<nb_send_stat_t> nb_send_traffic;
-  
-  std::list<dst_stat_t> dst_traffic;
-  
-  Time nb_timewindow = Seconds(5);
-  Time dst_timewindow = Seconds(40);
-  
 };
 
 
