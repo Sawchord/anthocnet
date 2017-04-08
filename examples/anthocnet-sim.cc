@@ -44,30 +44,36 @@
 using namespace ns3;
 using namespace ahn;
 
+typedef struct SimResult {
+  double pdr;
+  double delay;
+  double delay_jitter;
+  double packet_overhead;
+  double byte_overhead;
+} sim_results_t;
+
+
 class RoutingExperiment {
 public:
   RoutingExperiment();
-  void Run();
+  void Run(uint32_t iteration);
   std::string CommandSetup(int argc, char** argv);
   
-private:
+  void GetResults(sim_results_t& r);
+  void PrintResults(sim_results_t& r, std::ofstream& os);
+  void PrintOptions(std::ostream& os);
   
-  void PhyTracer(Ptr<Packet const> packet);
+private:
   
   void IpTxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   void IpRxTracer(Ptr<Packet const> packet, Ptr<Ipv4> ipv4, uint32_t interface);
   
-  void DataDropTracer(Ptr<Packet const> packet, std::string reason, 
-                      Ipv4Address address);
-  
   void ProgressUpdate();
   
-  void PrintSummary(std::ostream& os);
+  
   
   // State
   Ptr<SimDatabase> db;
-  std::ofstream data_drop_output;
-  //std::vector<ApplicationContainer*> apps;
   
   uint64_t control_packets;
   uint64_t control_bytes;
@@ -75,6 +81,8 @@ private:
   uint64_t data_bytes;
   
   results_t result;
+  uint32_t iteration;
+  
   
   Ptr<UniformRandomVariable> random;
   
@@ -259,24 +267,7 @@ std::string RoutingExperiment::CommandSetup(int argc, char** argv) {
 }
 
 
-void RoutingExperiment::PrintSummary(std::ostream& os) {
-  
-  os << "Simulations summary: " << std::endl;
-  os << "Comment: " << this->comment << std::endl;
-  
-  os << "Total average droprate: " 
-    << this->result.droprate_total_avr << std::endl;
-  os << "Total average delay: " 
-    << this->result.end_to_end_delay_total_avr << "ms" << std::endl;
-  
-  os << "Total average delay jitter: "
-    << this->result.total_average_delay_jitter << "ms" << std::endl;
-    
-  os << "Data Packet rate: " << ((double)data_packets 
-                / (data_packets+control_packets)) << std::endl;
-  os << "Data Byte rate: " << ((double)data_bytes
-                / (data_bytes+control_bytes)) << std::endl;
-  
+void RoutingExperiment::PrintOptions(std::ostream& os) {
   
   os << "Command line options: " << std::endl;
   
@@ -299,15 +290,39 @@ void RoutingExperiment::PrintSummary(std::ostream& os) {
   
   os << "appStartBegin: " << this->appStartBegin << std::endl;
   os << "appStartBegin: " << this->appStartBegin << std::endl;
+  os << "appSendRate: "<< this->appSendRate << std::endl;
   
   os << "nHoles: " << this->nHoles << std::endl;
   os << "holesStartBegin: " << this->holesStartBegin << std::endl;
   os << "holesStartEnd: " << this->holesStartEnd << std::endl;
   
+  os << "useFuzzy: " << this->use_fuzzy << std::endl;
+  
+}
+
+void RoutingExperiment::GetResults(sim_results_t& r) {
+  
+  r.pdr = 1.0 - this->result.droprate_total_avr;
+  r.delay = this->result.end_to_end_delay_total_avr;
+  r.delay_jitter = this->result.total_average_delay_jitter;
+  r.packet_overhead = (double) this->control_packets / this->data_packets;
+  r.byte_overhead = (double) this->control_bytes / this->data_bytes;
+  
+  
+}
+
+void RoutingExperiment::PrintResults(sim_results_t& r, std::ofstream& os) {
+  os << "PDR Delay Delay_Jitter Packet_overhead Byte_Overhead" << std::endl;
+  os << r.pdr << std::endl;
+  os << r.delay << std::endl;
+  os << r.delay_jitter << std::endl;
+  os << r.packet_overhead << std::endl;
+  os << r.byte_overhead << std::endl;
 }
 
 void RoutingExperiment::ProgressUpdate() {
-  std::cout << Simulator::Now().GetSeconds()
+  std::cout << "Experiment: " << this->iteration + 1 << " "
+    << Simulator::Now().GetSeconds()
     << "s/" << total_time.GetSeconds()
     << "s passed (" 
     << ((double)Simulator::Now().GetSeconds() / total_time.GetSeconds()) * 100
@@ -318,18 +333,6 @@ void RoutingExperiment::ProgressUpdate() {
 }
 
 // All the tracers
-
-void RoutingExperiment::DataDropTracer(Ptr<Packet const> packet, 
-                                       std::string reason, 
-                                       Ipv4Address address) {
-  
-  
-  data_drop_output << Simulator::Now().GetSeconds() << " Data dropped at address: " << address << std::endl;
-  data_drop_output << "\t Reason: " << reason << std::endl;
-  data_drop_output << "\t Packet: " << packet << std::endl;
-  
-}
-
 void RoutingExperiment::IpTxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4, 
                                    uint32_t interface) {
   
@@ -392,14 +395,9 @@ void RoutingExperiment::IpRxTracer(Ptr<Packet const> cpacket, Ptr<Ipv4> ipv4,
   
 }
 
-void RoutingExperiment::PhyTracer(Ptr<Packet const> packet) {
+void RoutingExperiment::Run(uint32_t iteration) {
+  this->iteration = iteration;
   
-  std::cout << *packet << std::endl;
-  
-}
-
-void RoutingExperiment::Run() {
-    
   std::string tr_name = "anthocnet-sim";
   Packet::EnablePrinting();
   
@@ -474,7 +472,7 @@ void RoutingExperiment::Run() {
   // Set up plane and mobility
   MobilityHelper mobilityAdhoc;
   // used to get consistent mobility across scenarios
-  int64_t streamIndex = 0; 
+  int64_t streamIndex = 100 * iteration; 
   
   std::stringstream ssXpos, ssYpos;
   ssXpos << "ns3::UniformRandomVariable[Min=0.0|Max=" << this->pWidth << "]";
@@ -520,7 +518,6 @@ void RoutingExperiment::Run() {
       break;
     case 2:
       list.Add (ahn, 100);
-      data_drop_output = std::ofstream(tr_name + "_data_drops.tr");
       break;
     default:
       NS_FATAL_ERROR ("Protocol");
@@ -543,7 +540,7 @@ void RoutingExperiment::Run() {
   
   // Install the fuzzy system on the nodes
   std::string fis_file;
-  fis_file = "../src/anthocnet/fis/simple_sniffer_analysis.fis";
+  fis_file = "../src/anthocnet/fis/sniffer_analysis.fis";
     
   
   Ptr<AntHocNetFis> fis = CreateObject<AntHocNetFis>();
@@ -657,29 +654,20 @@ void RoutingExperiment::Run() {
   Config::ConnectWithoutContext (IpRxPath, 
     MakeCallback(&RoutingExperiment::IpRxTracer, this));
   
-  std::string PhyPath = 
-    "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxDrop";
-  Config::ConnectWithoutContext (PhyPath, 
-    MakeCallback(&RoutingExperiment::PhyTracer, this));
-  
-  std::string DataDropPath = "/NodeList/*/$ns3::ahn::RoutingProtocol/DataDrop";
-  Config::ConnectWithoutContext (DataDropPath,
-    MakeCallback(&RoutingExperiment::DataDropTracer, this));
-  
   this->data_packets = 0;
   this->data_bytes = 0;
   this->control_packets = 0;
   this->control_bytes = 0;
   
   // Start the net animator
-  AnimationInterface anim (tr_name + "_animation.xml");
+  //AnimationInterface anim (tr_name + "_animation.xml");
   
   //anim.EnablePacketMetadata();
   //anim.SetMaxPktsPerTraceFile(1000000000);
   //anim.EnableIpv4RouteTracking(tr_name + "_route.xml", Seconds(0), 
   //                             Seconds(this->total_time), MilliSeconds(100));
   
-  anim.SkipPacketTracing();
+  //anim.SkipPacketTracing();
   
   if (this->generate_pcap) {
     
@@ -700,23 +688,23 @@ void RoutingExperiment::Run() {
   // Get the result of the simulation and put them into graphs
   this->result = this->db->Evaluate(this->output_granularity);
   
-  this->GenGnuplot(result.droprate, tr_name, "Droprate", 
-                   "droprate", "Time [s]", "Droprate[%]", 
-                   this->output_granularity);
+  //this->GenGnuplot(result.droprate, tr_name, "Droprate", 
+  //                 "droprate", "Time [s]", "Droprate[%]", 
+  //                 this->output_granularity);
   
-  this->GenGnuplot(result.end_to_end_delay, tr_name, "End-To-End Delay", 
-                   "delay", "Time [s]", "End-To-End Delay[ms]", 
-                   this->output_granularity);
+  //this->GenGnuplot(result.end_to_end_delay, tr_name, "End-To-End Delay", 
+  //                 "delay", "Time [s]", "End-To-End Delay[ms]", 
+  //                 this->output_granularity);
   
   //this->GenGnuplot(result.average_delay_jitter, tr_name, "Delay jitter", 
   //                 "delay-jitter", "Time [s]", "Jitter [ms]", 
   //                 this->output_granularity);
   
-  std::ofstream packet_log(tr_name + "_packets.log");
-  this->db->Print(packet_log);
+  //std::ofstream packet_log(tr_name + "_packets.log");
+  //this->db->Print(packet_log);
   
-  std::ofstream summary(tr_name + "_summary.txt");
-  this->PrintSummary(summary);
+  //std::ofstream summary(tr_name + "_summary.txt");
+  //this->PrintSummary(summary);
   
 }
 
@@ -791,7 +779,42 @@ int main (int argc, char* argv[]) {
   
   std::cout << dir_string << std::endl;
   
-  experiment.Run();
+  std::ofstream option_file("options.txt");
+  experiment.PrintOptions(option_file);
+  
+#define NUM_ITERATIONS 5
+  
+  sim_results_t result[NUM_ITERATIONS];
+  
+  for (uint32_t iteration = 0; iteration < NUM_ITERATIONS; iteration++) {
+    
+    experiment.Run(iteration);
+    experiment.GetResults(result[iteration]);
+    
+    std::stringstream output_name;
+    output_name << "experiment_" << iteration << ".txt";
+    std::ofstream output_file (output_name.str());
+    experiment.PrintResults(result[iteration], output_file);
+  }
+  
+  sim_results_t end_result;
+  for (uint32_t iteration = 0; iteration < NUM_ITERATIONS; iteration++) {
+    end_result.pdr += result[iteration].pdr;
+    end_result.delay += result[iteration].delay;
+    end_result.delay_jitter += result[iteration].delay_jitter;
+    end_result.packet_overhead += result[iteration].packet_overhead;
+    end_result.byte_overhead += result[iteration].byte_overhead;
+    
+  }
+  
+  end_result.pdr /= NUM_ITERATIONS;
+  end_result.delay /= NUM_ITERATIONS;
+  end_result.delay_jitter /= NUM_ITERATIONS;
+  end_result.packet_overhead /= NUM_ITERATIONS;
+  end_result.byte_overhead /= NUM_ITERATIONS;
+  
+  std::ofstream output_file ("summary.txt");
+  experiment.PrintResults(end_result, output_file);
   
   timeval stop;
   gettimeofday(&stop, NULL);
