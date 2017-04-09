@@ -130,7 +130,6 @@ private:
   
   uint32_t appStartBegin;
   uint32_t appStartEnd;
-  uint32_t appSendRate;
   
   // Blackhole configuration
   uint32_t nHoles;
@@ -283,9 +282,11 @@ void RoutingExperiment::PrintOptions(std::ostream& os) {
   os << "protocol: " << this->protocol << std::endl;
   os << "lossModel: " << this->lossModel << std::endl;
   
+  os << "packetRate: "<< this->packetRate << std::endl;
+  os << "packetSize: "<< this->packetSize << std::endl;
+  
   os << "appStartBegin: " << this->appStartBegin << std::endl;
   os << "appStartBegin: " << this->appStartBegin << std::endl;
-  os << "appSendRate: "<< this->appSendRate << std::endl;
   
   os << "nHoles: " << this->nHoles << std::endl;
   os << "holesStartBegin: " << this->holesStartBegin << std::endl;
@@ -780,7 +781,7 @@ int main (int argc, char* argv[]) {
   std::ofstream option_file("options.txt");
   experiment.PrintOptions(option_file);
   
-#define NUM_ITERATIONS 1
+#define NUM_ITERATIONS 5
   
   sim_results_t result[NUM_ITERATIONS];
   
