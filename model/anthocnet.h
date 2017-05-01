@@ -53,9 +53,6 @@
 #include "ns3/string.h"
 #include "ns3/pointer.h"
 
-
-// TODO: Make these settable by GetTypeId()
-//       instead of hardcoding them
 #define MAX_INTERFACES 30
 
 namespace ns3 {

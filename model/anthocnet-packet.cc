@@ -236,8 +236,8 @@ bool LinkFailureHeader::IsValid() const{
 
 bool LinkFailureHeader::operator== (LinkFailureHeader const &o) const {
   if (src == o.src) {
-    // TODO: Compare the other stuff as well
   } 
+  // NOTE: Uneeded, should be removed
   return false;
 }
 
@@ -592,8 +592,6 @@ bool ForwardAntHeader::IsValid() {
     return false;
   }
   
-  // TODO: More sanity checks
-  
   return true;
 }
 
@@ -680,8 +678,6 @@ bool BackwardAntHeader::IsValid() {
   if (this->ttl_or_max_hops < this->hops) {
     return false;
   }
-  
-  // TODO: More sanity checks
   
   return true;
 }

@@ -363,8 +363,6 @@ results_t SimDatabase::Evaluate(double granularity) const {
   
   for (auto so_it = sorter.begin(); so_it != sorter.end(); ++so_it) {
     
-    // TODO: Delay jitter
-    
     // Increase timestep, if necessary
     if (so_it->first.GetNanoSeconds() > next_step.GetNanoSeconds()) {
       
@@ -427,7 +425,7 @@ results_t SimDatabase::Evaluate(double granularity) const {
         total_dropped_packets++;
         break;
       case IN_TRANSMISSION:
-        // TODO: ????
+        // NOTE: Unimplemented. Should be removed.
         break;
       case UNKNOWN:
         num_unknown_packets++;
@@ -486,7 +484,6 @@ results_t SimDatabase::Evaluate(double granularity) const {
   results.total_average_delay_jitter = (double) total_jitter.GetMilliSeconds() /
                                         total_jitter_packets;
                                           
-  // TODO: Evaluate the Transmission related stuff
   
   return results;
 }

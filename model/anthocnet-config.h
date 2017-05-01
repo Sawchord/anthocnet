@@ -64,10 +64,6 @@ public:
   
   // ---------------------------------
   // Timings
-  
-  // TODO: Make jitters settable
-  // TODO: Make hello counter timeout settable
-  
   // Intervals of Timer events
   Time hello_interval;
   Time rtable_update_interval;
@@ -98,12 +94,8 @@ public:
   
   double eta_value;
   
-  // TODO: Exploration power (settable)
-  
   double snr_threshold;
   double snr_malus;
-  
-  // TODO: Consideration values
   
   // ---------------------------------
   // Misc

@@ -500,7 +500,6 @@ void RoutingExperiment::Run (double txp) {
   // Start the Receiver application
   for (uint32_t i = 0; i < m_nSinks; i++) {
     
-    // TODO: Set the Local address on sink1
     
     AddressValue localAddress (InetSocketAddress(adhocInterfaces.GetAddress (i), port));
     sink1.SetAttribute("Local", localAddress);
@@ -544,7 +543,6 @@ void RoutingExperiment::Run (double txp) {
     else if (m_experiment == 2) {
       
       UdpEchoClientHelper client(adhocInterfaces.GetAddress (i % m_nSinks), 9);
-      // TODO: Set attributes denpending on the input values
       client.SetAttribute ("MaxPackets", UintegerValue (1000));
       client.SetAttribute ("Interval", TimeValue (Seconds(1)));
       //client.SetAttribute ("PacketSize", UintegerValue (packetSize));

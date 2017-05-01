@@ -137,7 +137,6 @@ void SimApplication::NextTxEvent() {
     InetSocketAddress::ConvertFrom(this->local).GetIpv4(),
     InetSocketAddress::ConvertFrom(this->remote).GetIpv4());
   
-  // TODO: Put this into sendto
   this->db->RegisterInTransmission(seqno);
   
   SimPacketHeader msg = SimPacketHeader(seqno, this->packet_size);

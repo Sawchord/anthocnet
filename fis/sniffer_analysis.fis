@@ -12,7 +12,7 @@ AggMethod='max'
 DefuzzMethod='centroid'
 
 [Input1]
-Name='fullfillment-rate'
+Name='fulfillment-rate'
 Range=[0 1]
 NumMFs=3
 MF1='Low':'trapmf', [-1 0 0.40 0.50]
