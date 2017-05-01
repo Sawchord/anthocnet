@@ -31,7 +31,6 @@ RoutingProtocol::RoutingProtocol ():
   hello_timer(Timer::CANCEL_ON_DESTROY),
   pr_ant_timer(Timer::CANCEL_ON_DESTROY),
   
-  // These are no configs but rather inital values 
   last_hello(Seconds(0)),
   
   rtable(RoutingTable()),
@@ -152,7 +151,6 @@ Ptr<Ipv4Route> RoutingProtocol::RouteOutput (Ptr<Packet> p,
   uint32_t iface = 1;
   Ipv4Address nb;
   
-  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta,
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> route(new Ipv4Route);
@@ -254,7 +252,6 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
   Ipv4Address nb;
   
   //Search for a route, 
-  //NS_LOG_UNCOND(this->rtable);
   if (this->rtable.SelectRoute(dst, this->config->cons_beta, 
     nb, this->uniform_random, false)) {
     Ptr<Ipv4Route> rt = Create<Ipv4Route> ();
@@ -288,13 +285,7 @@ bool RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header,
     
     // If there is no route, cache the data to wait for a route
     
-    // Also start a forward ant towards the destination 
-    // NOTE: Repair forward ants are unimplemented
-    // Reactive forward ants are started by routeoutput at this point already
-    
     CacheEntry ce;
-    //ce.type = AHNTYPE_DATA;
-    // Why 0 here
     ce.iface = 0;
     ce.header = header;
     ce.packet = p;
@@ -1017,7 +1008,6 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
     return;
   
   double last_snr = snr.signal - snr.noise;
-  //NS_LOG_UNCOND(this << " " << *packet << " snr: " << last_snr );
   
   //Ptr<Ipv4L3Protocol> l3 = this->ipv4->GetObject<Ipv4L3Protocol>();
   //Ipv4Address this_node = l3->GetAddress(1, 0).GetLocal();
@@ -1040,7 +1030,7 @@ void RoutingProtocol::ProcessMonitorSnifferRx(Ptr<Packet const> packet,
       if (seen_address.find(*ad_it) != seen_address.end())
         continue;
       
-      //NS_LOG_UNCOND(Simulator::Now().GetSeconds()
+      //NS_LOG_FUNCTION(Simulator::Now().GetSeconds()
       //  << " SINR from " << *ad_it << " at " << this_node
       //  << " is " << last_snr);
       
@@ -1214,7 +1204,6 @@ void RoutingProtocol::NBExpire(Ipv4Address nb) {
       
       this->rtable.ProcessNeighborTimeout(msg, nb);
       NS_LOG_FUNCTION(this << "Processed NB Timeout " << msg);
-      //NS_LOG_UNCOND(this->rtable);
       
       if (msg.HasUpdates()) {
         TypeHeader type_header = TypeHeader(AHNTYPE_LINK_FAILURE);
@@ -1524,7 +1513,7 @@ void RoutingProtocol::HandleForwardAnt(Ptr<Packet> packet, uint32_t iface,
   
   Ipv4Address next_nb;
   uint32_t next_iface = 1;
-  //NS_LOG_UNCOND(this->rtable);
+  
   if(
     (!is_proactive && !this->rtable.SelectRoute(final_dst, 
                                                 this->config->cons_beta, 
@@ -1621,7 +1610,6 @@ void RoutingProtocol::HandleBackwardAnt(Ptr<Packet> packet,
   if(this->rtable.ProcessBackwardAnt(src, nb, ant.GetT(), 
       (ant.GetMaxHops() - ant.GetHops()) )) {
     this->UnicastBackwardAnt(iface, next_dst, ant);
-    //NS_LOG_UNCOND(this->rtable);
   }
   NS_LOG_FUNCTION(this << "iface" << iface << "ant" << ant);
   
